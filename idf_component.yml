@@ -1,0 +1,6 @@
+version: "1.0.0"
+description: "Bist Library for Espressif Devices"
+url: https://github.com/espressif/esp-bist
+dependencies:
+  idf:
+    version: ">=4.3"
