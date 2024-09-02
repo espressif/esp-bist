@@ -1,0 +1,311 @@
+stages:
+  - Build-Docker-Image
+  - Pre-Build
+  - Build
+  - Test Qemu
+  - Test Device
+
+default:
+  image: $CI_DOCKER_REGISTRY/espressif/robust/build-env
+  before_script:
+    - pip3 install esptool
+
+build_docker_image:
+  before_script: []
+  image: espressif/dind:1
+  stage: Build-Docker-Image
+  timeout: 2h
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: espressif/robust/build-env
+    DOCKERFILE: .gitlab/docker/build-env/Dockerfile
+  script:
+    - mkdir -p config
+    - echo ${DOCKER_AUTH_CONFIG} > config/config.json
+    - docker --config=./config pull ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} || true
+    - docker --config=./config build --pull -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} -f ${DOCKERFILE} .
+    - docker run --rm -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} /bin/bash -c "echo Hello Docker; exit 0"
+    - docker --config=./config push ${CI_DOCKER_REGISTRY}/${IMAGE_NAME}
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - ${DOCKERFILE}
+      when: manual
+  tags: [ "dind", "internet", "amd64" ]
+
+init_submodules:
+  stage: Pre-Build
+  before_script: []
+  script:
+    - echo "Fetching submodules"
+    - git submodule update --init --recursive
+  when: always
+  cache:
+    key: submodules
+    paths:
+      - modules/
+  tags: [build]
+
+build_mcuboot:
+  stage: Pre-Build
+  needs:
+    - init_submodules
+  script:
+    - echo "Building MCUboot"
+    - cd modules/mcuboot/boot/espressif
+    - cmake -DCMAKE_TOOLCHAIN_FILE=$CI_PROJECT_DIR/cmake/toolchain-esp32c3.cmake -DBIST_ROOT_DIR=$CI_PROJECT_DIR -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$CI_PROJECT_DIR/modules/esp-idf -DIDF_PATH=$CI_PROJECT_DIR/modules/esp-idf -B build -GNinja
+    - ninja -C build
+  variables:
+    IDF_PATH: $CI_PROJECT_DIR/modules/esp-idf
+  when: always
+  retry: 1
+  tags: [build]
+  cache:
+    key: submodules
+    paths:
+      - modules
+  artifacts:
+      expire_in: 1 day
+      paths:
+        - modules/mcuboot/boot/espressif/build/
+
+.build_template:
+  stage: Build
+  needs:
+    - build_mcuboot
+  script:
+    - echo "Building $ROOT_DIR/$TEST_APP_NAME"
+    - cd $ROOT_DIR/$TEST_APP_NAME
+    - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
+    - ninja -C build
+  when: always
+  retry: 1
+  tags: [build]
+  cache:
+    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
+      paths:
+        - $ROOT_DIR/$TEST_APP_NAME/build
+    - key: submodules
+      paths:
+        - modules
+
+build_esp32c3_cpu_reg_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'cpu_reg_test'
+    SOC_TARGET: 'esp32c3'
+
+build_esp32c3_cpu_stack_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'cpu_stack_test'
+    SOC_TARGET: 'esp32c3'
+
+build_esp32c3_ram_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'ram_test'
+    SOC_TARGET: 'esp32c3'
+
+build_esp32c3_flash_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'flash_test'
+    SOC_TARGET: 'esp32c3'
+
+build_esp32c3_pc_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'pc_test'
+    SOC_TARGET: 'esp32c3'
+
+build_esp32c3_wdt_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'wdt_test'
+    SOC_TARGET: 'esp32c3'
+
+build_esp32c3_sample_input:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'samples'
+    TEST_APP_NAME: 'input'
+    SOC_TARGET: 'esp32c3'
+
+.test_qemu_template:
+  stage: Test Qemu
+  needs:
+    - build_mcuboot
+  before_script:
+    - pip3 install pytest-embedded~=1.0
+    - pip3 install pytest-embedded-idf
+    - pip3 install pytest-embedded-serial-esp
+  script:
+    - echo "Testing $TEST_APP_NAME"
+    - cd tests/$TEST_APP_NAME
+    - pytest pytest_qemu* --junitxml=build/tests/report.xml
+  when: always
+  retry: 1
+  tags: [build]
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - tests/$TEST_APP_NAME/build/tests/report.xml
+    reports:
+      junit: tests/$TEST_APP_NAME/build/tests/report.xml
+  cache:
+    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
+      paths:
+        - tests/$TEST_APP_NAME/build
+    - key: submodules
+      paths:
+        - modules
+
+test_qemu_esp32c3_cpu_reg_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_cpu_reg_test"]
+  variables:
+    TEST_APP_NAME: 'cpu_reg_test'
+    SOC_TARGET: 'esp32c3'
+
+test_qemu_esp32c3_cpu_stack_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_cpu_stack_test"]
+  variables:
+    TEST_APP_NAME: 'cpu_stack_test'
+    SOC_TARGET: 'esp32c3'
+
+test_qemu_esp32c3_ram_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_ram_test"]
+  variables:
+    TEST_APP_NAME: 'ram_test'
+    SOC_TARGET: 'esp32c3'
+
+test_qemu_esp32c3_flash_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_flash_test"]
+  variables:
+    TEST_APP_NAME: 'flash_test'
+    SOC_TARGET: 'esp32c3'
+
+test_qemu_esp32c3_pc_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_pc_test"]
+  variables:
+    TEST_APP_NAME: 'pc_test'
+    SOC_TARGET: 'esp32c3'
+
+test_qemu_esp32c3_wdt_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_wdt_test"]
+  variables:
+    TEST_APP_NAME: 'wdt_test'
+    SOC_TARGET: 'esp32c3'
+
+.test_device_template:
+  stage: Test Device
+  needs:
+    - build_mcuboot
+  before_script:
+    - git submodule update --init --recursive
+    - echo "Building MCUboot"
+    - cd modules/mcuboot/boot/espressif
+    - cmake -DCMAKE_TOOLCHAIN_FILE=$CI_PROJECT_DIR/cmake/toolchain-esp32c3.cmake -DBIST_ROOT_DIR=$CI_PROJECT_DIR -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$CI_PROJECT_DIR/modules/esp-idf -DIDF_PATH=$CI_PROJECT_DIR/modules/esp-idf -B build -GNinja
+    - ninja -C build
+    - cd $CI_PROJECT_DIR
+    - pip3 install pytest-embedded~=1.0
+    - pip3 install pytest-embedded-idf
+    - pip3 install pytest-embedded-serial-esp
+  script:
+    - echo "Testing $TEST_APP_NAME"
+    - cd tests/$TEST_APP_NAME
+    - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
+    - ninja -C build
+    - ninja -C build flash_boot
+    - pytest pytest_device* --junitxml=build/tests/report.xml
+  when: always
+  retry: 1
+  tags: [generic, esp32c3]
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - tests/$TEST_APP_NAME/build/tests/report.xml
+    reports:
+      junit: tests/$TEST_APP_NAME/build/tests/report.xml
+  cache:
+    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
+      paths:
+        - tests/$TEST_APP_NAME/build
+    - key: submodules
+      paths:
+        - modules
+
+test_device_esp32c3_cpu_reg_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_cpu_reg_test"]
+  variables:
+    TEST_APP_NAME: 'cpu_reg_test'
+    SOC_TARGET: 'esp32c3'
+
+test_device_esp32c3_cpu_stack_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_cpu_stack_test"]
+  variables:
+    TEST_APP_NAME: 'cpu_stack_test'
+    SOC_TARGET: 'esp32c3'
+
+test_device_esp32c3_ram_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_ram_test"]
+  variables:
+    TEST_APP_NAME: 'ram_test'
+    SOC_TARGET: 'esp32c3'
+
+test_device_esp32c3_flash_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_flash_test"]
+  variables:
+    TEST_APP_NAME: 'flash_test'
+    SOC_TARGET: 'esp32c3'
+
+test_device_esp32c3_pc_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_pc_test"]
+  variables:
+    TEST_APP_NAME: 'pc_test'
+    SOC_TARGET: 'esp32c3'
+
+test_device_esp32c3_wdt_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_wdt_test"]
+  variables:
+    TEST_APP_NAME: 'wdt_test'
+    SOC_TARGET: 'esp32c3'
