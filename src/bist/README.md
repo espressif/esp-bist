@@ -1,6 +1,6 @@
 # BIST (Built-In Self Test) Library
 
-This repository contains the Built-In Self Test (BIST) library for the Espressif SoCs. The BIST library is designed to verify the integrity and proper operation of the hardware components in the SoC, including the CPU, memory, and clock sources. The library is intended for use in safety-critical applications that require compliance with industry standards such as IEC 60730 Class B.
+This directory contains the Built-In Self Test (BIST) library for the Espressif SoCs. The BIST library is designed to verify the integrity and proper operation of the hardware components in the SoC, including the CPU, memory, and clock sources. The library is intended for use in safety-critical applications that require compliance with industry standards such as IEC 60730 Class B.
 
 The Espressif's Built-in Self Test library performs the following tests:
 
@@ -203,7 +203,3 @@ If the stack overflows, the predefined pattern will be overwritten. The test fun
 
 4. Error Handling
 Upon detecting a stack overflow, appropriate error handling procedures should be invoked. This might include logging the error, halting the system, or attempting a safe recovery.
-
-## How to use the BIST library
-
-The BIST is a cmake library, to use it in your project, you can follow the instructions in the [Critical Safety]() repository. The library is designed to be used in a bare-metal context. It requires that the [ESP-IDF](https://github.com/espressif/esp-idf) is installed in your system.
