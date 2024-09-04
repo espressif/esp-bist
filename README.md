@@ -105,3 +105,7 @@ pytest pytest_device_* --junitxml=build/tests/report.xml
 ## Samples
 
 The samples are located in the `samples` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components.
+
+## BIST Library
+
+The proper documentation for the BIST library can be found in the [`src/bist`](src/bist) directory.
