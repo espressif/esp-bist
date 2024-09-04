@@ -1,0 +1,7 @@
+[submodule "modules/mcuboot"]
+	path = modules/mcuboot
+	url = https://github.com/mcu-tools/mcuboot.git
+[submodule "modules/esp-idf"]
+	path = modules/esp-idf
+	url = https://github.com/espressif/esp-idf.git
+	branch = release/v5.1

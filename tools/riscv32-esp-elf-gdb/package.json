@@ -1,0 +1,15 @@
+{
+  "name": "riscv32-esp-elf-gdb",
+  "version": "14.2_20240403",
+  "description": "GNU Debugger for Espressif riscv32 MCUs",
+  "keywords": [
+    "debugger",
+    "espressif"
+  ],
+  "license": "GPL-2.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/espressif/binutils-gdb"
+  },
+  "system": "linux_x86_64"
+}
