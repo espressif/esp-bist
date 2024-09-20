@@ -12,7 +12,7 @@ This repository includes the necessary files to build an application that runs t
 
 ## License
 
-This repository is licensed under the LGPL-3.0 license. For more information, see the [LICENSE](LICENSE) file.
+This repository is licensed under the LGPL-3.0 license. For more information, see the [LICENSE](LICENSE) file. Please, [contact Espressif](https://www.espressif.com/en/contact-us/technical-inquiries) directly for other licensing options.
 
 ## Download
 
