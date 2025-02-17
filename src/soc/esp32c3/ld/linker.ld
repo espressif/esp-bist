@@ -54,9 +54,9 @@
 MEMORY
 {
   mcuboot_hdr (R): org = 0x0, len = 0x20
-  metadata (R): org = 0x20, len = 0x20
+  metadata (R): org = 0x20, len = 0x60
 
-  ROM (RX): org = 0x40, len = FLASH_SIZE - 0x40
+  ROM (RX): org = 0x80, len = FLASH_SIZE - 0x80
 
   iram0_0_seg(RX): org = USER_IRAM_SEG_ORG, len = USER_IRAM_SEG_LEN
   dram0_0_seg(RW): org = USER_DRAM_SEG_ORG, len = USER_DRAM_SEG_LEN
@@ -66,12 +66,6 @@ MEMORY
 
   rtc_iram_seg(RWX): org = 0x50000000, len = 0x2000
 }
-
-/* The line below defines location alias for .rtc.data section
- * As C3 only has RTC fast memory, this is not configurable like
- * on other targets.
- */
-REGION_ALIAS("rtc_slow_seg", rtc_iram_seg);
 
 /*  Default entry point:  */
 ENTRY(__start)
@@ -118,15 +112,25 @@ SECTIONS
     LONG(ADDR(.dram0.data))
     LONG(LOADADDR(.dram0.data))
     LONG(LOADADDR(.dram0.end) - LOADADDR(.dram0.data))
+
+    /* RTC_TEXT metadata:
+     * 8. Destination address (VMA) for RTC_TEXT region
+     * 9. Flash offset (LMA) for start of RTC_TEXT region
+     * 10. Size of RTC region
+     */
+    LONG(ADDR(.rtc.text))
+    LONG(LOADADDR(.rtc.text))
+    LONG(SIZEOF(.rtc.text))
+
+    /* RTC_DATA metadata:
+     * 11. Destination address (VMA) for RTC_DATA region
+     * 12. Flash offset (LMA) for start of RTC_DATA region
+     * 13. Size of RTC region
+     */
+    LONG(ADDR(.rtc.data))
+    LONG(LOADADDR(.rtc.data))
+    LONG(SIZEOF(.rtc.data))
   } > metadata
-
-  iram_vma = ADDR(.iram0.text);
-  iram_lma = LOADADDR(.iram0.text);
-  iram_size_field = LOADADDR(.iram0.data) - LOADADDR(.iram0.text);
-
-  dram_vma = ADDR(.dram0.data);
-  dram_lma = LOADADDR(.dram0.data);
-  dram_size_field = LOADADDR(.dram0.end) - LOADADDR(.dram0.data);
 
   /* --- START OF RTC --- */
 
@@ -143,33 +147,48 @@ SECTIONS
     _pc_test_3_start = ABSOLUTE(.);
    *(.pc_test_3 .pc_test_3.*)
     _pc_test_3_end = ABSOLUTE(.);
-    *rtc_wake_stub*.o(.literal .text .literal.* .text.*)
+    . = ALIGN(4);
+    /* *rtc_wake_stub*.o(.literal .text .literal.* .text.*) */
   } >rtc_iram_seg AT>ROM
 
-  /* This section is required to skip rtc.text area because the text and
-   * data segments reflect the same address space on different buses.
+  /**
+   * This section located in RTC FAST Memory area.
+   * It holds data marked with RTC_FAST_ATTR attribute.
+   * See the file "esp_attr.h" for more information.
    */
-  .rtc.dummy (NOLOAD):
+  .rtc.force_fast :
   {
-    . = SIZEOF(.rtc.text);
-  } >rtc_iram_seg
+    . = ALIGN(4);
+    *(.rtc.force_fast .rtc.force_fast.*)
+    . = ALIGN(4);
+  } >rtc_iram_seg AT>ROM
 
   .rtc.data :
   {
     _rtc_data_start = ABSOLUTE(.);
     *(.rtc.data .rtc.data.*)
     *(.rtc.rodata .rtc.rodata.*)
-    *rtc_wake_stub*.o(.data .rodata .data.* .rodata.* .bss .bss.*)
-    _rtc_data_end = ABSOLUTE(.);
   } >rtc_iram_seg AT>ROM
 
   .rtc.bss (NOLOAD) :
   {
     _rtc_bss_start = ABSOLUTE(.);
-    *rtc_wake_stub*.o(.bss .bss.*)
-    *rtc_wake_stub*.o(COMMON)
+    *(.rtc.bss .rtc.bss.*)
     _rtc_bss_end = ABSOLUTE(.);
-  } >rtc_iram_seg
+  } > rtc_iram_seg
+
+  /**
+   * This section holds data that should not be initialized at power up
+   * and will be retained during deep sleep.
+   * User data marked with RTC_NOINIT_ATTR will be placed
+   * into this section. See the file "esp_attr.h" for more information.
+   */
+  .rtc_noinit (NOLOAD) :
+  {
+    . = ALIGN(4);
+    *(.rtc_noinit .rtc_noinit.*)
+    . = ALIGN(4);
+  } > rtc_iram_seg
 
   /* This section located in RTC SLOW Memory area.
    * It holds data marked with RTC_SLOW_ATTR attribute.
