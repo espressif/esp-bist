@@ -7,8 +7,6 @@ stages:
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/robust/build-env
-  before_script:
-    - pip3 install esptool
 
 build_docker_image:
   before_script: []
@@ -41,7 +39,7 @@ init_submodules:
     - git submodule update --init --recursive
   when: always
   cache:
-    key: submodules
+    key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
     paths:
       - modules/
   tags: [build]
@@ -61,7 +59,7 @@ build_mcuboot:
   retry: 1
   tags: [build]
   cache:
-    key: submodules
+    key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
     paths:
       - modules
   artifacts:
@@ -85,7 +83,7 @@ build_mcuboot:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
         - $ROOT_DIR/$TEST_APP_NAME/build
-    - key: submodules
+    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
       paths:
         - modules
 
@@ -171,7 +169,7 @@ build_esp32c3_sample_input:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
         - tests/$TEST_APP_NAME/build
-    - key: submodules
+    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
       paths:
         - modules
 
@@ -258,7 +256,7 @@ test_qemu_esp32c3_wdt_test:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
         - tests/$TEST_APP_NAME/build
-    - key: submodules
+    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
       paths:
         - modules
 
