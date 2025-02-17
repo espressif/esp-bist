@@ -49,75 +49,70 @@ static void runtime_tests(void)
 {
     bist_esp_err_t test_err = BIST_ESP_OK;
 
-    ESP_LOGI(TAG, "Running BIST CPU tests");
     test_err = bist_cpu_regs_test();
     if (test_err == BIST_ESP_CPU_TEST_ERR) {
         ESP_LOGE(TAG, "CPU register test failed");
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "Running BIST CPU CSR tests");
     test_err = bist_cpu_csr_regs_test();
     if (test_err == BIST_ESP_CPU_CSR_TEST_ERR) {
         ESP_LOGE(TAG, "CPU CSR register test failed");
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "Running BIST Stack tests");
     test_err = bist_cpu_stack_overflow_test();
     if (test_err == BIST_ESP_STACK_TEST_ERR) {
         ESP_LOGE(TAG, "Stack test failed");
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "Running BIST PC tests");
     test_err = bist_pc_test();
     if (test_err == BIST_ESP_PC_TEST_ERR) {
         ESP_LOGE(TAG, "PC test failed");
         fail_safe_exit();
     }
+
+    ESP_LOGI(TAG, "All runtime tests passed! Executed tests: CPU, CPU CSR, Stack, PC");
 }
 
 static void post_boot_tests(void)
 {
     bist_esp_err_t test_err = BIST_ESP_OK;
 
-    ESP_LOGI(TAG, "Running BIST external clock tests");
     test_err = bist_ext_crystal_fail_test();
     if (test_err == BIST_ESP_CLOCK_TEST_ERR) {
         ESP_LOGE(TAG, "External crystal fail test failed");
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "Running BIST main crystal tests");
     test_err = bist_main_crystal_test();
     if (test_err == BIST_ESP_CLOCK_TEST_ERR) {
         ESP_LOGE(TAG, "Main crystal test failed");
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "Running BIST RAM tests");
     test_err = bist_ram_test_march_a();
     if (test_err == BIST_ESP_RAM_TEST_ERR) {
         ESP_LOGE(TAG, "RAM test failed");
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "Running BIST Flash tests");
     test_err = bist_flash_test();
     if (test_err == BIST_ESP_FLASH_TEST_ERR) {
         ESP_LOGE(TAG, "Flash test failed");
         fail_safe_exit();
     }
+
+    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash");
 }
 
 int main()
 {
-    ESP_LOGI(TAG, "Input Sample Application!");
+    ESP_LOGI(TAG, "BIST Input Sample Application!");
+    
     post_boot_tests();
     runtime_tests();
-
-    ESP_LOGI(TAG, "All tests passed!");
 
     configure_led();
     configure_button();
