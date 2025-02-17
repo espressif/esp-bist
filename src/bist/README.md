@@ -111,7 +111,7 @@ The algorithm used in this test is the 32-bit Cyclic Redundancy Check (CRC), def
 
 After building the image, CRC32 of the relevant NVM section is calculated for comparison in runtime.
 
-This process involves a script, located at `scripts/calculate_crc32.py`, not located in this repository, which calculates the CRC32 checksums of the `.flash.text` and `.flash.rodata` sections of the firmware. These sections contain the executable code and read-only data, respectively, which are critical for the system's operation.
+This process involves a script, located at [`scripts/calculate_crc32.py`](../../scripts/calculate_crc32.py), which calculates the CRC32 checksums of the `.flash.text` and `.flash.rodata` sections of the firmware. These sections contain the executable code and read-only data, respectively, which are critical for the system's operation.
 
 After the calculation, the script injects these CRC32 checksums into a dedicated place in the Flash memory. This dedicated location is carefully chosen to ensure it does not interfere with the sections being checksummed, thereby avoiding any potential for the calculation to inadvertently alter the checksum. This step is crucial for maintaining the integrity of the firmware by ensuring that any modifications post-build are accounted for in the checksum.
 
