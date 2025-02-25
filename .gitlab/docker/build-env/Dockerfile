@@ -1,4 +1,5 @@
 FROM ubuntu:22.04
+
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Exclude documentation files from /usr/share/doc/ to reduce the Docker image size

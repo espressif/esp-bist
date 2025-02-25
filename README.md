@@ -22,6 +22,12 @@ To download the repository, execute the following command:
 git clone --recursive https://github.com/espressif/esp-bist.git
 ```
 
+Fetch the submodules with the following command:
+
+```sh
+git submodule update --init --recursive
+```
+
 ## Bootloader
 
 The Critical Firmware is designed to run on top of the MCUboot bootloader.
