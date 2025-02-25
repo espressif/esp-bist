@@ -13,7 +13,7 @@ else()
     endif()
 endif()
 
-message("Building Critical Safety FW for ${SOC_TARGET}")
+message("Building BIST project for ${SOC_TARGET}")
 
 set(MODULES_PATH ${BIST_ROOT_DIR}/modules)
 set(IDF_PATH ${MODULES_PATH}/esp-idf)
@@ -201,10 +201,12 @@ endforeach()
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ld")
 
+set(ld_input ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/ld/linker.ld)
+set(ld_output ${CMAKE_CURRENT_BINARY_DIR}/ld/linker.ld)
+
 add_custom_command(
     TARGET ${APP_EXECUTABLE} PRE_LINK
-    COMMAND ${CMAKE_C_COMPILER} -x c -E -P -o ${CMAKE_CURRENT_BINARY_DIR}/ld/linker.ld ${conf_defines} ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/ld/linker.ld
-    MAIN_DEPENDENCY ${ld_input}
+    COMMAND ${CMAKE_C_COMPILER} -x c -E -P -o ${ld_output} ${conf_defines} ${ld_input}
     COMMENT "Preprocessing linker scripts..."
     )
 
@@ -287,7 +289,7 @@ else()
 endif()
 
 add_custom_target(flash DEPENDS ${APP_NAME}.bin)
-add_custom_command(TARGET flash
+add_custom_command(TARGET flash POST_BUILD
     USES_TERMINAL
     COMMAND
     ${esptool_path}
@@ -300,7 +302,7 @@ add_custom_command(TARGET flash
 
 # Flash bootloader command
 add_custom_target(flash_boot DEPENDS ${APP_NAME}.bin)
-add_custom_command(TARGET flash_boot
+add_custom_command(TARGET flash_boot POST_BUILD
     USES_TERMINAL
     COMMAND
     ${esptool_path}
@@ -314,7 +316,7 @@ add_custom_command(TARGET flash_boot
 # **************************************************************************************************
 # Qemu Command
 add_custom_target(qemu DEPENDS ${APP_NAME}_qemu_image.bin)
-add_custom_command(TARGET qemu
+add_custom_command(TARGET qemu POST_BUILD
     USES_TERMINAL
     COMMAND
     qemu-system-riscv32 -nographic -icount 3 -machine ${SOC_TARGET}
@@ -323,7 +325,7 @@ add_custom_command(TARGET qemu
 
 # Qemu Debug Command
 add_custom_target(qemu_debug DEPENDS ${APP_NAME}_qemu_image.bin)
-add_custom_command(TARGET qemu_debug
+add_custom_command(TARGET qemu_debug POST_BUILD
     USES_TERMINAL
     COMMAND
     qemu-system-riscv32 -s -S -nographic -icount 3 -machine ${SOC_TARGET}
