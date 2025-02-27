@@ -15,8 +15,17 @@ endif()
 
 message("Building BIST project for ${SOC_TARGET}")
 
+if (DEFINED ENV{IDF_PATH})
+    set(IDF_PATH $ENV{IDF_PATH})
+    include(${IDF_PATH}/tools/cmake/version.cmake)
+    if (NOT (IDF_VERSION_MAJOR EQUAL 5 AND IDF_VERSION_MINOR EQUAL 1 AND IDF_VERSION_PATCH EQUAL 4))
+        message(FATAL_ERROR "Unsupported ESP-IDF version. Required: v5.1.4, Found: v${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}.${IDF_VERSION_PATCH}")
+    endif()
+else()
+    set(IDF_PATH ${MODULES_PATH}/esp-idf)
+endif()
+
 set(MODULES_PATH ${BIST_ROOT_DIR}/modules)
-set(IDF_PATH ${MODULES_PATH}/esp-idf)
 set(MCUBOOT_PATH ${MODULES_PATH}/mcuboot)
 set(MCUBOOT_BIN_PATH ${MODULES_PATH}/mcuboot/boot/espressif/build)
 

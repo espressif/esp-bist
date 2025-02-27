@@ -74,7 +74,8 @@ riscv32-esp-elf-gdb build/critical_fw_esp32c3.elf -ex "target remote :1234" -ex 
 By default, the flashing process assumes the board is connected to /dev/ttyUSB0. The port can be set with `-DESP_PORT`.
 
 ```sh
-ninja -C build flash -DESP_PORT=/dev/ttyUSB0
+export ESP_PORT=/dev/ttyUSB0
+ninja -C build flash
 ```
 
 ## Watchdog
