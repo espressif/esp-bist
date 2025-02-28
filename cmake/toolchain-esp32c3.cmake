@@ -1,7 +1,5 @@
-
 # Copyright (c) 2024 Espressif Systems (Shanghai) Co., Ltd.
 # SPDX-License-Identifier: Apache-2.0
-
 
 set(CMAKE_SYSTEM_NAME Generic)
 set(BIST_TOOLCHAIN_PATH ${BIST_ROOT_DIR}/tools/riscv32-esp-elf/bin)

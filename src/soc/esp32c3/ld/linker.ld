@@ -201,7 +201,7 @@ SECTIONS
     *(.rtc.force_slow .rtc.force_slow.*)
     . = ALIGN(4) ;
     _rtc_force_slow_end = ABSOLUTE(.);
-  } > rtc_slow_seg
+  } > rtc_iram_seg
 
   /* Get size of rtc slow data */
   _rtc_slow_length = (_rtc_force_slow_end - _rtc_data_start);
