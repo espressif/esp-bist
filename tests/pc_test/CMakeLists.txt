@@ -4,6 +4,9 @@
 cmake_minimum_required(VERSION 3.16)
 set(BIST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../../)
 
+# Download toolchain if not present
+include(${BIST_ROOT_DIR}/cmake/tools.cmake)
+
 # Set the toolchain file path
 set(CMAKE_TOOLCHAIN_FILE ${BIST_ROOT_DIR}/cmake/toolchain-${SOC_TARGET}.cmake)
 
