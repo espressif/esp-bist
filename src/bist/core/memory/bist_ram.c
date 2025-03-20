@@ -16,10 +16,10 @@
 #include <stdbool.h>
 #include "bist_ram.h"
 
-#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 128 // 512 bytes
 
-extern uint32_t _heap_start;
-extern uint32_t _heap_size;
+extern uint32_t _bist_ram_test_start;
+extern uint32_t _bist_ram_test_size;
 
 // Buffer to backup and restore 1024 bytes at a time
 volatile uint32_t __attribute__((section(".dram0.safe_ram"))) backup_chunk[BIST_ESP_RAM_BACKUP_CHUNK_SIZE];
@@ -27,8 +27,8 @@ volatile uint32_t __attribute__((section(".dram0.safe_ram"))) backup_chunk[BIST_
 bist_esp_err_t bist_ram_test_march_a(void)
 {
     bool test_passed = true;
-    volatile uint32_t *start_addr = (uint32_t *)&_heap_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_heap_size;
+    volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size;
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
@@ -81,8 +81,8 @@ bist_esp_err_t bist_ram_test_march_a(void)
 bist_esp_err_t bist_ram_test_march_x(void)
 {
     bool test_passed = true;
-    volatile uint32_t *start_addr = (uint32_t *)&_heap_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_heap_size;
+    volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size;
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
