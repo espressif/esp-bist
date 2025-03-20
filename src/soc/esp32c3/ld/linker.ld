@@ -565,12 +565,12 @@ SECTIONS
   .dram0.heap_start (NOLOAD):
   {
     . = ALIGN (4);
-    _heap_start = ABSOLUTE(.);
+    _bist_ram_test_start = ABSOLUTE(.);
     KEEP(*(.dram0.heap_start))
   } > dram0_0_seg
 
   _dram0_end = ORIGIN(dram0_0_seg) + LENGTH(dram0_0_seg);
-  _heap_size = _dram0_end - _heap_start;
+  _bist_ram_test_size = _dram0_end - _bist_ram_test_start;
 
   /* Provide total SRAM usage, including IRAM and DRAM */
   _image_ram_start = _iram_start - IRAM_DRAM_OFFSET;
