@@ -14,9 +14,13 @@
  */
 
 #include "bist_pc.h"
+
+#ifndef SOC_TARGET_ESP32C6
 #include "esp_log.h"
 #include "esp_attr.h"
+#endif
 
+#define IRAM_ATTR
 /**
  * Program Counter testing
  *
@@ -64,7 +68,9 @@ bist_esp_err_t IRAM_ATTR bist_pc_test(void)
     BIST_ADD_LABEL("bist_verify_pc_test");
     for (int countPcTest = 0; countPcTest < sizeof(pcTestFunctions) / sizeof(void *); countPcTest++) {
         returnFunctionAddress = (*pcTestFunctions[countPcTest])();
-        ESP_EARLY_LOGD("BIST_PC", "returnFunctionAddress %d: %p", countPcTest, returnFunctionAddress);
+#ifndef SOC_TARGET_ESP32C6
+        ESP_EARLY_LOGD("BIST_PC", "returnFunctionAddress %d: %p", countPcTest, returnFunctionAddress); //Only for qemu test
+#endif
         if (pcTestFunctions[countPcTest] != returnFunctionAddress) {
             return BIST_ESP_PC_TEST_ERR;
         }

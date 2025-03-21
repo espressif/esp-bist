@@ -55,6 +55,7 @@ if(SOC_TARGET STREQUAL "esp32c6")
         core/cpu/bist_cpu_regs.c
         core/cpu/bist_cpu_csr_regs.c
         core/memory/bist_ram.c
+        core/cpu/bist_pc.c
         )
 
     add_library(bist_esp
