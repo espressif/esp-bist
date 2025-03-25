@@ -28,7 +28,7 @@ bist_esp_err_t bist_ram_test_march_a(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size;
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size/4; // 4 bytes per word
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
@@ -82,7 +82,7 @@ bist_esp_err_t bist_ram_test_march_x(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size;
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size/4; // 4 bytes per word
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
