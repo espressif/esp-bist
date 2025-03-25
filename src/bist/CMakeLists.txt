@@ -63,6 +63,13 @@ if(SOC_TARGET STREQUAL "esp32c6")
     )
 endif()
 
+# Add the soc target definition to the build
+string(TOUPPER "${SOC_TARGET}" SOC_TARGET_UPPER)
+target_compile_definitions(bist_esp
+    PUBLIC
+    "SOC_TARGET_${SOC_TARGET_UPPER}"
+)
+
 set(CFLAGS
     "-Wno-frame-address"
     "-Wall"
