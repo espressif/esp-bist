@@ -63,6 +63,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(mcause, CSR_MCAUSE_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(mtval, MASK_32BIT, errorCSR);
 
+#ifndef SOC_TARGET_ESP32C6
     // Physical Memory Protection (PMP) CSRs
     BIST_TEST_CSR_REG_STACKED(pmpaddr0, MASK_32BIT, errorCSR);
     BIST_TEST_CSR_REG_STACKED(pmpaddr1, MASK_32BIT, errorCSR);
@@ -80,6 +81,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(pmpaddr13, MASK_32BIT, errorCSR);
     BIST_TEST_CSR_REG_STACKED(pmpaddr14, MASK_32BIT, errorCSR);
     BIST_TEST_CSR_REG_STACKED(pmpaddr15, MASK_32BIT, errorCSR);
+#endif
 
     ASM(" li a0, 0x0");
     ASM(" addi	sp,sp,16");
