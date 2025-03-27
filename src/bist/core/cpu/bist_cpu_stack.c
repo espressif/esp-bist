@@ -14,9 +14,7 @@
  */
 
 #include "bist_cpu_stack.h"
-#include "esp_log.h"
 #include "esp_attr.h"
-#include "esp32c3/rom/ets_sys.h"
 
 extern uint32_t _stack_overflow_protection_start;
 extern uint32_t _stack_overflow_protection_end;
