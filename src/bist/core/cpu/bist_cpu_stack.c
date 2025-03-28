@@ -21,7 +21,8 @@ extern uint32_t _stack_overflow_protection_end;
 
 #define STACK_PATTERN 0xDEADBEEF
 
-void handle_stack_overflow(void)
+
+void __attribute__((weak)) handle_stack_overflow(void)
 {
     /* handle the error (e.g., log it, halt the system) */
 }
