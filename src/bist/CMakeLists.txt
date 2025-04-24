@@ -13,36 +13,62 @@ set(PROJECT_VERSION 0.0.1)
 project(bist_esp VERSION 0.0.1 DESCRIPTION "Espressif's Built-In Self Test (BIST) Library")
 
 # SOC_TARGET must be defined
+if(DEFINED IDF_TARGET)
+    set(SOC_TARGET ${IDF_TARGET})
+endif()
 if(NOT DEFINED SOC_TARGET)
     message(FATAL_ERROR "SOC_TARGET not defined. Please set -DSOC_TARGET.")
 endif()
 
 message("Building Espressif's Built-In Self Test (BIST) Library for ${SOC_TARGET}")
 
-set(bist_src
-    drivers/xt_wdt.c
-    drivers/wdt.c
-    drivers/gpio.c
-    core/cpu/bist_cpu_regs.c
-    core/cpu/bist_cpu_csr_regs.c
-    core/cpu/bist_cpu_stack.c
-    core/memory/bist_ram.c
-    core/memory/bist_flash.c
-    core/cpu/bist_pc.c
-    core/clock/bist_clock_fail.c
-    core/wdt/bist_wdt.c
-    )
+if(SOC_TARGET STREQUAL "esp32c3")
+    set(bist_src
+        drivers/xt_wdt.c
+        drivers/wdt.c
+        drivers/gpio.c
+        core/cpu/bist_cpu_regs.c
+        core/cpu/bist_cpu_csr_regs.c
+        core/cpu/bist_cpu_stack.c
+        core/memory/bist_ram.c
+        core/memory/bist_flash.c
+        core/cpu/bist_pc.c
+        core/clock/bist_clock_fail.c
+        core/wdt/bist_wdt.c
+        )
 
-set(idf_srcs
-    ${IDF_PATH}/components/hal/xt_wdt_hal.c
-    ${IDF_PATH}/components/log/log.c
-    ${IDF_PATH}/components/log/log_noos.c
-    ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
-    )
+    set(idf_srcs
+        ${IDF_PATH}/components/hal/xt_wdt_hal.c
+        ${IDF_PATH}/components/log/log.c
+        ${IDF_PATH}/components/log/log_noos.c
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
+        )
 
-add_library(bist_esp
-    ${idf_srcs}
-    ${bist_src}
+    add_library(bist_esp
+        ${idf_srcs}
+        ${bist_src}
+    )
+endif()
+
+if(SOC_TARGET STREQUAL "esp32c6")
+    set(bist_src
+        core/cpu/bist_cpu_regs.c
+        core/cpu/bist_cpu_csr_regs.c
+        core/memory/bist_ram.c
+        core/cpu/bist_pc.c
+        core/cpu/bist_cpu_stack.c
+        )
+
+    add_library(bist_esp
+        ${bist_src}
+    )
+endif()
+
+# Add the soc target definition to the build
+string(TOUPPER "${SOC_TARGET}" SOC_TARGET_UPPER)
+target_compile_definitions(bist_esp
+    PUBLIC
+    "SOC_TARGET_${SOC_TARGET_UPPER}"
 )
 
 set(CFLAGS

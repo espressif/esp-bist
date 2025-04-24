@@ -181,11 +181,13 @@ The primary goal of the stack overflow test is to ensure that the stack does not
 This overlap can occur in various scenarios, such as the use of recursive functions, leading to potential system crashes or unpredictable behavior.
 
 ### Stack Overflow Detection Mechanism
+
 To detect stack overflow, a reserved block of memory at the end of the stack is filled with a predefined pattern.
 A test function is periodically invoked to verify the integrity of this block. If the stack overflows,
 it will overwrite this reserved block with corrupted data, which the test function will detect as an overflow error.
 
 ### Linker Script Configuration
+
 The linker script is a vital component in defining the memory layout of the program.
 It specifies the location and size of the stack and other memory sections. Proper configuration of the linker script
 ensures that the stack is correctly placed and that the reserved block for overflow detection is appropriately defined.
@@ -203,3 +205,7 @@ If the stack overflows, the predefined pattern will be overwritten. The test fun
 
 4. Error Handling
 Upon detecting a stack overflow, appropriate error handling procedures should be invoked. This might include logging the error, halting the system, or attempting a safe recovery.
+
+### Stack Overflow Handler
+
+The signature for the stack overflow handler is `void handle_stack_overflow(void)` and should be defined in the application code.

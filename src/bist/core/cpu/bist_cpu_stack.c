@@ -14,16 +14,15 @@
  */
 
 #include "bist_cpu_stack.h"
-#include "esp_log.h"
 #include "esp_attr.h"
-#include "esp32c3/rom/ets_sys.h"
 
 extern uint32_t _stack_overflow_protection_start;
 extern uint32_t _stack_overflow_protection_end;
 
 #define STACK_PATTERN 0xDEADBEEF
 
-void handle_stack_overflow(void)
+
+void __attribute__((weak)) handle_stack_overflow(void)
 {
     /* handle the error (e.g., log it, halt the system) */
 }
