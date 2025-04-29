@@ -110,7 +110,7 @@ static void post_boot_tests(void)
 int main()
 {
     ESP_LOGI(TAG, "BIST Input Sample Application!");
-    
+
     post_boot_tests();
     runtime_tests();
 

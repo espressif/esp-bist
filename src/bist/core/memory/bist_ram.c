@@ -16,7 +16,11 @@
 #include <stdbool.h>
 #include "bist_ram.h"
 
+#ifndef SOC_TARGET_ESP32C6
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
+#else
 #define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 128 // 512 bytes
+#endif
 
 extern uint32_t _bist_ram_test_start;
 extern uint32_t _bist_ram_test_size;
