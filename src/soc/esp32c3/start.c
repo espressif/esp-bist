@@ -31,6 +31,7 @@ extern uint32_t _image_drom_start, _image_drom_size, _image_drom_vaddr;
 extern uint32_t _image_rtc_start, _image_rtc_size, _image_rtc_vaddr;
 extern uint32_t _bss_start, _bss_end;
 extern uint32_t _rtc_bss_start, _rtc_bss_end;
+extern uint32_t _stack_top;
 
 extern int _vector_table;
 
@@ -157,6 +158,9 @@ void __start(void)
                          ".option norelax\n"
                          "la gp, __global_pointer$\n"
                          ".option pop");
+
+    /* Set the stack pointer to the top of the stack */
+    __asm__ __volatile__("la sp, _stack_top");
 
     esp_cpu_intr_set_ivt_addr(&_vector_table);
 
