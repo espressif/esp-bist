@@ -23,3 +23,5 @@
 #define CONFIG_ESP_INT_WDT                        1
 #define CONFIG_RTC_CLK_SRC_EXT_CRYS               1
 #define CONFIG_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT 1
+#define CONFIG_HEAP_SIZE                          0x1000
+#define CONFIG_STACK_PROTECTION_BLOCK_SIZE        0x400

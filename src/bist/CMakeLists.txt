@@ -132,3 +132,8 @@ target_include_directories(
     )
 
 set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
+
+target_link_libraries(bist_esp
+    PUBLIC
+    c
+)

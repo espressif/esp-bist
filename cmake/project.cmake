@@ -147,6 +147,7 @@ target_include_directories(
 set(soc_srcs
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/newlib_stubs.c
     )
 
 # IDF overwritten sources
