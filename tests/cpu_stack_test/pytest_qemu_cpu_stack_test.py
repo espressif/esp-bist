@@ -72,4 +72,4 @@ def cpu_stack_error(qemu_debug_instance, gdb_instance, test_name, test_bp, injec
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
 def test_cpu_stack_error(qemu_debug_instance, gdb_instance):
-    cpu_stack_error(qemu_debug_instance, gdb_instance, "test_BIST_Cpu_Stack_Overflow", "bist_cpu_stack_overflow_data", "100")
+    cpu_stack_error(qemu_debug_instance, gdb_instance, "test_BIST_Cpu_Stack_Overflow", "bist_cpu_stack_overflow_data", "10")
