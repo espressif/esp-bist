@@ -2,8 +2,10 @@
 #include "bist_esp.h"
 #include "bist_log.h"
 #include "wdt.h"
+#include "esp_xt_wdt.h"
 #include "bist_gpio.h"
 #include "rom/ets_sys.h"
+#include "esp_attr.h"
 
 #define LED_GPIO 7
 #define BTN_GPIO 9
@@ -17,9 +19,9 @@ static void fail_safe_exit(void)
         ;
 }
 
-void mwdt_callback(void *args)
+void IRAM_ATTR wdt_callback(void *args)
 {
-    ESP_LOGE(TAG, "WDT timeout");
+    ESP_LOGE(TAG, "User WDT callback triggered");
 }
 
 static void configure_led(void)
@@ -72,13 +74,12 @@ static void runtime_tests(void)
         ESP_LOGE(TAG, "PC test failed");
         fail_safe_exit();
     }
-
-    ESP_LOGI(TAG, "All runtime tests passed! Executed tests: CPU, CPU CSR, Stack, PC");
 }
 
 static void post_boot_tests(void)
 {
     bist_esp_err_t test_err = BIST_ESP_OK;
+
 
     test_err = bist_ext_crystal_fail_test();
     if (test_err == BIST_ESP_CLOCK_TEST_ERR) {
@@ -133,6 +134,10 @@ int main()
 
     bist_cpu_stack_overflow_init();
 
+    // Register Crystal WDT and Master WDT callbacks
+    esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL);
+    wdt_register_callback(wdt_callback, NULL);
+
     runtime_tests();
 
     configure_led();
@@ -140,11 +145,16 @@ int main()
 
     test_malloc();
 
+    ESP_EARLY_LOGI(TAG, "Initializing WDT");
+    wdt_init(CONFIG_WDT_TIMEOUT_US);
+    wdt_init_windowed(CONFIG_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US);
+
     while (1) {
-        wdt_feed();
         set_led(get_button());
         runtime_tests();
+        wdt_feed();
     }
 
     return 0;
 }
+

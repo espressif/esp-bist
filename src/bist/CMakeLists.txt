@@ -27,6 +27,7 @@ if(SOC_TARGET STREQUAL "esp32c3")
         drivers/xt_wdt.c
         drivers/wdt.c
         drivers/gpio.c
+        drivers/esp_timer.c
         core/cpu/bist_cpu_regs.c
         core/cpu/bist_cpu_csr_regs.c
         core/cpu/bist_cpu_stack.c
@@ -42,6 +43,8 @@ if(SOC_TARGET STREQUAL "esp32c3")
         ${IDF_PATH}/components/log/log.c
         ${IDF_PATH}/components/log/log_noos.c
         ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
+        ${IDF_PATH}/components/hal/systimer_hal.c
+        ${IDF_PATH}/components/esp_hw_support/port/esp32c3/systimer.c
         )
 
     add_library(bist_esp
@@ -128,6 +131,7 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hw_support/include/soc
     ${IDF_PATH}/components/hal/include
     ../../components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
     )
 

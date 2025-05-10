@@ -148,6 +148,23 @@ Each test function is assigned to a specific memory section through the `__attri
 
 The core function `bist_pc_test` iterates through an array of function pointers, each pointing to a test function defined to return its own address. The test validates the PC register by ensuring that the address returned by each test function matches the function's address, thereby confirming the correct operation of bits 2-17, 19-21, 25, and 28 of the PC register.
 
+### Indirect time-slot monitoring
+
+The library implements a software based windowed watchdog to strictly monitor the main loop execution time. This is done by using a private timer in conjunction with the main watchdog timer. The indirect time-slot monitoring helps detect Program Counter (PC) faults (e.g., due to corruption, infinite loops, or unintended jumps). It infers correct execution by enforcing strict timing deadlines on software checkpoints.
+
+The Windowed Watchdog mechanism relies on two key components working together that defines the allowed reset window (minimum and maximum time limits):
+
+- Private Timer
+- Main Watchdog Timer (Hardware Watchdog)
+
+The private timer is configured independently. It defines the bottom of the time-slot window. The main watchdog defines the top of the time-slot window. The private timer is set to a value defined by `CONFIG_WDT_UNDERFLOW_US` while the main watchdog is set to a value defined by `CONFIG_WDT_TIMEOUT_US`.
+
+If the application tries to reset the watchdog:
+
+- Too early (before CONFIG_WDT_UNDERFLOW_US): Private timer flags an underflow, blocking the watchdog reset.
+- Too late (after the max window): Hardware watchdog will expire, triggering an interrupt that the application can register for fault handling and resetting the device.
+- Within the allowed window: The reset is done correctly.
+
 ## Clock Testing
 
 The clock test is designed to verify the integrity and proper operation of the clock sources. It checks the clock frequency and stability to ensure the MCU's operation is within the specified limits.

@@ -219,14 +219,11 @@ void __start(void)
     ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
     init_stack_pattern();
 
-    ESP_EARLY_LOGI(TAG, "Initializing WDT");
-    wdt_init(CONFIG_WDT_TIMEOUT_MS);
-
     /* Jump to application entry point. */
     ESP_EARLY_LOGI(TAG, "Calling main...");
     main();
 
     while (1) {
-        wdt_feed();
+        __asm__ __volatile__("wfi");
     }
 }
