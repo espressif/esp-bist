@@ -17,6 +17,7 @@
 
 #include "stdint.h"
 #include "bist_esp_types.h"
+#include "bist_conf.h"
 
 bist_esp_err_t bist_ext_crystal_fail_test(void);
 bist_esp_err_t bist_main_crystal_test(void);

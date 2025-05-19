@@ -142,6 +142,7 @@ target_include_directories(
     ${include_soc}
     ${include_hal}
     ${include_unity}
+    ${CMAKE_CURRENT_BINARY_DIR}/include
     )
 
 set(soc_srcs
@@ -204,10 +205,11 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ld")
 
 set(ld_input ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/ld/linker.ld)
 set(ld_output ${CMAKE_CURRENT_BINARY_DIR}/ld/linker.ld)
+set(bist_conf ${CMAKE_CURRENT_BINARY_DIR}/bist/include)
 
 add_custom_command(
     TARGET ${APP_EXECUTABLE} PRE_LINK
-    COMMAND ${CMAKE_C_COMPILER} -x c -E -P -o ${ld_output} ${conf_defines} ${ld_input}
+    COMMAND ${CMAKE_C_COMPILER} -x c -E -P -o ${ld_output} -I ${bist_conf} ${conf_defines} ${ld_input}
     COMMENT "Preprocessing linker scripts..."
     )
 

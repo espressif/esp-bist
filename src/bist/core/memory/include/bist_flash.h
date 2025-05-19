@@ -18,5 +18,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "bist_esp_types.h"
+#include "sdkconfig.h"
 
 bist_esp_err_t bist_flash_test(void);

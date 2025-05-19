@@ -5,6 +5,7 @@
 
 #include "soc_memory.h"
 #include "../include/sdkconfig.h"
+#include "bist_conf.h"
 
 /* SRAM0 (16kB) memory */
 #define SRAM0_IRAM_START   0x4037c000

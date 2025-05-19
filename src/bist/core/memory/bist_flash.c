@@ -16,7 +16,6 @@
 #include <stdbool.h>
 #include "bist_flash.h"
 #include "esp_log.h"
-#include "sdkconfig.h"
 
 // Pointer to CRC32 value
 extern uint32_t _crc_section_text_start, _crc_section_data_start;
