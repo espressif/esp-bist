@@ -551,31 +551,34 @@ SECTIONS
     _safe_ram_end = ABSOLUTE(.);
   } >dram0_0_seg
 
-  /* define the stack overflow section */
-  .dram0.overflow (NOLOAD) :
-  {
-    . = ALIGN(8);
-    /* define the reserved block for stack overflow protection */
-    . += 0x1000;
-    _stack_overflow_protection_start = .;
-    . += 0x4; /* assuming 4 bytes for pattern check */
-    _stack_overflow_protection_end = .;
-  } >dram0_0_seg
-
   .dram0.heap_start (NOLOAD):
   {
     . = ALIGN (4);
+    _heap_start = ABSOLUTE(.);
     _bist_ram_test_start = ABSOLUTE(.);
+    /* define the reserved block for heap */
+    . += CONFIG_HEAP_SIZE;
+    _heap_end = ABSOLUTE(.);
     KEEP(*(.dram0.heap_start))
   } > dram0_0_seg
 
+  /* define the stack overflow section */
+  .dram0.overflow (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _stack_overflow_protection_end = .;
+    . += CONFIG_STACK_PROTECTION_BLOCK_SIZE;
+    _stack_overflow_protection_start = .;
+  } >dram0_0_seg
+
   _dram0_end = ORIGIN(dram0_0_seg) + LENGTH(dram0_0_seg);
   _bist_ram_test_size = _dram0_end - _bist_ram_test_start;
+  _stack_top = _dram0_end;
 
   /* Provide total SRAM usage, including IRAM and DRAM */
   _image_ram_start = _iram_start - IRAM_DRAM_OFFSET;
 
-  ASSERT(((__bss_end - ORIGIN(dram0_0_seg)) <= LENGTH(dram0_0_seg)), "DRAM segment data does not fit.")
+  ASSERT(((_heap_end - ORIGIN(dram0_0_seg)) <= LENGTH(dram0_0_seg)), "DRAM segment data does not fit.")
 
   /* --- END OF DRAM --- */
 

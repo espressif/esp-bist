@@ -18,9 +18,9 @@
 #ifndef SOC_TARGET_ESP32C6
 #include "esp_log.h"
 #include "esp_attr.h"
-#endif
-
+#else
 #define IRAM_ATTR
+#endif /* SOC_TARGET_ESP32C6 */
 /**
  * Program Counter testing
  *

@@ -16,11 +16,12 @@
 #include "bist_cpu_stack.h"
 #include "esp_attr.h"
 
+extern uint32_t _stack_top;
 extern uint32_t _stack_overflow_protection_start;
 extern uint32_t _stack_overflow_protection_end;
 
-#define STACK_PATTERN 0xDEADBEEF
-
+#define STACK_PROTECTION_PATTERN    0xDEADBEEF
+#define STACK_FILL_PATTERN          0xBADC0FFE
 
 void __attribute__((weak)) handle_stack_overflow(void)
 {
@@ -42,7 +43,7 @@ void bist_cpu_stack_recursive(int count)
 bist_esp_err_t bist_cpu_stack_overflow_init(void)
 {
     uint32_t *protection_start = (uint32_t *)&_stack_overflow_protection_start;
-    *protection_start = STACK_PATTERN;
+    *protection_start = STACK_PROTECTION_PATTERN;
 
     return BIST_ESP_OK;
 }
@@ -51,7 +52,7 @@ bist_esp_err_t bist_cpu_stack_overflow_check(void)
 {
     uint32_t *protection_start = (uint32_t *)&_stack_overflow_protection_start;
 
-    if (*protection_start != STACK_PATTERN) {
+    if (*protection_start != STACK_PROTECTION_PATTERN) {
         /* stack overflow detected */
         handle_stack_overflow();
 
@@ -78,4 +79,19 @@ bist_esp_err_t bist_cpu_stack_overflow_test(void)
     }
 
     return BIST_ESP_STACK_TEST_ERR;
+}
+
+uint32_t bist_get_stack_high_watermark(void)
+{
+    uint32_t *stack_top = (uint32_t *)&_stack_top;
+    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_end;
+
+    uint32_t high_watermark = 0;
+    for (uint32_t *p = stack_bottom; p < stack_top; p++) {
+        if (*p != STACK_FILL_PATTERN) {
+            high_watermark++;
+        }
+    }
+
+    return high_watermark;
 }

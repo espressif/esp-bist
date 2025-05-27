@@ -31,6 +31,7 @@ extern uint32_t _image_drom_start, _image_drom_size, _image_drom_vaddr;
 extern uint32_t _image_rtc_start, _image_rtc_size, _image_rtc_vaddr;
 extern uint32_t _bss_start, _bss_end;
 extern uint32_t _rtc_bss_start, _rtc_bss_end;
+extern uint32_t _stack_top, _stack_overflow_protection_start;
 
 extern int _vector_table;
 
@@ -146,6 +147,16 @@ static void setup_clock_glitch_reset(bool enable)
     }
 }
 
+void init_stack_pattern(void)
+{
+    uint32_t *stack_top = (uint32_t *)&_stack_top;
+    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_start;
+
+    for (uint32_t *p = stack_bottom; p < stack_top; p++) {
+        *p = 0xBADC0FFE;
+    }
+}
+
 void __start(void)
 {
     /* Configure the global pointer register
@@ -157,6 +168,9 @@ void __start(void)
                          ".option norelax\n"
                          "la gp, __global_pointer$\n"
                          ".option pop");
+
+    /* Set the stack pointer to the top of the stack */
+    __asm__ __volatile__("la sp, _stack_top");
 
     esp_cpu_intr_set_ivt_addr(&_vector_table);
 
@@ -202,7 +216,10 @@ void __start(void)
     core_intr_matrix_clear();
 
     // esp_cache_err_int_init();
+    ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
+    init_stack_pattern();
 
+    ESP_EARLY_LOGI(TAG, "Initializing WDT");
     wdt_init(CONFIG_WDT_TIMEOUT_MS);
 
     /* Jump to application entry point. */

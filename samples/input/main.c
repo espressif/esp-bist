@@ -10,6 +10,13 @@
 
 static const char *TAG = "sample";
 
+static void fail_safe_exit(void)
+{
+    ESP_LOGE(TAG, "Fail safe exit");
+    while (1)
+        ;
+}
+
 void mwdt_callback(void *args)
 {
     ESP_LOGE(TAG, "WDT timeout");
@@ -38,13 +45,6 @@ static bool get_button(void)
     return gpio_get_level(BTN_GPIO);
 }
 
-static void fail_safe_exit(void)
-{
-    ESP_LOGE(TAG, "Fail safe exit");
-    while (1)
-        ;
-}
-
 static void runtime_tests(void)
 {
     bist_esp_err_t test_err = BIST_ESP_OK;
@@ -61,8 +61,8 @@ static void runtime_tests(void)
         fail_safe_exit();
     }
 
-    test_err = bist_cpu_stack_overflow_test();
-    if (test_err == BIST_ESP_STACK_TEST_ERR) {
+    test_err = bist_cpu_stack_overflow_check();
+    if (test_err == BIST_ESP_STACK_TEST_OVERFLOW) {
         ESP_LOGE(TAG, "Stack test failed");
         fail_safe_exit();
     }
@@ -104,18 +104,41 @@ static void post_boot_tests(void)
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash");
+    test_err = bist_cpu_stack_overflow_test();
+    if (test_err == BIST_ESP_STACK_TEST_ERR) {
+        ESP_LOGE(TAG, "Stack test failed");
+        fail_safe_exit();
+    }
+
+    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash, Stack");
+}
+
+int test_malloc(void)
+{
+    int *ptr = malloc(4);
+    if (ptr == NULL) {
+        ESP_LOGE(TAG, "Memory allocation failed");
+        return -1;
+    }
+    ESP_LOGI(TAG, "Memory allocated at %p", ptr);
+    free(ptr);
+    return 0;
 }
 
 int main()
 {
     ESP_LOGI(TAG, "BIST Input Sample Application!");
-    
+
     post_boot_tests();
+
+    bist_cpu_stack_overflow_init();
+
     runtime_tests();
 
     configure_led();
     configure_button();
+
+    test_malloc();
 
     while (1) {
         wdt_feed();
