@@ -28,7 +28,7 @@ def wdt_test_routine(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
 
     # Commands to run when breakpoint is hit
     commands
-        set wdt_timeout_ms={}
+        set wdt_timeout_us={}
         continue
     end
     '''.format(test_bp, injected_value)
