@@ -15,8 +15,13 @@ endif()
 
 message("Building BIST project for ${SOC_TARGET}")
 
+if (DEFINED ENV{IDF_PATH})
+    set (IDF_PATH $ENV{IDF_PATH})
+else()
+    message(FATAL_ERROR "IDF_PATH environment variable is not set.")
+endif()
+
 set(MODULES_PATH ${BIST_ROOT_DIR}/modules)
-set(IDF_PATH ${MODULES_PATH}/esp-idf)
 set(MCUBOOT_PATH ${MODULES_PATH}/mcuboot)
 set(MCUBOOT_BIN_PATH ${MODULES_PATH}/mcuboot/boot/espressif/build)
 
@@ -241,14 +246,14 @@ add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
 # # **************************************************************************************************
 # Calculate Flash CRC
 add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
-    COMMAND
+    COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
     python
     ${BIST_ROOT_DIR}/scripts/calculate_crc32.py
     ${APP_EXECUTABLE} .flash.text .crc_section_text
     )
 
 add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
-    COMMAND
+    COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
     python
     ${BIST_ROOT_DIR}/scripts/calculate_crc32.py
     ${APP_EXECUTABLE} .flash.rodata .crc_section_data

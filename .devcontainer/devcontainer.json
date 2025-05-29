@@ -1,0 +1,13 @@
+{
+	"name": "BIST Dev Container",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+
+    "mounts": [
+        "type=bind,source=/dev/ttyUSB0,target=/dev/ttyUSB0"
+    ],
+    "runArgs": [
+        "--privileged"
+    ]
+}

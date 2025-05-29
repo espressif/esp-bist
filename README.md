@@ -28,17 +28,50 @@ Fetch the submodules with the following command:
 git submodule update --init --recursive
 ```
 
+## Dev Container
+
+This repository includes a dev container configuration to ease the development process. The dev container includes all the necessary tools and libraries to build and test the BIST library.
+
+1. Install the Dev Container CLI:
+
+```sh
+npm install -g @devcontainers/cli
+```
+
+2. Start a dev container in your workspace folder:
+
+```sh
+devcontainer up --workspace-folder .
+```
+
+3. You can run commands in this dev container, for example:
+
+```sh
+devcontainer exec --workspace-folder . bash
+```
+## Set up IDF environment variables
+
+Before building the project, make sure to set the IDF_PATH environment variable to access all the necessary tools.
+
+To set up the IDF environment variables, execute the following command:
+
+```sh
+. $IDF_PATH/export.sh
+```
+
 ## Bootloader
 
 The Critical Firmware is designed to run on top of the MCUboot bootloader.
 
 MCUboot is a submodule located at modules/mcuboot.
 
-To build and flash MCUboot, follow the instructions in https://github.com/mcu-tools/mcuboot/blob/main/docs/readme-espressif.md
+```sh
+cd modules/mcuboot/boot/espressif
+cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+ninja -C build
+```
 
 ## Build
-
-Before building the project, make sure to set the IDF_PATH environment variable to access all the necessary tools.
 
 Inside any of the tests or samples directories:
 
@@ -55,7 +88,7 @@ The project uses Kconfig to configure the BIST library. Application developers c
 ninja -C build menuconfig
 ```
 
-The file `bist.conf` in the root directory of any application is mandatory and can be used to set the default configuration for the BIST library. The configuration file is automatically included in the build process. If empty, the BIST library will use the default configuration.
+The file `bist.conf` in the root directory of any application is mandatory and can be used to set the default configuration the project. The configuration file is automatically included in the build process. If empty, the BIST library will use the default configuration.
 
 ## QEMU
 
@@ -84,7 +117,15 @@ riscv32-esp-elf-gdb build/critical_fw_esp32c3.elf -ex "target remote :1234" -ex 
 By default, the flashing process assumes the board is connected to /dev/ttyUSB0. The port can be set with `-DESP_PORT`.
 
 ```sh
-ninja -C build flash -DESP_PORT=/dev/ttyUSB0
+ninja -C build flash -DESP_PORT=/dev/ttyUSBx
+```
+
+## Monitor
+
+To monitor the device output, execute the following command:
+
+```sh
+minicom -D /dev/ttyUSB0 -b 115200
 ```
 
 ## Watchdog

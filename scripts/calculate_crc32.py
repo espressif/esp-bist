@@ -85,8 +85,9 @@ def calculate_crc32(filename):
 def dump_elf_section(filename, section_name):
     """Dump the contents of a section from an ELF file."""
     dump_filename = f"{section_name}_dump.bin"
+    objcopy = os.environ.get("OBJCOPY")
     command = [
-        f"{BIST_ROOT_DIR}/tools/riscv32-esp-elf/bin/riscv32-esp-elf-objcopy",
+        objcopy,
         "--dump-section",
         f"{section_name}={dump_filename}",
         f"{filename}"
@@ -105,8 +106,9 @@ def dump_elf_section(filename, section_name):
 
 def inject_elf_section(filename, section_name, bin_filename):
     """Dump the contents of a section from an ELF file."""
+    objcopy = os.environ.get("OBJCOPY")
     command = [
-        f"{BIST_ROOT_DIR}/tools/riscv32-esp-elf/bin/riscv32-esp-elf-objcopy",
+        objcopy,
         "--update-section",
         f"{section_name}={bin_filename}",
         f"{filename}"
@@ -162,4 +164,3 @@ if __name__ == "__main__":
     os.remove(dump_crc)
 
     sys.exit(error)
-
