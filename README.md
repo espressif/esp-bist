@@ -47,6 +47,16 @@ cmake -DSOC_TARGET=esp32c3 -B build -GNinja
 ninja -C build
 ```
 
+## Project Configuration
+
+The project uses Kconfig to configure the BIST library. Application developers can open a terminal-based project configuration menu using the following command:
+
+```sh
+ninja -C build menuconfig
+```
+
+The file `bist.conf` in the root directory of any application is mandatory and can be used to set the default configuration for the BIST library. The configuration file is automatically included in the build process. If empty, the BIST library will use the default configuration.
+
 ## QEMU
 
 To run on the QEMU emulator, execute the following command:
@@ -83,7 +93,7 @@ The Main System Watchdog Timer (MWDT) of Timer 1 is enabled by default. The MWDT
 
 Before resetting the system, the watchdog can trigger an interrupt to allow the application to perform any necessary operation. The interrupt handler can be defined in the application and registered using `wdt_register_callback(void (*callback)(void *), void *arg)`.
 
-The `CONFIG_WDT_TIMEOUT_US` macro in the `sdkconfig.h` file defines the watchdog timeout in microseconds. The watchdog timeout should be set according to the system's requirements, ensuring it provides sufficient time for the application to complete its operations. The interrupt will be triggered when the watchdog timer reaches its timeout value. The system will be reset after double the timeout value.
+The `CONFIG_WDT_TIMEOUT_US` configuration defines the watchdog timeout in microseconds. The watchdog timeout should be set according to the system's requirements, ensuring it provides sufficient time for the application to complete its operations. The interrupt will be triggered when the watchdog timer reaches its timeout value. The system will be reset after double the timeout value.
 
 ### Windowed Watchdog
 

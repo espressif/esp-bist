@@ -182,7 +182,7 @@ If the XT WDT detects a failure of 200 cycles from the 32KHz crystal, it trigger
 
 ### Main 40 Mhz Crystal Oscillator
 
-This test uses the External 32Khz as a reference for calculating the 40Mhz crystal oscillator frequency. It calculates the ratio between the 40Mhz and 32Khz clocks and compares it with the expected value. If the ratio is out of the specified range, the test returns `BIST_ESP_CLOCK_TEST_ERR`. The frequency drift is set by the `CONFIG_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT` configuration in `sdkconfig.h` and it represents the maximum allowed deviation from the expected value in percentage.
+This test uses the External 32Khz as a reference for calculating the 40Mhz crystal oscillator frequency. It calculates the ratio between the 40Mhz and 32Khz clocks and compares it with the expected value. If the ratio is out of the specified range, the test returns `BIST_ESP_CLOCK_TEST_ERR`. The frequency drift is set by the `CONFIG_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT` configuration and it represents the maximum allowed deviation from the expected value in percentage.
 
 ## CPU Stack tests
 
