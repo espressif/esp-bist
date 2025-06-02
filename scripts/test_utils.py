@@ -70,7 +70,7 @@ class GDB_RISCV(object):
             file.write(script)
 
         # Starts GDB and runs the script
-        gdb_command = [f"{BIST_ROOT_DIR}/tools/riscv32-esp-elf-gdb/bin/riscv32-esp-elf-gdb", f"{self.current_dir}/build/critical_fw_esp32c3.elf","-q", f"--command={self.temp_file_path}"]
+        gdb_command = ["riscv32-esp-elf-gdb", f"{self.current_dir}/build/critical_fw_esp32c3.elf","-q", f"--command={self.temp_file_path}"]
         print("Starting GDB with command: " + " ".join(gdb_command))
         gdb_process = subprocess.Popen(gdb_command)
         return gdb_process
@@ -104,4 +104,3 @@ def qemu_debug_instance(request):
 @pytest.fixture
 def gdb_instance(request):
     return GDB_RISCV(os.path.dirname(request.fspath))
-

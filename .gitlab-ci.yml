@@ -7,6 +7,8 @@ stages:
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env
+  before_script:
+    - . $IDF_PATH/export.sh
 
 build_docker_image:
   before_script: []
@@ -37,15 +39,11 @@ init_submodules:
   script:
     - echo "Fetching submodules"
     - git submodule update --init --recursive
-    - echo "Installing tools"
-    - cd samples/input
-    - cmake -DSOC_TARGET=esp32c3 -B build -GNinja
   when: always
   cache:
     key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
     paths:
       - modules
-      - tools
   tags: [build]
 
 build_mcuboot:
@@ -55,7 +53,7 @@ build_mcuboot:
   script:
     - echo "Building MCUboot"
     - cd modules/mcuboot/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=$CI_PROJECT_DIR/cmake/toolchain-esp32c3.cmake -DBIST_ROOT_DIR=$CI_PROJECT_DIR -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$CI_PROJECT_DIR/modules/esp-idf -DIDF_PATH=$CI_PROJECT_DIR/modules/esp-idf -B build -GNinja
+    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
     - ninja -C build
   when: always
   retry: 1
@@ -64,7 +62,6 @@ build_mcuboot:
     key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
     paths:
       - modules
-      - tools
   artifacts:
       expire_in: 1 day
       paths:
@@ -75,7 +72,6 @@ build_mcuboot:
   needs:
     - build_mcuboot
   script:
-    - pip3 install imgtool # put on docker
     - echo "Building $ROOT_DIR/$TEST_APP_NAME"
     - cd $ROOT_DIR/$TEST_APP_NAME
     - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
@@ -90,7 +86,6 @@ build_mcuboot:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
       paths:
         - modules
-        - tools
 
 build_esp32c3_cpu_reg_test:
   extends:
@@ -153,6 +148,7 @@ build_esp32c3_sample_input:
   needs:
     - build_mcuboot
   before_script:
+    - . $IDF_PATH/export.sh
     - pip3 install pytest-embedded~=1.0
     - pip3 install pytest-embedded-idf
     - pip3 install pytest-embedded-serial-esp
@@ -177,7 +173,6 @@ build_esp32c3_sample_input:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
       paths:
         - modules
-        - tools
 
 test_qemu_esp32c3_cpu_reg_test:
   extends:
@@ -232,21 +227,17 @@ test_qemu_esp32c3_wdt_test:
   needs:
     - build_mcuboot
   before_script:
+    - . $IDF_PATH/export.sh
     - echo "Fetching submodules"
     - git submodule update --init --recursive
-    - echo "Installing tools"
-    - cd samples/input
-    - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
-    - cd $CI_PROJECT_DIR
     - echo "Building MCUboot"
     - cd modules/mcuboot/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=$CI_PROJECT_DIR/cmake/toolchain-esp32c3.cmake -DBIST_ROOT_DIR=$CI_PROJECT_DIR -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$CI_PROJECT_DIR/modules/esp-idf -DIDF_PATH=$CI_PROJECT_DIR/modules/esp-idf -B build -GNinja
+    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
     - ninja -C build
     - cd $CI_PROJECT_DIR
     - pip3 install pytest-embedded~=1.0
     - pip3 install pytest-embedded-idf
     - pip3 install pytest-embedded-serial-esp
-    - pip3 install imgtool # put on docker
   script:
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
@@ -271,7 +262,6 @@ test_qemu_esp32c3_wdt_test:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
       paths:
         - modules
-        - tools
 
 test_device_esp32c3_cpu_reg_test:
   extends:
