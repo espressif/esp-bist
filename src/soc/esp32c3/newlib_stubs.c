@@ -21,3 +21,9 @@ void *_sbrk(int incr)
     cur += incr;
     return prev;
 }
+
+void *_sbrk_r(struct _reent *r, int incr)
+{
+    (void)r; // unused
+    return _sbrk(incr);
+}
