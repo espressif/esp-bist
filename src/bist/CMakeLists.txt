@@ -67,6 +67,8 @@ if(SOC_TARGET STREQUAL "esp32c6")
     )
 endif()
 
+include(${BIST_ROOT_DIR}/cmake/kconfig.cmake)
+
 # Add the soc target definition to the build
 string(TOUPPER "${SOC_TARGET}" SOC_TARGET_UPPER)
 target_compile_definitions(bist_esp
@@ -133,6 +135,7 @@ target_include_directories(
     ../../components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
     )
 
 set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})

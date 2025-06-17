@@ -23,3 +23,4 @@
 #include "bist_flash.h"
 #include "bist_clock_fail.h"
 #include "bist_wdt.h"
+#include "bist_conf.h"

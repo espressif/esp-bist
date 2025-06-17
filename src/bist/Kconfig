@@ -1,0 +1,82 @@
+mainmenu "Built In Self Test (BIST) Configuration"
+
+config BIST
+    bool "Enable Built In Self Test (BIST)"
+    default y
+    help
+      Enable the built-in self-test (BIST) feature for the system.
+      This feature allows for self-diagnosis and verification of system
+      components during startup or at runtime.
+
+menu "BIST Tests"
+    depends on BIST
+
+config BIST_CPU_REG_TEST
+    bool "CPU Register Test"
+    default y
+    help
+      Enable tests for CPU registers.
+
+config BIST_CPU_CSR_REG_TEST
+    bool "CPU CSR Register Test"
+    default y
+    help
+      Enable tests for CPU Control and Status Registers (CSRs).
+
+config BIST_STACK_TEST
+    bool "Stack Test"
+    default y
+    help
+      Enable tests for the stack integrity.
+
+config BIST_CLOCK_TEST
+    bool "Clock Test"
+    default y
+    help
+      Enable tests for the main crystal clock.
+
+config BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
+    int "Clock Frequency Drift Percentage"
+    depends on BIST_CLOCK_TEST
+    range 0 100
+    default 1
+    help
+      Specify the acceptable percentage of frequency drift for the clock test.
+
+endmenu
+
+config FLASH_SIZE
+    hex "Flash Size"
+    default 0x400000
+    help
+      Specify the size of the flash memory in bytes.
+
+config HEAP_SIZE
+    hex "Heap Size"
+    default 0x1000
+    help
+      Specify the size of the heap in bytes. This is used for dynamic memory allocation
+      during BIST operations. A value of 0 means no heap is allocated.
+
+config STACK_PROTECTION_BLOCK_SIZE
+    hex "Stack Protection Block Size"
+    default 0x400
+    help
+      Specify the size of the stack protection block in bytes. This is used to protect
+      the stack from overflow and underflow conditions. A value of 0 means no protection
+      block is allocated.
+
+config WDT_TIMEOUT_US
+    int "WDT Timeout (us)"
+    default 50000
+    help
+      Specify the watchdog timer (WDT) timeout in microseconds. This is the maximum time
+      allowed for the application operations to complete before the watchdog timer triggers a reset.
+
+config WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
+    int "WDT Windowed Underflow Timeout (us)"
+    default 10
+    help
+      Specify the timeout for the windowed underflow condition in microseconds.
+      This is used to ensure that the watchdog timer does not trigger an underflow
+      condition during application time-slot.
