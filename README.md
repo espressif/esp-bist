@@ -125,8 +125,10 @@ ninja -C build flash -DESP_PORT=/dev/ttyUSBx
 To monitor the device output, execute the following command:
 
 ```sh
-minicom -D /dev/ttyUSB0 -b 115200
+ninja -C build monitor
 ```
+
+To close the monitor, press `Ctrl+]`.
 
 ## Watchdog
 

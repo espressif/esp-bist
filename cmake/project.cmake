@@ -322,6 +322,18 @@ add_custom_command(TARGET flash_boot POST_BUILD
     )
 
 # **************************************************************************************************
+# Monitor command
+add_custom_target(monitor DEPENDS ${APP_NAME}.bin)
+add_custom_command(TARGET monitor POST_BUILD
+    USES_TERMINAL
+    COMMAND
+    python
+    ${IDF_PATH}/tools/idf_monitor.py
+    --port ${ESPPORT}
+    ${APP_EXECUTABLE}
+    )
+
+# **************************************************************************************************
 # Qemu Command
 add_custom_target(qemu DEPENDS ${APP_NAME}_qemu_image.bin)
 add_custom_command(TARGET qemu POST_BUILD
