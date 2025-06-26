@@ -36,6 +36,7 @@ if(SOC_TARGET STREQUAL "esp32c3")
         core/cpu/bist_pc.c
         core/clock/bist_clock_fail.c
         core/wdt/bist_wdt.c
+        core/io/bist_gpio.c
         )
 
     set(idf_srcs
@@ -118,6 +119,7 @@ target_include_directories(
     core/memory/include
     core/clock/include
     core/wdt/include
+    core/io/include
     drivers/include
     ../soc/${SOC_TARGET}/include
     ${IDF_PATH}/components/riscv/include

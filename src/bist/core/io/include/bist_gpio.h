@@ -15,19 +15,10 @@
 
 #pragma once
 
-#define ASM(x)                __asm volatile(x)
-#define BIST_ADD_LABEL(label) ASM(#label ":")
+#include "stdint.h"
+#include "bist_esp_types.h"
+#include "gpio.h"
 
-typedef enum {
-    BIST_ESP_OK = 0,
-    BIST_ESP_CPU_TEST_ERR = 1,
-    BIST_ESP_CPU_CSR_TEST_ERR = 2,
-    BIST_ESP_RAM_TEST_ERR = 3,
-    BIST_ESP_FLASH_TEST_ERR = 4,
-    BIST_ESP_PC_TEST_ERR = 5,
-    BIST_ESP_CLOCK_TEST_ERR = 6,
-    BIST_ESP_STACK_TEST_ERR = 7,
-    BIST_ESP_STACK_TEST_OVERFLOW = 8,
-    BIST_ESP_WDT_TEST_ERR = 9,
-    BIST_ESP_IO_TEST_ERR =  10,
-} bist_esp_err_t;
+
+bist_esp_err_t bist_gpio_output_test(gpio_num_t gpio_num);
+bist_esp_err_t bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level);

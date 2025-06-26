@@ -3,7 +3,7 @@
 #include "bist_log.h"
 #include "wdt.h"
 #include "esp_xt_wdt.h"
-#include "bist_gpio.h"
+#include "gpio.h"
 #include "rom/ets_sys.h"
 #include "esp_attr.h"
 
@@ -111,7 +111,19 @@ static void post_boot_tests(void)
         fail_safe_exit();
     }
 
-    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash, Stack");
+    test_err = bist_gpio_output_test(LED_GPIO);
+    if (test_err == BIST_ESP_IO_TEST_ERR) {
+        ESP_LOGE(TAG, "GPIO output test failed for LED GPIO");
+        fail_safe_exit();
+    }
+
+    test_err = bist_gpio_input_test(BTN_GPIO, 1);
+    if (test_err == BIST_ESP_IO_TEST_ERR) {
+        ESP_LOGE(TAG, "GPIO input test failed for Button GPIO");
+        fail_safe_exit();
+    }
+
+    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash, Stack, IO");
 }
 
 int test_malloc(void)
@@ -157,4 +169,3 @@ int main()
 
     return 0;
 }
-
