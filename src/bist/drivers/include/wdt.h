@@ -18,7 +18,7 @@
 #include <stdint.h>
 
 void wdt_deinit(void);
-void wdt_init(uint32_t timeout_ms);
+void wdt_init(uint32_t timeout_us);
 void wdt_feed(void);
 void wdt_register_callback(void (*callback)(void *), void *arg);
-void wdt_init_windowed(uint32_t underflow_timeout_ms);
+void wdt_init_windowed(uint32_t underflow_timeout_us);
