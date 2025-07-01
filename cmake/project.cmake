@@ -21,9 +21,12 @@ else()
     message(FATAL_ERROR "IDF_PATH environment variable is not set.")
 endif()
 
-set(MODULES_PATH ${BIST_ROOT_DIR}/modules)
-set(MCUBOOT_PATH ${MODULES_PATH}/mcuboot)
-set(MCUBOOT_BIN_PATH ${MODULES_PATH}/mcuboot/boot/espressif/build)
+if (DEFINED ENV{MCUBOOT_PATH})
+    set(MCUBOOT_PATH $ENV{MCUBOOT_PATH})
+    set(MCUBOOT_BIN_PATH "${MCUBOOT_PATH}/boot/espressif/build")
+else()
+    message(FATAL_ERROR "MCUBOOT_PATH environment variable is not set.")
+endif()
 
 # Find installed esptool, if not found falls to IDF's
 find_program(ESPTOOL_COMMAND

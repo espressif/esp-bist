@@ -69,10 +69,12 @@ To set up the IDF environment variables, execute the following command:
 
 The Critical Firmware is designed to run on top of the MCUboot bootloader.
 
-MCUboot is a submodule located at modules/mcuboot.
+The current supported version of MCUboot is 2.2.0.
+
+MCUboot is a located at opt/mcuboot.
 
 ```sh
-cd modules/mcuboot/boot/espressif
+cd /opt/mcuboot/boot/espressif
 cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
 ninja -C build
 ```

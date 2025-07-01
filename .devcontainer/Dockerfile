@@ -97,4 +97,17 @@ RUN : \
     && rm -rf $IDF_TOOLS_PATH/dist \
     && :
 
+# Download MCUboot
+ARG MCUBOOT_VER=v2.2.0
+ARG MCUBOOT_URL="https://github.com/mcu-tools/mcuboot"
+ARG MCUBOOT_SHA256=94d2e63fb6bc042d583267a1e82ab1481618eb7808a49fe455af435d5cd6072e
+ENV MCUBOOT_PATH=/opt/mcuboot
+RUN : \
+    && wget --no-verbose ${MCUBOOT_URL}/archive/refs/tags/${MCUBOOT_VER}.tar.gz \
+    && echo "${MCUBOOT_SHA256} ${MCUBOOT_VER}.tar.gz" | sha256sum --check --strict - \
+    && mkdir -p ${MCUBOOT_PATH} \
+    && tar -xf ${MCUBOOT_VER}.tar.gz -C ${MCUBOOT_PATH} --strip-components=1 \
+    && rm ${MCUBOOT_VER}.tar.gz \
+    && :
+
 RUN echo '. $IDF_PATH/export.sh' >> /root/.profile
