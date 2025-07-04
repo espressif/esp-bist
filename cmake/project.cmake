@@ -121,6 +121,7 @@ set(include_hal
     ${IDF_PATH}/components/hal/platform_port/include
     ${IDF_PATH}/components/hal/platform_port/include/hal
     ${BIST_ROOT_DIR}/components/esp_common/include
+    ${IDF_PATH}/components/esp_common/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
@@ -162,7 +163,6 @@ set(idf_ow_srcs
     ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
-    ${BIST_ROOT_DIR}/components/newlib/assert.c
     ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
 )
 

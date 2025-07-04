@@ -11,6 +11,7 @@ The Espressif's Built-in Self Test library performs the following tests:
 - Non-volatile memory
 - Program Counter (PC)
 - Clock
+- Digital IO
 
 ## Supported SoCs
 
@@ -97,7 +98,7 @@ The BIST routines work by temporarily backing up a chunk of the heap before perf
 
 - March X:
 
-`bist_ram_test_march_a` is a more comprehensive test that includes several phases of writing and reading in both ascending and descending orders, intended to uncover a wider range of potential memory faults.
+`bist_ram_test_march_x` is a more comprehensive test that includes several phases of writing and reading in both ascending and descending orders, intended to uncover a wider range of potential memory faults.
 
 ## Non-volatile memory Test
 
@@ -226,3 +227,30 @@ Upon detecting a stack overflow, appropriate error handling procedures should be
 ### Stack Overflow Handler
 
 The signature for the stack overflow handler is `void handle_stack_overflow(void)` and should be defined in the application code.
+
+## IO Tests
+
+The IO (GPIO) test routines verify the correct operation of the digital Input/Output pins.
+
+These tests are supposed to be run before the application configures the GPIO pins, as they will configure the pins to a known state and perform read/write operations to ensure the pins are functioning correctly.
+
+### Output Test
+
+The output test (`bist_gpio_output_test`) checks if a GPIO pin can be reliably set to logic low and high:
+
+1. The pin is configured as output.
+2. The test sets the pin to logic low (0) and reads back the value to confirm.
+3. The test sets the pin to logic high (1) and reads back the value to confirm.
+4. If the pin does not reflect the expected value at any step, the test fails with error code `BIST_ESP_IO_TEST_ERR`.
+
+This ensures the pin can be controlled as expected by the application.
+
+### Input Test
+
+The input test (`bist_gpio_input_test`) checks if a GPIO pin can correctly read an external logic level:
+
+1. The pin is configured as input.
+2. The test reads the pin value and compares it to the expected logic level (0 or 1) provided by the user.
+3. If the read value does not match the expected value, the test fails with error code `BIST_ESP_IO_TEST_ERR`.
+
+This ensures the pin can reliably read external signals.

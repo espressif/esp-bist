@@ -1,5 +1,5 @@
-def test_wdt_success(dut):
-    tests_names = ["test_BIST_WDT"]
+def test_io(dut):
+    tests_names = ["test_BIST_IO_INVALID_GPIO", "test_BIST_IO_OUTPUT_GPIO"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 
     # expect from what esptool.py printed to sys.stdout

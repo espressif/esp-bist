@@ -135,6 +135,14 @@ build_esp32c3_wdt_test:
     TEST_APP_NAME: 'wdt_test'
     SOC_TARGET: 'esp32c3'
 
+build_esp32c3_digital_io_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'digital_io_test'
+    SOC_TARGET: 'esp32c3'
+
 build_esp32c3_sample_input:
   extends:
     - .build_template
@@ -309,4 +317,12 @@ test_device_esp32c3_wdt_test:
   needs: ["build_esp32c3_wdt_test"]
   variables:
     TEST_APP_NAME: 'wdt_test'
+    SOC_TARGET: 'esp32c3'
+
+test_device_esp32c3_digital_io_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_digital_io_test"]
+  variables:
+    TEST_APP_NAME: 'digital_io_test'
     SOC_TARGET: 'esp32c3'

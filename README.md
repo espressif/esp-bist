@@ -38,13 +38,19 @@ This repository includes a dev container configuration to ease the development p
 npm install -g @devcontainers/cli
 ```
 
-2. Start a dev container in your workspace folder:
+2. Build the dev container image:
+
+```sh
+devcontainer build --workspace-folder .
+```
+
+3. Start a dev container in your workspace folder:
 
 ```sh
 devcontainer up --workspace-folder .
 ```
 
-3. You can run commands in this dev container, for example:
+4. You can run commands in this dev container, for example:
 
 ```sh
 devcontainer exec --workspace-folder . bash
