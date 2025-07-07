@@ -1,6 +1,5 @@
 stages:
   - Build-Docker-Image
-  - Pre-Build
   - Build
   - Test Qemu
   - Test Device
@@ -9,6 +8,12 @@ default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env
   before_script:
     - . $IDF_PATH/export.sh
+    - echo "Building MCUboot"
+    - cd $MCUBOOT_PATH/boot/espressif
+    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+    - ninja -C build
+    - cd $CI_PROJECT_DIR
+
 
 build_docker_image:
   before_script: []
@@ -18,7 +23,7 @@ build_docker_image:
   variables:
     DOCKER_TLS_CERTDIR: ""
     IMAGE_NAME: espressif/esp-bist/build-env
-    DOCKERFILE: .gitlab/docker/build-env/Dockerfile
+    DOCKERFILE: .devcontainer/Dockerfile
   script:
     - mkdir -p config
     - echo ${DOCKER_AUTH_CONFIG} > config/config.json
@@ -33,44 +38,8 @@ build_docker_image:
       when: manual
   tags: [ "dind", "shiny" ]
 
-init_submodules:
-  stage: Pre-Build
-  before_script: []
-  script:
-    - echo "Fetching submodules"
-    - git submodule update --init --recursive
-  when: always
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
-    paths:
-      - modules
-  tags: [build]
-
-build_mcuboot:
-  stage: Pre-Build
-  needs:
-    - init_submodules
-  script:
-    - echo "Building MCUboot"
-    - cd modules/mcuboot/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
-    - ninja -C build
-  when: always
-  retry: 1
-  tags: [build]
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
-    paths:
-      - modules
-  artifacts:
-      expire_in: 1 day
-      paths:
-        - modules/mcuboot/boot/espressif/build/
-
 .build_template:
   stage: Build
-  needs:
-    - build_mcuboot
   script:
     - echo "Building $ROOT_DIR/$TEST_APP_NAME"
     - cd $ROOT_DIR/$TEST_APP_NAME
@@ -83,9 +52,6 @@ build_mcuboot:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
         - $ROOT_DIR/$TEST_APP_NAME/build
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
-      paths:
-        - modules
 
 build_esp32c3_cpu_reg_test:
   extends:
@@ -153,8 +119,6 @@ build_esp32c3_sample_input:
 
 .test_qemu_template:
   stage: Test Qemu
-  needs:
-    - build_mcuboot
   before_script:
     - . $IDF_PATH/export.sh
     - pip3 install pytest-embedded~=1.0
@@ -178,9 +142,6 @@ build_esp32c3_sample_input:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
         - tests/$TEST_APP_NAME/build
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
-      paths:
-        - modules
 
 test_qemu_esp32c3_cpu_reg_test:
   extends:
@@ -232,21 +193,10 @@ test_qemu_esp32c3_wdt_test:
 
 .test_device_template:
   stage: Test Device
-  needs:
-    - build_mcuboot
-  before_script:
-    - . $IDF_PATH/export.sh
-    - echo "Fetching submodules"
-    - git submodule update --init --recursive
-    - echo "Building MCUboot"
-    - cd modules/mcuboot/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
-    - ninja -C build
-    - cd $CI_PROJECT_DIR
+  script:
     - pip3 install pytest-embedded~=1.0
     - pip3 install pytest-embedded-idf
     - pip3 install pytest-embedded-serial-esp
-  script:
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
     - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
@@ -267,9 +217,6 @@ test_qemu_esp32c3_wdt_test:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
         - tests/$TEST_APP_NAME/build
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_submodules
-      paths:
-        - modules
 
 test_device_esp32c3_cpu_reg_test:
   extends:
