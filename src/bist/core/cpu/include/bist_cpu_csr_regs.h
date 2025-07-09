@@ -17,5 +17,10 @@
 
 #include "stdint.h"
 #include "bist_esp_types.h"
+#ifndef __ZEPHYR__
+#include "bist_conf.h"
+#endif
 
+#if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
 bist_esp_err_t bist_cpu_csr_regs_test(void);
+#endif

@@ -53,7 +53,7 @@ ENV PIP_PACKAGES="\
     pyserial==3.5 \
     setuptools \
     wheel \
-    pytest \
+    pytest==8.4.1 \
     esptool==4.7.0 \
 "
 

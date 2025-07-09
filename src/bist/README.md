@@ -158,7 +158,7 @@ The Windowed Watchdog mechanism relies on two key components working together th
 - Private Timer
 - Main Watchdog Timer (Hardware Watchdog)
 
-The private timer is configured independently. It defines the bottom of the time-slot window. The main watchdog defines the top of the time-slot window. The private timer is set to a value defined by `CONFIG_WDT_UNDERFLOW_US` while the main watchdog is set to a value defined by `CONFIG_WDT_TIMEOUT_US`.
+The private timer is configured independently. It defines the bottom of the time-slot window. The main watchdog defines the top of the time-slot window. The private timer is set to a value defined by `CONFIG_ESP_BIST_WDT_UNDERFLOW_US` while the main watchdog is set to a value defined by `CONFIG_ESP_BIST_WDT_TIMEOUT_US`.
 
 If the application tries to reset the watchdog:
 
@@ -254,3 +254,21 @@ The input test (`bist_gpio_input_test`) checks if a GPIO pin can correctly read 
 3. If the read value does not match the expected value, the test fails with error code `BIST_ESP_IO_TEST_ERR`.
 
 This ensures the pin can reliably read external signals.
+
+## Watchdog
+
+The Main System Watchdog Timer (MWDT) of Timer 1 is enabled by default. The MWDT is a hardware watchdog timer that can be used to monitor the system's operation and detect potential failures. The MWDT is configured to trigger a system reset if the system fails to clear the watchdog within a specified time frame. The MWDT is enabled by default to ensure the system can recover from potential failures and maintain operational integrity.
+
+Before resetting the system, the watchdog can trigger an interrupt to allow the application to perform any necessary operation. The interrupt handler can be defined in the application and registered using `wdt_register_callback(void (*callback)(void *), void *arg)`.
+
+The `CONFIG_ESP_BIST_WDT_TIMEOUT_US` configuration defines the watchdog timeout in microseconds. The watchdog timeout should be set according to the system's requirements, ensuring it provides sufficient time for the application to complete its operations. The interrupt will be triggered when the watchdog timer reaches its timeout value. The system will be reset after double the timeout value.
+
+### Windowed Watchdog
+
+The system implements a Windowed Watchdog using a private timer in conjunction with the main watchdog timer. This mechanism provides indirect time-slot monitoring of the application execution flow.
+
+A Program Counter (PC) Fault is detected if the watchdog timer is not reset within a specified time window. If an underflow occurs (early reset), subsequent attempts to reset the watchdog within the same time window will fail, ensuring fault detection.
+
+The Underflow value is defined in microseconds by `CONFIG_ESP_BIST_WDT_UNDERFLOW_US` in the `sdkconfig.h` file. The overflow value is the same as the main watchdog timer timeout, defined by `CONFIG_ESP_BIST_WDT_TIMEOUT_US`.
+
+The windowed watchdog can be enabled with `void wdt_init_windowed(uint32_t underflow_timeout_us)`.

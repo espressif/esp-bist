@@ -19,13 +19,7 @@ This repository is licensed under the LGPL-3.0 license. For more information, se
 To download the repository, execute the following command:
 
 ```sh
-git clone --recursive https://github.com/espressif/esp-bist.git
-```
-
-Fetch the submodules with the following command:
-
-```sh
-git submodule update --init --recursive
+git clone https://github.com/espressif/esp-bist.git
 ```
 
 ## Dev Container
@@ -137,24 +131,6 @@ ninja -C build monitor
 ```
 
 To close the monitor, press `Ctrl+]`.
-
-## Watchdog
-
-The Main System Watchdog Timer (MWDT) of Timer 1 is enabled by default. The MWDT is a hardware watchdog timer that can be used to monitor the system's operation and detect potential failures. The MWDT is configured to trigger a system reset if the system fails to clear the watchdog within a specified time frame. The MWDT is enabled by default to ensure the system can recover from potential failures and maintain operational integrity.
-
-Before resetting the system, the watchdog can trigger an interrupt to allow the application to perform any necessary operation. The interrupt handler can be defined in the application and registered using `wdt_register_callback(void (*callback)(void *), void *arg)`.
-
-The `CONFIG_WDT_TIMEOUT_US` configuration defines the watchdog timeout in microseconds. The watchdog timeout should be set according to the system's requirements, ensuring it provides sufficient time for the application to complete its operations. The interrupt will be triggered when the watchdog timer reaches its timeout value. The system will be reset after double the timeout value.
-
-### Windowed Watchdog
-
-The system implements a Windowed Watchdog using a private timer in conjunction with the main watchdog timer. This mechanism provides indirect time-slot monitoring of the application execution flow.
-
-A Program Counter (PC) Fault is detected if the watchdog timer is not reset within a specified time window. If an underflow occurs (early reset), subsequent attempts to reset the watchdog within the same time window will fail, ensuring fault detection.
-
-The Underflow value is defined in microseconds by `CONFIG_WDT_UNDERFLOW_US` in the `sdkconfig.h` file. The overflow value is the same as the main watchdog timer timeout, defined by `CONFIG_WDT_TIMEOUT_US`.
-
-The windowed watchdog can be enabled with `void wdt_init_windowed(uint32_t underflow_timeout_us)`.
 
 ## Testing
 

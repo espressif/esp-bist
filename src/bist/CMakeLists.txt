@@ -12,6 +12,11 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_VERSION 0.0.1)
 project(bist_esp VERSION 0.0.1 DESCRIPTION "Espressif's Built-In Self Test (BIST) Library")
 
+if(DEFINED ZEPHYR_BASE)
+        include(zephyr.cmake)
+        return()
+endif()
+
 # SOC_TARGET must be defined
 if(DEFINED IDF_TARGET)
     set(SOC_TARGET ${IDF_TARGET})

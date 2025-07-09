@@ -20,6 +20,7 @@
 #include "bist_log.h"
 #include "math.h"
 #include "rom/ets_sys.h"
+#include "bist_conf.h"
 
 static volatile bool test_failed = false;
 static const char *TAG = "BIST_CLOCK";
@@ -82,7 +83,7 @@ bist_esp_err_t bist_main_crystal_test(void)
      * Check if the calculated XTAL frequency is within
      * CONFIG_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
      */
-    if (deviation > CONFIG_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {
+    if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {
         return BIST_ESP_CLOCK_TEST_ERR;
     }
 
