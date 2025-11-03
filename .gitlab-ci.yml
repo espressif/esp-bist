@@ -117,6 +117,25 @@ build_esp32c3_sample_standalone:
     TEST_APP_NAME: 'standalone'
     SOC_TARGET: 'esp32c3'
 
+build_zephyr_esp32c6_sample:
+  stage: Build
+  image: ghcr.io/zephyrproject-rtos/ci:latest
+  before_script: []
+  variables:
+    ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
+  script:
+    - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
+    - cd "$ZEPHYR_WORKSPACE"
+    - west update --narrow -o=--depth=1
+    - west zephyr-export
+    - west build -p -b esp32c6_devkitc/esp32c6/hpcore "$CI_PROJECT_DIR/samples/zephyr" --sysbuild -D ZEPHYR_EXTRA_MODULES="$CI_PROJECT_DIR"
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - zephyr-workspace/build/zephyr/zephyr.elf
+  tags: [build]
+  
 .test_qemu_template:
   stage: Test Qemu
   before_script:
