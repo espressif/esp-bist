@@ -24,4 +24,6 @@
 #include "bist_clock_fail.h"
 #include "bist_wdt.h"
 #include "bist_gpio.h"
+#ifndef __ZEPHYR__
 #include "bist_conf.h"
+#endif

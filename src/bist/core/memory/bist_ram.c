@@ -16,6 +16,8 @@
 #include <stdbool.h>
 #include "bist_ram.h"
 
+#if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
+
 #ifndef SOC_TARGET_ESP32C6
 #define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
 #else
@@ -154,3 +156,5 @@ bist_esp_err_t bist_ram_test_march_x(void)
 
     return BIST_ESP_OK;
 }
+
+#endif // CONFIG_ESP_BIST_MEMORY_RAM_TEST

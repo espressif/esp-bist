@@ -18,6 +18,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "bist_esp_types.h"
+#ifndef __ZEPHYR__
+#include "bist_conf.h"
+#endif
 
+#if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
 bist_esp_err_t bist_ram_test_march_a(void);
 bist_esp_err_t bist_ram_test_march_x(void);
+#endif

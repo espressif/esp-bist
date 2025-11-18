@@ -30,8 +30,8 @@
 #define USER_DRAM_SEG_LEN  USER_IDRAM_SIZE
 
 /* Flash */
-#ifdef CONFIG_FLASH_SIZE
-#define FLASH_SIZE         CONFIG_FLASH_SIZE
+#ifdef CONFIG_ESP_BIST_FLASH_SIZE
+#define FLASH_SIZE         CONFIG_ESP_BIST_FLASH_SIZE
 #else
 #define FLASH_SIZE         0x400000
 #endif
@@ -558,7 +558,7 @@ SECTIONS
     _heap_start = ABSOLUTE(.);
     _bist_ram_test_start = ABSOLUTE(.);
     /* define the reserved block for heap */
-    . += CONFIG_HEAP_SIZE;
+    . += CONFIG_ESP_BIST_HEAP_SIZE;
     _heap_end = ABSOLUTE(.);
     KEEP(*(.dram0.heap_start))
   } > dram0_0_seg
@@ -568,7 +568,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _stack_overflow_protection_end = .;
-    . += CONFIG_STACK_PROTECTION_BLOCK_SIZE;
+    . += CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE;
     _stack_overflow_protection_start = .;
   } >dram0_0_seg
 

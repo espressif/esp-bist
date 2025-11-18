@@ -1,43 +1,49 @@
 mainmenu "Built In Self Test (BIST) Configuration"
 
-config BIST
+config ESP_BIST
     bool "Enable Built In Self Test (BIST)"
-    default y
+    default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable the built-in self-test (BIST) feature for the system.
       This feature allows for self-diagnosis and verification of system
       components during startup or at runtime.
 
-menu "BIST Tests"
-    depends on BIST
+menu "ESP-BIST Tests"
+    depends on ESP_BIST
 
-config BIST_CPU_REG_TEST
+config ESP_BIST_CPU_REG_TEST
     bool "CPU Register Test"
-    default y
+    default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for CPU registers.
 
-config BIST_CPU_CSR_REG_TEST
+config ESP_BIST_CPU_CSR_REG_TEST
     bool "CPU CSR Register Test"
-    default y
+    default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for CPU Control and Status Registers (CSRs).
 
-config BIST_STACK_TEST
+config ESP_BIST_MEMORY_RAM_TEST
+    bool "Memory RAM Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+        Enable tests for the RAM memory integrity (March A and March X).
+
+config ESP_BIST_STACK_TEST
     bool "Stack Test"
-    default y
+    default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for the stack integrity.
 
-config BIST_CLOCK_TEST
+config ESP_BIST_CLOCK_TEST
     bool "Clock Test"
-    default y
+    default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for the main crystal clock.
 
-config BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
+config ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
     int "Clock Frequency Drift Percentage"
-    depends on BIST_CLOCK_TEST
+    depends on ESP_BIST_CLOCK_TEST
     range 0 100
     default 1
     help
@@ -45,20 +51,21 @@ config BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
 
 endmenu
 
-config FLASH_SIZE
+# Standalone build system configs (not available when building with Zephyr)
+config ESP_BIST_FLASH_SIZE
     hex "Flash Size"
     default 0x400000
     help
       Specify the size of the flash memory in bytes.
 
-config HEAP_SIZE
+config ESP_BIST_HEAP_SIZE
     hex "Heap Size"
     default 0x1000
     help
       Specify the size of the heap in bytes. This is used for dynamic memory allocation
       during BIST operations. A value of 0 means no heap is allocated.
 
-config STACK_PROTECTION_BLOCK_SIZE
+config ESP_BIST_STACK_PROTECTION_BLOCK_SIZE
     hex "Stack Protection Block Size"
     default 0x400
     help
@@ -66,14 +73,14 @@ config STACK_PROTECTION_BLOCK_SIZE
       the stack from overflow and underflow conditions. A value of 0 means no protection
       block is allocated.
 
-config WDT_TIMEOUT_US
+config ESP_BIST_WDT_TIMEOUT_US
     int "WDT Timeout (us)"
     default 50000
     help
       Specify the watchdog timer (WDT) timeout in microseconds. This is the maximum time
       allowed for the application operations to complete before the watchdog timer triggers a reset.
 
-config WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
+config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
     int "WDT Windowed Underflow Timeout (us)"
     default 10
     help

@@ -52,6 +52,8 @@
     }                                                                                                                  \
     while (0)
 
+#if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
+
 bist_esp_err_t bist_cpu_csr_regs_test(void)
 {
     // Machine Trap Setup CSRs
@@ -92,3 +94,5 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     ASM(" ret");
     return BIST_ESP_CPU_CSR_TEST_ERR;
 }
+
+#endif // CONFIG_ESP_BIST_CPU_CSR_REG_TEST

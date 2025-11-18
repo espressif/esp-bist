@@ -158,8 +158,8 @@ int main()
     test_malloc();
 
     ESP_EARLY_LOGI(TAG, "Initializing WDT");
-    wdt_init(CONFIG_WDT_TIMEOUT_US);
-    wdt_init_windowed(CONFIG_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US);
+    wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
+    wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US);
 
     while (1) {
         set_led(get_button());
