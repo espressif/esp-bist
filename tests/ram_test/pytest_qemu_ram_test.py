@@ -1,17 +1,5 @@
-import pytest
-import sys
-import os
 import time
 import queue
-
-# Add the 'scripts' directory to the Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.join(current_dir, '..', '..')
-scripts_path = os.path.join(project_root, 'scripts')
-sys.path.append(scripts_path)
-
-# Now you can import from test_utils.py
-from test_utils import QEMU_RISCV, GDB_RISCV, qemu_instance, qemu_debug_instance, gdb_instance
 
 def test_ram_success(qemu_instance):
     qemu, qemu_process, output_queue = qemu_instance
@@ -78,5 +66,3 @@ def test_ram_march_a_error(qemu_debug_instance, gdb_instance):
 
 def test_ram_march_x_error(qemu_debug_instance, gdb_instance):
     ram_error_test(qemu_debug_instance, gdb_instance, "test_BIST_ram_march_x",  "bist_ram_test_march_x_step2", "0xFF")
-
-
