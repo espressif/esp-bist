@@ -3,9 +3,8 @@
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
-
     "mounts": [
-        "type=bind,source=/dev/ttyUSB0,target=/dev/ttyUSB0"
+        "type=bind,source=/dev,target=/dev"
     ],
     "runArgs": [
         "--privileged"
