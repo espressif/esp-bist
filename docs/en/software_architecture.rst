@@ -1,0 +1,107 @@
+Software Architecture
+=====================
+
+Architecture Overview and Layering
+-----------------------------------
+
+The ESP-BIST standalone firmware uses a three-layer architecture:
+
+- **Application layer** — Integrates BIST tests and fail-safe logic (e.g., ``samples/standalone/main.c``). Runs post-boot tests, registers watchdog and crystal failure callbacks, initializes stack overflow detection, and runs runtime tests in the main loop.
+- **BIST library layer** (``src/bist/``) — Core safety test routines and driver wrappers:
+
+  - Core modules ``core/cpu/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``
+  - Driver layer ``drivers/`` for watchdog, XT WDT, GPIO, timer
+  - Public API headers ``src/bist/include/`` and ``src/bist/core/include/`` expose test functions and error codes
+- **SoC and HAL layer** (``soc/{IDF_TARGET_PATH_NAME}/``, ``components/``) — Startup code, vector table, linker script, minimal HAL stubs, and memory layout control.
+
+Key Build Properties
+^^^^^^^^^^^^^^^^^^^^
+- CMake + Ninja build; toolchain pinned in dev container and ``cmake/toolchain-{IDF_TARGET_PATH_NAME}.cmake``
+- BIST library compiled with ``-O0``/``-ggdb``, strict warnings, ``-std=gnu17``, section flags, and volatile bitfield safety flags
+- All BIST objects placed in IRAM by linker for deterministic timing; CRC regions reserved in flash
+- Kconfig-driven configuration compiled into ``bist_conf.h``; timing and memory parameters recorded in build artifacts
+
+Modules Architecture
+--------------------
+
+- **CPU tests** (``core/cpu/``): register integrity, CSR integrity, PC integrity (functions placed in IRAM/Flash/RTC), stack overflow detection
+- **Memory tests** (``core/memory/``): RAM March A/X; flash CRC validation
+- **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring; 40MHz crystal drift measurement
+- **WDT tests** (``core/wdt/``): watchdog init and stack overflow handler registration
+- **IO tests** (``core/io/``): GPIO output/input plausibility checks
+- **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, GPIO, timer wrappers
+- **Performance Metrics** (``include/bist_metrics.h``): Macro-based Performance Counter CSR interface for measuring CPU cycles, instruction counts, and microarchitectural events during BIST test execution
+- **SoC support** (``soc/{IDF_TARGET_PATH_NAME}/``): startup, vectors, linker script, newlib stubs
+
+Hierarchy & Call Structure
+--------------------------
+
+.. blockdiag::
+    :scale: 100%
+    :caption: BIST Call Structure
+    :align: center
+
+    blockdiag {
+        Boot -> "BIST Post boot tests" -> "Success?";
+        "Success?" -> Application [label = "Yes"];
+        "Success?" -> "Safe State" [label = "No"];
+        Application -> "Runtime Loop";
+        "Runtime Loop" -> "Periodic BIST";
+        "Periodic BIST" -> "Tests Pass?";
+        "Tests Pass?" -> "Runtime Loop" [label = "Yes"];
+        "Tests Pass?" -> "Safe State" [label = "No"];
+
+        Boot [shape = roundedbox];
+        "BIST Post boot tests" [shape = box];
+        "Success?" [shape = diamond];
+        Application [shape = box];
+        "Safe State" [shape = box];
+        "Runtime Loop" [shape = box];
+        "Periodic BIST" [shape = box];
+        "Tests Pass?" [shape = diamond];
+    }
+
+Interrupt Handling
+------------------
+
+- Vector table in ``soc/{IDF_TARGET_PATH_NAME}/vectors.S`` mapped to IRAM.
+- MWDT interrupt before reset; callback registered via ``wdt_register_callback`` must be short and deterministic.
+- XT WDT interrupt for 32kHz crystal failure via ``esp_xt_wdt_register_callback``.
+- Library does not install ISRs; it exposes registration APIs only.
+
+Data Storage Model
+------------------
+
+- **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash region.
+- **IRAM**: All ``libbist_esp.a`` code placed in IRAM for deterministic timing; PC test functions in dedicated sections.
+- **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel at bottom of stack; safe RAM buffer excluded from RAM test.
+- **RTC/LP RAM**: Small RAM region used by PC test.
+- **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).
+
+Time-Based Dependencies
+-----------------------
+
+- **Watchdog timing**: ``CONFIG_ESP_BIST_WDT_TIMEOUT_US`` defines feed window; reset at ~2× stage interval.
+- **Windowed watchdog**: ``CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US`` enforces minimum feed interval; early feeds flag underflow.
+- **Clock tests**: Measure frequency ratio vs 32.768 kHz; tolerance via ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT``.
+- **XT WDT**: Detects 32kHz failure after ~200 cycles.
+- **Runtime tests**: CPU/CSR/stack/PC executed within watchdog window; deterministic bounded execution.
+- **Post-boot tests**: RAM, flash, stack, GPIO run once at startup; integrators ensure total time fits safety goals.
+
+Hardware/Software Interfaces
+----------------------------
+
+- Clock control via XT WDT and ESP timer
+- Flash CRC injection/readback via ``scripts/calculate_crc32.py`` and runtime CRC in ``bist_flash_test``
+- GPIO configuration and I/O via driver wrappers
+- Watchdog APIs for MWDT/windowed and XT WDT callbacks
+- Interrupt controller use limited to watchdog-related handlers
+
+Error Control Measures (Architecture)
+-------------------------------------
+
+- SR/NSR separation: BIST library and SoC support are SR; scripts/tests are NSR.
+- Minimal TCB: small modular tests, no dynamic allocation in SR.
+- CRC redundancy: post-build CRC injection; runtime verification.
+- Build reproducibility: toolchain and flags fixed in CMake; IRAM placement for deterministic timing.
+- Stack boundary checking: sentinel block defined by linker/Kconfig.

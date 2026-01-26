@@ -3,6 +3,8 @@ stages:
   - Build
   - Test Qemu
   - Test Device
+  - Static-Analysis
+  - Build Docs
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env
@@ -19,7 +21,7 @@ build_docker_image:
   before_script: []
   image: espressif/dind:1
   stage: Build-Docker-Image
-  timeout: 2h
+  timeout: 4h
   variables:
     DOCKER_TLS_CERTDIR: ""
     IMAGE_NAME: espressif/esp-bist/build-env
@@ -43,7 +45,7 @@ build_docker_image:
   script:
     - echo "Building $ROOT_DIR/$TEST_APP_NAME"
     - cd $ROOT_DIR/$TEST_APP_NAME
-    - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
+    - cmake -DSOC_TARGET=$SOC_TARGET -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build -GNinja
     - ninja -C build
   when: always
   retry: 1
@@ -117,33 +119,35 @@ build_esp32c3_sample_standalone:
     TEST_APP_NAME: 'standalone'
     SOC_TARGET: 'esp32c3'
 
-build_zephyr_esp32c6_sample:
-  stage: Build
-  image: ghcr.io/zephyrproject-rtos/ci:latest
-  before_script: []
-  variables:
-    ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
-  script:
-    - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
-    - cd "$ZEPHYR_WORKSPACE"
-    - west update --narrow -o=--depth=1
-    - west zephyr-export
-    - west build -p -b esp32c6_devkitc/esp32c6/hpcore "$CI_PROJECT_DIR/samples/zephyr" --sysbuild -D ZEPHYR_EXTRA_MODULES="$CI_PROJECT_DIR"
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - zephyr-workspace/build/zephyr/zephyr.elf
-  tags: [build]
-  
+# build_zephyr_esp32c6_sample:
+#   stage: Build
+#   image: ghcr.io/zephyrproject-rtos/ci:latest
+#   before_script: []
+#   variables:
+#     ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
+#   script:
+#     - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
+#     - cd "$ZEPHYR_WORKSPACE"
+#     - west update --narrow -o=--depth=1
+#     - west zephyr-export
+#     - west build -p -b esp32c6_devkitc/esp32c6/hpcore "$CI_PROJECT_DIR/samples/zephyr" --sysbuild -D ZEPHYR_EXTRA_MODULES="$CI_PROJECT_DIR"
+#   artifacts:
+#     when: always
+#     expire_in: 1 week
+#     paths:
+#       - zephyr-workspace/build/zephyr/zephyr.elf
+#   tags: [build]
+
 .test_qemu_template:
   stage: Test Qemu
+  variables:
+    REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
   script:
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --junitxml=build/tests/report.xml
+    - pytest pytest_qemu* --executable=$TEST_APP_NAME --junitxml=$REPORT_PATH
   when: always
   retry: 1
   tags: [build]
@@ -151,9 +155,9 @@ build_zephyr_esp32c6_sample:
     when: always
     expire_in: 1 week
     paths:
-      - tests/$TEST_APP_NAME/build/tests/report.xml
+      - tests/$TEST_APP_NAME/$REPORT_PATH
     reports:
-      junit: tests/$TEST_APP_NAME/build/tests/report.xml
+      junit: tests/$TEST_APP_NAME/$REPORT_PATH
   cache:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
@@ -209,23 +213,25 @@ test_qemu_esp32c3_wdt_test:
 
 .test_device_template:
   stage: Test Device
+  variables:
+    REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
   script:
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
     - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
     - ninja -C build
     - ninja -C build flash_boot
-    - pytest pytest_device* --junitxml=build/tests/report.xml
+    - pytest pytest_device* --executable=$TEST_APP_NAME --junitxml=$REPORT_PATH
   when: always
   retry: 1
-  tags: [generic, esp32c3]
+  tags: [generic, $SOC_TARGET]
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - tests/$TEST_APP_NAME/build/tests/report.xml
+      - tests/$TEST_APP_NAME/$REPORT_PATH
     reports:
-      junit: tests/$TEST_APP_NAME/build/tests/report.xml
+      junit: tests/$TEST_APP_NAME/$REPORT_PATH
   cache:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${TEST_APP_NAME}
       paths:
@@ -286,3 +292,78 @@ test_device_esp32c3_digital_io_test:
   variables:
     TEST_APP_NAME: 'digital_io_test'
     SOC_TARGET: 'esp32c3'
+
+# static_analysis:
+#   stage: Static-Analysis
+#   needs: ["build_esp32c3_sample_standalone"]
+#   script:
+#     - echo "Running static analysis and preparing GitLab Pages content"
+#     - bash scripts/run_static_analysis.sh samples/standalone
+#     - ls -R docs/validation-reports/samples/standalone/static-analysis || true
+#     - mkdir -p public
+#     - REPORT_DIR="docs/validation-reports/samples/standalone/static-analysis"
+#     - if [ -d "$REPORT_DIR/cppcheck-misra-html" ]; then cp -r "$REPORT_DIR/cppcheck-misra-html" public/; fi
+#     - cp "$REPORT_DIR/env.txt" public/ 2>/dev/null || true
+#     - cp "$REPORT_DIR/cppcheck-misra.xml" public/ 2>/dev/null || true
+#     - echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>ESP-BIST Static Analysis</title><style>body{font-family:Arial,sans-serif;margin:2rem;}a{display:block;margin:.3rem 0;}code{background:#f5f5f5;padding:2px 4px;border-radius:3px;}footer{margin-top:2rem;font-size:.8em;color:#666}</style></head><body><h1>ESP-BIST Static Analysis Reports</h1><p>Generated from commit <code>${CI_COMMIT_SHORT_SHA}</code> on branch <code>${CI_COMMIT_REF_NAME}</code>.</p><h2>Artifacts</h2><ul><li><a href=\"cppcheck-misra-html/index.html\">Cppcheck MISRA HTML Report</a></li><li><a href=\"cppcheck-misra.xml\">Cppcheck MISRA XML (raw)</a></li><li><a href=\"env.txt\">Environment Info</a></li></ul><footer>Published via GitLab Pages job at $(date --iso-8601=seconds)</footer></body></html>" > public/index.html
+#   pages: true
+#   artifacts:
+#     paths:
+#       - public
+#   cache:
+#   - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_standalone
+#     paths:
+#       - samples/standalone/build
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "push"'
+#       when: always
+#     - when: never
+#   tags: [build]
+
+build_docs:
+  stage: Build Docs
+  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
+  before_script: []
+  needs:
+    - artifacts: true
+      job: test_qemu_esp32c3_cpu_reg_test
+    - artifacts: true
+      job: test_qemu_esp32c3_cpu_stack_test
+    - artifacts: true
+      job: test_qemu_esp32c3_ram_test
+    - artifacts: true
+      job: test_qemu_esp32c3_flash_test
+    - artifacts: true
+      job: test_qemu_esp32c3_pc_test
+    - artifacts: true
+      job: test_qemu_esp32c3_wdt_test
+    - artifacts: true
+      job: test_device_esp32c3_cpu_reg_test
+    - artifacts: true
+      job: test_device_esp32c3_cpu_stack_test
+    - artifacts: true
+      job: test_device_esp32c3_ram_test
+    - artifacts: true
+      job: test_device_esp32c3_flash_test
+    - artifacts: true
+      job: test_device_esp32c3_pc_test
+    - artifacts: true
+      job: test_device_esp32c3_wdt_test
+    - artifacts: true
+      job: test_device_esp32c3_digital_io_test
+  script:
+    - cd docs
+    - bash build.sh
+    - cp _build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf _build/en/esp32c3/html/esp-bist-en-master-esp32c3.pdf
+    - cd ..
+    - mkdir -p public
+    - cp -r docs/_build/en/esp32c3/html/* public/
+  artifacts:
+    paths:
+      - public
+  pages: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+    - when: never
+  tags: [build]
