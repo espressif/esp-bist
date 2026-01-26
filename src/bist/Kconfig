@@ -29,6 +29,19 @@ config ESP_BIST_MEMORY_RAM_TEST
     help
         Enable tests for the RAM memory integrity (March A and March X).
 
+config ESP_BIST_MEMORY_FLASH_TEST
+    bool "Memory Flash Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+      Enable tests for the Flash memory integrity.
+
+config BIST_FLASH_TEST_CHUNK_SIZE
+    hex "Flash Test Chunk Size"
+    depends on ESP_BIST_MEMORY_FLASH_TEST
+    default 0x1000
+    help
+      Specify the chunk size in bytes for flash memory testing.
+
 config ESP_BIST_STACK_TEST
     bool "Stack Test"
     default y if !ZEPHYR_ESP_BIST_MODULE
@@ -67,7 +80,7 @@ config ESP_BIST_HEAP_SIZE
 
 config ESP_BIST_STACK_PROTECTION_BLOCK_SIZE
     hex "Stack Protection Block Size"
-    default 0x400
+    default 0x100
     help
       Specify the size of the stack protection block in bytes. This is used to protect
       the stack from overflow and underflow conditions. A value of 0 means no protection
@@ -87,3 +100,10 @@ config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
       Specify the timeout for the windowed underflow condition in microseconds.
       This is used to ensure that the watchdog timer does not trigger an underflow
       condition during application time-slot.
+
+config ESP_BIST_METRICS
+    bool "BIST Metrics Collection"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+      Enable the collection of performance metrics during BIST operations, such as
+      execution time, CPU cycles, and instruction counts.

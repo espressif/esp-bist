@@ -15,6 +15,7 @@
 
 #include <stdbool.h>
 #include "bist_flash.h"
+#include "bist_conf.h"
 #include "esp_log.h"
 
 // Pointer to CRC32 value

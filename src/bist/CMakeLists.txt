@@ -8,7 +8,7 @@
 #  You should have received a copy of the GNU General Public License along with BIST library. If not, see
 #  <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 set(PROJECT_VERSION 0.0.1)
 project(bist_esp VERSION 0.0.1 DESCRIPTION "Espressif's Built-In Self Test (BIST) Library")
 

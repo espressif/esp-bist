@@ -334,6 +334,7 @@ SECTIONS
     *esp_cache.*(.literal .literal.* .text .text.*)
     *cache_utils.*(.literal .text .literal.* .text.*)
 
+    *libbist_esp.a:*(.text .text.*)
     . = ALIGN(4) + 16;
 
   } >iram0_0_seg AT>ROM
@@ -492,6 +493,8 @@ SECTIONS
     /* [mapping:esp_system] */
     *esp_err.*(.rodata .rodata.*)
     *(.rodata.esp_system_abort)
+
+    *libbist_esp.a:*(.rodata .rodata.*)
 
     . = ALIGN(4);
 

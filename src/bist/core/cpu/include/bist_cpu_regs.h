@@ -13,6 +13,17 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_cpu_regs.h
+ * @brief CPU general-purpose register integrity test
+ *
+ * Tests all 32 RISC-V general-purpose registers (X1-X31) by writing
+ * alternating bit patterns (0xAAAAAAAA and 0x55555555) to verify:
+ * - No stuck-at-0 or stuck-at-1 faults
+ * - All register bits functional
+ * - Proper read/write operation
+ */
+
 #pragma once
 
 #include "stdint.h"
@@ -21,6 +32,14 @@
 #include "bist_conf.h"
 #endif
 
-#if defined(CONFIG_ESP_BIST_CPU_REG_TEST)
+/**
+ * @brief Test CPU general-purpose register integrity
+ *
+ * Verifies all 32 RISC-V general-purpose registers can retain both
+ * 0 and 1 values without corruption. Uses checkerboard patterns
+ * (0xAAAAAAAA and 0x55555555) to detect stuck-at faults.
+ *
+ * @return BIST_ESP_OK if all registers pass
+ * @return BIST_ESP_CPU_TEST_ERR if any register fails
+ */
 bist_esp_err_t bist_cpu_regs_test(void);
-#endif

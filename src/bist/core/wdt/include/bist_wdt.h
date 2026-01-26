@@ -13,9 +13,32 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_wdt.h
+ * @brief Watchdog timer operation test
+ *
+ * Validates watchdog timer (MWDT) initialization, timeout detection,
+ * and reset reason reporting. Test intentionally triggers a watchdog
+ * timeout and verifies the system resets with correct reset reason.
+ */
+
 #pragma once
 
 #include "stdint.h"
 #include "bist_esp_types.h"
 
+/**
+ * @brief Test watchdog timer operation
+ *
+ * Two-phase test:
+ * 1. First execution: Initializes watchdog with 100 µs timeout,
+ *    waits 1000 µs, causing watchdog to expire and trigger reset
+ * 2. After reset: Checks reset reason is RESET_REASON_CORE_MWDT0
+ *
+ * @return BIST_ESP_OK if WDT reset detected (second execution)
+ * @return BIST_ESP_WDT_TEST_ERR if watchdog fails to trigger reset
+ *
+ * @note First execution will cause system reset. Success is detected
+ *       on subsequent boot by checking reset reason.
+ */
 bist_esp_err_t bist_wdt_test(void);

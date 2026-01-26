@@ -13,6 +13,15 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_flash.h
+ * @brief Flash memory CRC validation test
+ *
+ * Validates flash integrity by computing CRC32 checksums of .flash.text
+ * and .flash.rodata sections at runtime and comparing against stored
+ * values injected during build (by scripts/calculate_crc32.py).
+ */
+
 #pragma once
 
 #include <stdint.h>
@@ -20,4 +29,17 @@
 #include "bist_esp_types.h"
 #include "sdkconfig.h"
 
+/**
+ * @brief Test flash memory integrity via CRC validation
+ *
+ * Computes CRC32 for:
+ * - .flash.text section (executable code)
+ * - .flash.rodata section (read-only data)
+ *
+ * Compares computed CRC against stored values (injected post-build).
+ * Processes flash in 1024-byte chunks.
+ *
+ * @return BIST_ESP_OK if both CRCs match
+ * @return BIST_ESP_FLASH_TEST_ERR if any CRC mismatch detected
+ */
 bist_esp_err_t bist_flash_test(void);

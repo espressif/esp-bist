@@ -13,6 +13,11 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_log.h
+ * @brief Logging macros for BIST library
+ */
+
 #include "esp_log.h"
 
 #undef ESP_LOGE
@@ -21,8 +26,13 @@
 #undef ESP_LOGD
 #undef ESP_LOGV
 
+/** @brief Log error message */
 #define ESP_LOGE(tag, format, ...) ESP_EARLY_LOGE(tag, format, ##__VA_ARGS__)
+/** @brief Log warning message */
 #define ESP_LOGW(tag, format, ...) ESP_EARLY_LOGW(tag, format, ##__VA_ARGS__)
+/** @brief Log info message */
 #define ESP_LOGI(tag, format, ...) ESP_EARLY_LOGI(tag, format, ##__VA_ARGS__)
+/** @brief Log debug message */
 #define ESP_LOGD(tag, format, ...) ESP_EARLY_LOGD(tag, format, ##__VA_ARGS__)
+/** @brief Log verbose message */
 #define ESP_LOGV(tag, format, ...) ESP_EARLY_LOGV(tag, format, ##__VA_ARGS__)

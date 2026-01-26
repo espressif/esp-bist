@@ -13,6 +13,16 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_cpu_csr_regs.h
+ * @brief CPU Control and Status Register (CSR) integrity test
+ *
+ * Tests RISC-V CSRs including MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL,
+ * and all 16 PMP address registers (PMPADDR0-PMPADDR15) by writing
+ * alternating bit patterns while respecting CSR-specific write masks.
+ * Original CSR values are saved and restored after testing.
+ */
+
 #pragma once
 
 #include "stdint.h"
@@ -21,6 +31,14 @@
 #include "bist_conf.h"
 #endif
 
-#if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
+/**
+ * @brief Test CPU Control and Status Register integrity
+ *
+ * Verifies 21 CSRs (5 main CSRs + 16 PMP address CSRs) can be
+ * written and read reliably. Saves original values, tests with
+ * alternating patterns, and restores originals.
+ *
+ * @return BIST_ESP_OK if all CSRs pass
+ * @return BIST_ESP_CPU_CSR_TEST_ERR if any CSR fails
+ */
 bist_esp_err_t bist_cpu_csr_regs_test(void);
-#endif

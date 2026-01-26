@@ -13,6 +13,19 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_core.h
+ * @brief Core BIST module aggregator
+ *
+ * Includes all individual BIST test module headers:
+ * - CPU register tests
+ * - Memory tests (RAM and Flash)
+ * - Program Counter tests
+ * - Clock integrity tests
+ * - Watchdog tests
+ * - GPIO tests
+ */
+
 #pragma once
 
 #include "bist_cpu_regs.h"

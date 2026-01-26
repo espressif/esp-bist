@@ -17,12 +17,10 @@
 #include "sdkconfig.h"
 #include "soc/soc_caps.h"
 
-#include "esp_log.h"
+#include "bist_log.h"
 #include "esp_check.h"
 #include "esp_attr.h"
 #include "esp_intr_alloc.h"
-
-#if SOC_XT_WDT_SUPPORTED
 
 #include "esp_private/rtc_ctrl.h"
 #include "hal/xt_wdt_hal.h"
@@ -43,7 +41,7 @@ static void *s_callback_arg;
 
 static IRAM_ATTR void rtc_xt_wdt_default_isr_handler(void *arg)
 {
-    ESP_EARLY_LOGE(TAG, "XTAL32K watchdog timer got triggered");
+    ESP_LOGE(TAG, "XTAL32K watchdog timer got triggered");
 
     uint32_t status = REG_READ(RTC_CNTL_INT_ST_REG);
     REG_WRITE(RTC_CNTL_INT_CLR_REG, status);
@@ -64,7 +62,7 @@ esp_err_t esp_xt_wdt_init(const esp_xt_wdt_config_t *cfg)
     if (cfg->auto_backup_clk_enable) {
         /* Estimate frequency of internal RTC oscillator */
         uint32_t rtc_clk_frequency_khz = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_INTERNAL_OSC, RTC_CLK_CAL_CYCLES)) / 1000;
-        ESP_EARLY_LOGD(TAG, "Calibrating backup clock from rtc clock with frequency %" PRIu32, rtc_clk_frequency_khz);
+        ESP_LOGD(TAG, "Calibrating backup clock from rtc clock with frequency %" PRIu32, rtc_clk_frequency_khz);
 
         xt_wdt_hal_enable_backup_clk(&s_hal_ctx, rtc_clk_frequency_khz);
     }
@@ -100,5 +98,3 @@ void esp_xt_wdt_register_callback(esp_xt_callback_t func, void *arg)
     s_callback_func = func;
     s_callback_arg = arg;
 }
-
-#endif // SOC_XT_WDT_SUPPORTED

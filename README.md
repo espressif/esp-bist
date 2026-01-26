@@ -152,7 +152,6 @@ To run the tests on the device, execute the following command:
 
 ```sh
 pytest pytest_device_* --junitxml=build/tests/report.xml
-
 ```
 
 ## Samples

@@ -287,7 +287,7 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
                 gpio_pulldown_dis(io_num);
             }
 
-            ESP_LOGI(GPIO_TAG,
+            ESP_LOGD(GPIO_TAG,
                 "GPIO[%" PRIu32 "]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d",
                 io_num, input_en, output_en, od_en, pu_en, pd_en);
 

@@ -13,6 +13,24 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_esp.h
+ * @brief Main include file for ESP-BIST (Built-In Self Test) library
+ *
+ * This header includes all core BIST test modules for Espressif ESP32-C3/C6 SoCs.
+ * Include this single header to access all BIST functionality.
+ *
+ * The ESP-BIST library provides IEC 60730 Class B compliant self-test functions for:
+ * - CPU register and CSR integrity
+ * - RAM testing (March A and March X algorithms)
+ * - Flash CRC validation
+ * - Program Counter integrity
+ * - Clock monitoring
+ * - Stack overflow detection
+ * - Watchdog timer operation
+ * - GPIO functionality
+ */
+
 #pragma once
 
 #include "bist_esp_types.h"

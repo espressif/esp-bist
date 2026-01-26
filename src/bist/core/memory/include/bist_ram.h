@@ -13,6 +13,18 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file bist_ram.h
+ * @brief RAM integrity testing using March algorithms
+ *
+ * Implements March A and March X algorithms for detecting stuck-at
+ * and transition faults in RAM. Tests are non-destructive as original
+ * RAM content is backed up and restored.
+ *
+ * - March A: 3-step algorithm (Write 0, Read 0/Write 1, Read 1)
+ * - March X: 6-step algorithm with additional descending address operations
+ */
+
 #pragma once
 
 #include <stdint.h>
@@ -22,7 +34,37 @@
 #include "bist_conf.h"
 #endif
 
-#if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
+/**
+ * @brief Test RAM integrity using March A algorithm
+ *
+ * Executes 3-step March A algorithm:
+ * 1. Write 0 to all cells (ascending)
+ * 2. Read 0, write 1 (ascending)
+ * 3. Read 1 from all cells (ascending)
+ *
+ * Backs up original RAM content before test and restores after.
+ * Test region defined by linker symbols _bist_ram_test_start/_end.
+ *
+ * @return BIST_ESP_OK if RAM passes test
+ * @return BIST_ESP_RAM_TEST_ERR if mismatch detected
+ */
 bist_esp_err_t bist_ram_test_march_a(void);
+
+/**
+ * @brief Test RAM integrity using March X algorithm
+ *
+ * Executes 6-step March X algorithm:
+ * 1. Write 0 to all cells (ascending)
+ * 2. Read 0, write 1 (ascending)
+ * 3. Read 1 from all cells (ascending)
+ * 4. Read 1, write 0 (descending)
+ * 5. Read 0, write 1 (ascending)
+ * 6. Read 1, write 0 (descending)
+ *
+ * More comprehensive than March A. Backs up and restores RAM content.
+ * Test region defined by linker symbols _bist_ram_test_start/_end.
+ *
+ * @return BIST_ESP_OK if RAM passes test
+ * @return BIST_ESP_RAM_TEST_ERR if mismatch detected
+ */
 bist_esp_err_t bist_ram_test_march_x(void);
-#endif
