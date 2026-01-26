@@ -1,7 +1,6 @@
 build/
 __pycache__/
 .pytest_cache/
-.vscode
 tools/
 .github/copilot-instructions.md
 *.dump
