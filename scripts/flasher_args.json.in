@@ -8,13 +8,13 @@
         "flash_freq": "80m"
     },
     "flash_files" : {
-        "0x10000" : "critical_fw_esp32c3_signed.bin"
+        "0x10000" : "@APP_NAME@_signed.bin"
     },
-    "app" : { "offset" : "0x10000", "file" : "critical_fw_esp32c3_signed.bin", "encrypted" : "false" },
+    "app" : { "offset" : "0x10000", "file" : "@APP_NAME@_signed.bin", "encrypted" : "false" },
     "extra_esptool_args" : {
         "after"  : "no_reset",
         "before" : "default_reset",
         "stub"   : true,
-        "chip"   : "esp32c3"
+        "chip"   : "@SOC_TARGET@"
     }
 }

@@ -1,6 +1,9 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
-enable_language(C ASM)
+# Enable compile_commands.json by default unless the user explicitly sets it to OFF
+if (NOT CMAKE_EXPORT_COMPILE_COMMANDS)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
 
 if (NOT DEFINED SOC_TARGET)
     message(FATAL_ERROR "SOC_TARGET not defined. Please set -DSOC_TARGET.")
@@ -51,6 +54,19 @@ else()
 endif()
 
 # **************************************************************************************************
+
+if (NOT DEFINED APP_SOURCES)
+    message(FATAL_ERROR "APP_SOURCES not defined. Please set APP_SOURCES before including project.cmake")
+endif()
+
+set(CMAKE_TOOLCHAIN_FILE ${BIST_ROOT_DIR}/cmake/toolchain-${SOC_TARGET}.cmake)
+
+set(APP_EXECUTABLE ${APP_NAME}.elf)
+
+add_executable(${APP_EXECUTABLE} ${APP_SOURCES})
+
+enable_language(C ASM)
+
 add_subdirectory(${BIST_ROOT_DIR}/src/bist ${CMAKE_BINARY_DIR}/bist)
 target_link_libraries(${APP_EXECUTABLE} PUBLIC bist_esp)
 
@@ -287,7 +303,14 @@ add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
 # Copy flasher_args.json to build folder
 add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
     COMMAND
-    ${CMAKE_COMMAND} -E copy ${BIST_ROOT_DIR}/scripts/flasher_args.json ${CMAKE_BINARY_DIR}/flasher_args.json
+    ${CMAKE_COMMAND} -E copy ${BIST_ROOT_DIR}/scripts/flasher_args.json.in ${CMAKE_BINARY_DIR}/flasher_args.json.in
+    COMMAND
+    ${CMAKE_COMMAND}
+    -DINPUT_FILE=${CMAKE_BINARY_DIR}/flasher_args.json.in
+    -DOUTPUT_FILE=${CMAKE_BINARY_DIR}/flasher_args.json
+    -DAPP_NAME=${APP_NAME}
+    -DSOC_TARGET=${SOC_TARGET}
+    -P ${BIST_ROOT_DIR}/cmake/flash_target.cmake
     )
 
 # **************************************************************************************************
@@ -319,7 +342,7 @@ add_custom_command(TARGET flash_boot POST_BUILD
     ${esptool_path}
     -p ${ESPPORT} -b 460800 --before default_reset --after hard_reset
     --chip ${SOC_TARGET} write_flash
-    --flash_mode dio --flash_size detect
+    --flash_mode dio --flash_size detect --force
     --flash_freq 40m 0x0
     ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin
     )
@@ -353,4 +376,16 @@ add_custom_command(TARGET qemu_debug POST_BUILD
     COMMAND
     qemu-system-riscv32 -s -S -nographic -icount 3 -machine ${SOC_TARGET}
     -drive file=${APP_NAME}_qemu_image.bin,if=mtd,format=raw
+    )
+
+# **************************************************************************************************
+# Debug Commands
+
+add_custom_target(debug DEPENDS ${APP_EXECUTABLE})
+add_custom_command(TARGET debug POST_BUILD
+    USES_TERMINAL
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND
+    ${BIST_ROOT_DIR}/scripts/debug.sh
+    ${APP_EXECUTABLE}
     )
