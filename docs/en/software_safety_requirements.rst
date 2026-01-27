@@ -167,52 +167,52 @@ All physical memory regions are defined by the linker script (``src/soc/{IDF_TAR
 
 .. only:: esp32c3
 
-- ROM 0 (instruction): 0x4000_0000 - 0x4003_FFFF (256 KB, read-only ROM)
-- ROM 1 (instruction): 0x4004_0000 - 0x4005_FFFF (128 KB, read-only ROM)
-- ROM 1 (data): 0x3FF0_0000 - 0x3FF1_FFFF (128 KB, read-only ROM)
-- SRAM 0 (instructions): 0x4037_C000 - 0x4037_FFFF (16KB SRAM)
-- SRAM 1 (data/instruction): 0x3FC8_0000 - 0x3FCD_FFFF (384 KB SRAM)
-- RTC (data/instruction): 0x5000_0000 - 0x5000_1FFF
-- External Flash (data): 0x3C00_0000 - 0x3C7F_FFFF (8MB external flash)
-- External Flash (instruction): 0x4200_0000 - 0x427F_FFFF (8MB external flash)
+  - ROM 0 (instruction): 0x4000_0000 - 0x4003_FFFF (256 KB, read-only ROM)
+  - ROM 1 (instruction): 0x4004_0000 - 0x4005_FFFF (128 KB, read-only ROM)
+  - ROM 1 (data): 0x3FF0_0000 - 0x3FF1_FFFF (128 KB, read-only ROM)
+  - SRAM 0 (instructions): 0x4037_C000 - 0x4037_FFFF (16KB SRAM)
+  - SRAM 1 (data/instruction): 0x3FC8_0000 - 0x3FCD_FFFF (384 KB SRAM)
+  - RTC (data/instruction): 0x5000_0000 - 0x5000_1FFF
+  - External Flash (data): 0x3C00_0000 - 0x3C7F_FFFF (8MB external flash)
+  - External Flash (instruction): 0x4200_0000 - 0x427F_FFFF (8MB external flash)
 
 .. only:: esp32c5
 
-- ROM: 0x4000_0000 - 0x4004_FFFF (320 KB, read-only ROM)
-- HP SRAM (data/instructions): 0x4080_0000 - 0x4085_FFFF (384 KB HP SRAM)
-- LP SRAM: 0x5000_0000 - 0x5000_3FFF (16 KB LP SRAM, retained in deep sleep; accessible by HP and LP CPU)
-- External Flash (via cache/MMU): 0x4200_0000 - 0x43FF_FFFF (up to 32 MB external flash)
-- External RAM (via cache/MMU): 0x4200_0000 - 0x43FF_FFFF (up to 32 MB external flash)
+  - ROM: 0x4000_0000 - 0x4004_FFFF (320 KB, read-only ROM)
+  - HP SRAM (data/instructions): 0x4080_0000 - 0x4085_FFFF (384 KB HP SRAM)
+  - LP SRAM: 0x5000_0000 - 0x5000_3FFF (16 KB LP SRAM, retained in deep sleep; accessible by HP and LP CPU)
+  - External Flash (via cache/MMU): 0x4200_0000 - 0x43FF_FFFF (up to 32 MB external flash)
+  - External RAM (via cache/MMU): 0x4200_0000 - 0x43FF_FFFF (up to 32 MB external flash)
 
 .. only:: esp32c6
 
-- ROM: 0x4000_0000 - 0x4004_FFFF (320 KB, read-only ROM)
-- HP SRAM (data/instructions): 0x4080_0000 - 0x4087_FFFF (512 KB HP SRAM)
-- LP SRAM: 0x5000_0000 - 0x5000_3FFF (16 KB LP SRAM, retained in deep sleep; accessible by HP and LP CPU)
-- External Flash (via cache/MMU): 0x4200_0000 - 0x42FF_FFFF (up to 16 MB external flash)
+  - ROM: 0x4000_0000 - 0x4004_FFFF (320 KB, read-only ROM)
+  - HP SRAM (data/instructions): 0x4080_0000 - 0x4087_FFFF (512 KB HP SRAM)
+  - LP SRAM: 0x5000_0000 - 0x5000_3FFF (16 KB LP SRAM, retained in deep sleep; accessible by HP and LP CPU)
+  - External Flash (via cache/MMU): 0x4200_0000 - 0x42FF_FFFF (up to 16 MB external flash)
 
 .. only:: esp32c61
 
-- ROM: 0x4000_0000 - 0x4003_FFFF (256 KB, read-only ROM)
-- HP SRAM (data/instructions): 0x4080_0000 - 0x4084_FFFF (320 KB HP SRAM)
-- External Flash (via cache/MMU): 0x4200_0000 - 0x43FF_FFFF (up to 32 MB external flash)
+  - ROM: 0x4000_0000 - 0x4003_FFFF (256 KB, read-only ROM)
+  - HP SRAM (data/instructions): 0x4080_0000 - 0x4084_FFFF (320 KB HP SRAM)
+  - External Flash (via cache/MMU): 0x4200_0000 - 0x43FF_FFFF (up to 32 MB external flash)
 
 .. only:: esp32h2
 
-- ROM: 0x4000_0000 - 0x4001_FFFF (218 KB, read-only ROM)
-- HP SRAM (data/instructions): 0x4080_0000 - 0x4084_FFFF (320 KB HP SRAM)
-- LP SRAM: 0x5000_0000 - 0x5000_0FFF (4 KB LP SRAM, retained in deep sleep; accessible by HP and LP CPU)
-- External Flash (via cache/MMU): 0x4200_0000 - 0x42FF_FFFF (up to 16 MB external flash)
+  - ROM: 0x4000_0000 - 0x4001_FFFF (218 KB, read-only ROM)
+  - HP SRAM (data/instructions): 0x4080_0000 - 0x4084_FFFF (320 KB HP SRAM)
+  - LP SRAM: 0x5000_0000 - 0x5000_0FFF (4 KB LP SRAM, retained in deep sleep; accessible by HP and LP CPU)
+  - External Flash (via cache/MMU): 0x4200_0000 - 0x42FF_FFFF (up to 16 MB external flash)
 
 .. only:: esp32p4
 
-- HP ROM: 0x4FC0_0000 - 0x4FC1_FFFF (128 KB, read-only ROM)
-- HP SPM (data/instructions): 0x3010_0000 - 0x3010_1FFF (8 KB HP SPM, a volatile memory accessed by the HP CPU, finishing one access in two cycles)
-- HP L2MEM (data/instructions): 0x4FF0_0000 - 0x4FFB_FFFF (768 KB L2MEM, retained in light sleep)
-- LP ROM: 0x5010_0000 - 0x5010_3FFF (16 KB LP ROM, read-only ROM)
-- LP SRAM: 0x5010_8000 - 0x5010_FFFF (32 KB LP SRAM, retained in light sleep)
-- External Flash (via cache/MMU): 0x4000_0000 - 0x43FF_FFFF (up to 64 MB external flash)
-- External RAM (via cache/MMU): 0x4800_0000 - 0x4BFF_FFFF (up to 64 MB external RAM)
+  - HP ROM: 0x4FC0_0000 - 0x4FC1_FFFF (128 KB, read-only ROM)
+  - HP SPM (data/instructions): 0x3010_0000 - 0x3010_1FFF (8 KB HP SPM, a volatile memory accessed by the HP CPU, finishing one access in two cycles)
+  - HP L2MEM (data/instructions): 0x4FF0_0000 - 0x4FFB_FFFF (768 KB L2MEM, retained in light sleep)
+  - LP ROM: 0x5010_0000 - 0x5010_3FFF (16 KB LP ROM, read-only ROM)
+  - LP SRAM: 0x5010_8000 - 0x5010_FFFF (32 KB LP SRAM, retained in light sleep)
+  - External Flash (via cache/MMU): 0x4000_0000 - 0x43FF_FFFF (up to 64 MB external flash)
+  - External RAM (via cache/MMU): 0x4800_0000 - 0x4BFF_FFFF (up to 64 MB external RAM)
 
 Section Placement
 ^^^^^^^^^^^^^^^^^
@@ -251,31 +251,31 @@ The {IDF_TARGET_NAME} uses the following reference clock sources:
 
 .. only:: esp32c3
 
-- **Main crystal oscillator:** 40 MHz
+  - **Main crystal oscillator:** 40 MHz
 
 .. only:: esp32c5
 
-- **Main crystal oscillator:** 40 MHz
+  - **Main crystal oscillator:** 40 MHz
 
 .. only:: esp32c6
 
-- **Main crystal oscillator:** 40 MHz
+  - **Main crystal oscillator:** 40 MHz
 
 .. only:: esp32c61
 
-- **Main crystal oscillator:** 40 MHz
+  - **Main crystal oscillator:** 40 MHz
 
 .. only:: esp32h2
 
-- **Main crystal oscillator:** 32 MHz
+  - **Main crystal oscillator:** 32 MHz
 
 .. only:: esp32h4
 
-- **Main crystal oscillator:** 32 MHz
+  - **Main crystal oscillator:** 32 MHz
 
 .. only:: esp32p4
 
-- **Main crystal oscillator:** 40 MHz
+  - **Main crystal oscillator:** 40 MHz
 
 The BIST clock tests validate that the main crystal and the 32.768 kHz external crystal are present and operating within expected tolerances. The frequency ratio is measured at runtime and compared against thresholds defined by build-time constants and Kconfig options (see ``src/bist/Kconfig``).
 

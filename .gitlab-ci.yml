@@ -5,6 +5,7 @@ stages:
   - Test Device
   - Static-Analysis
   - Build Docs
+  - Deploy Docs
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env
@@ -320,10 +321,11 @@ test_device_esp32c3_digital_io_test:
 #     - when: never
 #   tags: [build]
 
-build_docs:
+.build_docs_template:
   stage: Build Docs
   image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
   before_script: []
+  tags: [build]
   needs:
     - artifacts: true
       job: test_qemu_esp32c3_cpu_reg_test
@@ -351,19 +353,85 @@ build_docs:
       job: test_device_esp32c3_wdt_test
     - artifacts: true
       job: test_device_esp32c3_digital_io_test
-  script:
-    - cd docs
-    - bash build.sh
-    - cp _build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf _build/en/esp32c3/html/esp-bist-en-master-esp32c3.pdf
-    - cd ..
-    - mkdir -p public
-    - cp -r docs/_build/en/esp32c3/html/* public/
+
+build_docs_html:
+  extends:
+    - .build_docs_template
+  variables:
+    DOCS_DIR: $CI_PROJECT_DIR/docs
   artifacts:
+    when: always
     paths:
-      - public
-  pages: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-      when: always
-    - when: never
+      - $DOCS_DIR/_build/*/*/html/*
+      - $DOCS_DIR/_build/*/*/*.txt
+    expire_in: 4 days
+  script:
+    - cd $DOCS_DIR
+    - build-docs -t esp32c3 --skip-reqs-check -l en
+    - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/html/index.html"
+
+build_docs_pdf:
+  extends:
+    - .build_docs_template
+  variables:
+    DOCS_DIR: $CI_PROJECT_DIR/docs
+  artifacts:
+    when: always
+    paths:
+      - $DOCS_DIR/_build/*/*/latex/*
+      - $DOCS_DIR/_build/*/*/*.txt
+    expire_in: 4 days
+  script:
+    - cd $DOCS_DIR
+    - build-docs -t esp32c3 --skip-reqs-check -l en -bs latex
+    - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf"
+
+deploy_preview_docs:
+  stage: Deploy Docs
+  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
+  before_script: []
   tags: [build]
+  variables:
+    DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
+    TYPE: "preview"
+    DOCS_DEPLOY_PRIVATEKEY: "$DOCS_PREVIEW_PRIVATEKEY"
+    DOCS_DEPLOY_SERVER: "$DOCS_PREVIEW_SERVER"
+    DOCS_DEPLOY_SERVER_USER: "$DOCS_PREVIEW_SERVER_USER"
+    DOCS_DEPLOY_PATH: "$DOCS_PREVIEW_PATH"
+    DOCS_DEPLOY_URL_BASE: "$DOCS_PREVIEW_URL_BASE"
+  script:
+    - source scripts/utils.sh
+    - add_doc_server_ssh_keys $DOCS_DEPLOY_PRIVATEKEY $DOCS_DEPLOY_SERVER $DOCS_DEPLOY_SERVER_USER
+    - export GIT_VER=$(git describe --abbrev=10 --always)
+    - deploy-docs
+  needs:
+    - build_docs_html
+    - build_docs_pdf
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: always
+
+deploy_prod_docs:
+  stage: Deploy Docs
+  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
+  before_script: []
+  tags: [build]
+  variables:
+    DOCS_BUILD_DIR: "${CI_PROJECT_DIR}/docs/_build/"
+    TYPE: "prod"
+    DOCS_DEPLOY_PRIVATEKEY: "$DOCS_PROD_PRIVATEKEY"
+    DOCS_DEPLOY_SERVER: "$DOCS_PROD_SERVER"
+    DOCS_DEPLOY_SERVER_USER: "$DOCS_PROD_SERVER_USER"
+    DOCS_DEPLOY_PATH: "$DOCS_PROD_PATH"
+    DOCS_DEPLOY_URL_BASE: "$DOCS_PROD_URL_BASE"
+  script:
+    - source scripts/utils.sh
+    - add_doc_server_ssh_keys $DOCS_DEPLOY_PRIVATEKEY $DOCS_DEPLOY_SERVER $DOCS_DEPLOY_SERVER_USER
+    - export GIT_VER=$(git describe --abbrev=10 --always)
+    - deploy-docs
+  needs:
+    - build_docs_html
+    - build_docs_pdf
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always

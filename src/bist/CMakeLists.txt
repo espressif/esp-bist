@@ -9,7 +9,7 @@
 #  <https://www.gnu.org/licenses/>.
 
 cmake_minimum_required(VERSION 3.22)
-set(PROJECT_VERSION 0.0.1)
+set(PROJECT_VERSION 1.0.0)
 project(bist_esp VERSION 0.0.1 DESCRIPTION "Espressif's Built-In Self Test (BIST) Library")
 
 if(DEFINED ZEPHYR_BASE)
