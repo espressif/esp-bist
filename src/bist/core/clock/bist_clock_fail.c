@@ -25,7 +25,7 @@
 static volatile bool test_failed = false;
 static const char *TAG = "BIST_CLOCK";
 
-static IRAM_ATTR void test_callback(void *arg)
+static void test_callback(void *arg)
 {
     test_failed = true;
 }
@@ -47,11 +47,10 @@ bist_esp_err_t bist_ext_crystal_fail_test(void)
         return BIST_ESP_CLOCK_TEST_ERR;
     }
 
-    for (uint32_t k = 0; k < 500; k++) {
-        ets_delay_us(1000);
-    }
+    ets_delay_us(2000);
 
     if (test_failed) {
+        test_failed = false;
         return BIST_ESP_CLOCK_TEST_ERR;
     }
 
@@ -81,7 +80,7 @@ bist_esp_err_t bist_main_crystal_test(void)
 
     /*
      * Check if the calculated XTAL frequency is within
-     * CONFIG_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
+     * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
      */
     if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {
         return BIST_ESP_CLOCK_TEST_ERR;

@@ -3,14 +3,14 @@
  *
  * This file is part of Espressif's BIST (Built-In Self Test) Library.
  *
- * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+ * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
  *
  * BIST library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with BIST library. If not, see
- * <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License along with BIST library. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
 
 #include "sdkconfig.h"
@@ -55,8 +55,11 @@ void IRAM_ATTR mwdt_default_callback(void *args)
     }
 }
 
-void wdt_windowed_underflow_callback()
+void wdt_windowed_underflow_callback(void *arg)
 {
+    (void)arg;
+
+    /* Set window flag to allow feeding */
     wdt_ctx.window_open_flag = true;
 }
 
@@ -95,7 +98,8 @@ void wdt_feed(void)
     }
 
     if(wdt_ctx.is_windowed && !wdt_ctx.window_open_flag) {
-        ESP_LOGE(TAG, "WDT underflow detected, feeding is not allowed");
+        ESP_LOGE(TAG, "WDT underflow detected: feeding is not allowed (min required = %u us)",
+                 wdt_ctx.underflow_timeout);
         wdt_ctx.stop_feed = true;
         return;
     }
@@ -106,9 +110,13 @@ void wdt_feed(void)
 
     if (wdt_ctx.is_windowed) {
         wdt_ctx.window_open_flag = false;
-        esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);
+        /* Stop timer if running, then start fresh */
+        esp_timer_stop(periodic_timer);  /* Ignore error if not running */
+        esp_err_t ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);
+        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+            ESP_LOGE(TAG, "Failed to start windowed timer: %d", ret);
+        }
     }
-
 }
 
 void wdt_register_callback(void (*callback)(void *), void *arg)
@@ -141,17 +149,35 @@ void wdt_init_windowed(uint32_t underflow_timeout_us)
     wdt_ctx.is_windowed = true;
     wdt_ctx.underflow_timeout = underflow_timeout_us;
 
+    /* Initialize esp_timer library first (idempotent - safe to call multiple times) */
+    esp_err_t ret = esp_timer_init();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to initialize esp_timer: %d", ret);
+        return;
+    }
+
+    /* Create timer with proper arguments */
     const esp_timer_create_args_t periodic_timer_args = {
         .callback = wdt_windowed_underflow_callback,
+        .arg = NULL,
         .dispatch_method = ESP_TIMER_ISR,
+        .name = "wdt_windowed",
+        .skip_unhandled_events = false,
     };
-    int ret = esp_timer_create(&periodic_timer_args, &periodic_timer);
+    ret = esp_timer_create(&periodic_timer_args, &periodic_timer);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to create periodic timer");
+        ESP_LOGE(TAG, "Failed to create periodic timer: %d", ret);
+        return;
     }
 
     ESP_LOGI(TAG, "WDT windowed mode initialized");
 
-    esp_timer_init();
-    esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);
+    /* Initialize window as open to allow first feed */
+    wdt_ctx.window_open_flag = true;
+
+    /* Start the timer */
+    ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start windowed timer: %d", ret);
+    }
 }

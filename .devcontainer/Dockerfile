@@ -14,6 +14,9 @@ RUN : \
         cmake \
         gcc \
         gcc-multilib \
+        clang \
+        clang-tidy \
+        clang-format \
         git \
         kconfig-frontends \
         libdbus-1-dev \
@@ -26,6 +29,7 @@ RUN : \
         libpixman-1-dev \
         minicom \
         ninja-build \
+        cppcheck \
         pkg-config \
         python-is-python3 \
         python3 \

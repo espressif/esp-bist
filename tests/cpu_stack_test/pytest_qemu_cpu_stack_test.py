@@ -1,16 +1,5 @@
-import pytest
-import sys
-import os
 import time
 import queue
-
-# Add the 'scripts' directory to the Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.join(current_dir, '..', '..')
-scripts_path = os.path.join(project_root, 'scripts')
-sys.path.append(scripts_path)
-
-from test_utils import QEMU_RISCV, GDB_RISCV, qemu_instance, qemu_debug_instance, gdb_instance
 
 def test_cpu_stack_success(qemu_instance):
     qemu, qemu_process, output_queue = qemu_instance

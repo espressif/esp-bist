@@ -84,14 +84,19 @@ bist_esp_err_t bist_cpu_stack_overflow_test(void)
 uint32_t bist_get_stack_high_watermark(void)
 {
     uint32_t *stack_top = (uint32_t *)&_stack_top;
-    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_end;
-
+    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_start;
     uint32_t high_watermark = 0;
+
+    /* We should check after the overflow protection region */
+    stack_bottom++;
+
     for (uint32_t *p = stack_bottom; p < stack_top; p++) {
-        if (*p != STACK_FILL_PATTERN) {
+        if (*p == STACK_FILL_PATTERN) {
             high_watermark++;
+        } else {
+            break;
         }
     }
 
-    return high_watermark;
+    return high_watermark * sizeof(uint32_t);
 }

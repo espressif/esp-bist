@@ -1,0 +1,12 @@
+{
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**"
+    ],
+    "C_Cpp.default.defines": [],
+    "C_Cpp.default.compilerPath": "riscv32-esp-elf-gcc",
+    "C_Cpp.default.cStandard": "c11",
+    "files.associations": {
+        "*.h": "c",
+        "*.c": "c"
+    }
+}

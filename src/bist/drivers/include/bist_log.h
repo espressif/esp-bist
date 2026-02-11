@@ -3,14 +3,19 @@
  *
  * This file is part of Espressif's BIST (Built-In Self Test) Library.
  *
- * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+ * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
  *
  * BIST library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with BIST library. If not, see
- * <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License along with BIST library. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
+/**
+ * @file bist_log.h
+ * @brief Logging macros for BIST library
  */
 
 #include "esp_log.h"
@@ -21,8 +26,13 @@
 #undef ESP_LOGD
 #undef ESP_LOGV
 
+/** @brief Log error message */
 #define ESP_LOGE(tag, format, ...) ESP_EARLY_LOGE(tag, format, ##__VA_ARGS__)
+/** @brief Log warning message */
 #define ESP_LOGW(tag, format, ...) ESP_EARLY_LOGW(tag, format, ##__VA_ARGS__)
+/** @brief Log info message */
 #define ESP_LOGI(tag, format, ...) ESP_EARLY_LOGI(tag, format, ##__VA_ARGS__)
+/** @brief Log debug message */
 #define ESP_LOGD(tag, format, ...) ESP_EARLY_LOGD(tag, format, ##__VA_ARGS__)
+/** @brief Log verbose message */
 #define ESP_LOGV(tag, format, ...) ESP_EARLY_LOGV(tag, format, ##__VA_ARGS__)

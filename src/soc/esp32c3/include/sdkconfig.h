@@ -16,7 +16,6 @@
 #define CONFIG_LOG_MAXIMUM_LEVEL                  5
 #define CONFIG_LOG_DEFAULT_LEVEL                  3
 #define CONFIG_LOG_TIMESTAMP_SOURCE_SYSTEM        1
-#define CONFIG_BIST_FLASH_TEST_CHUNK_SIZE         0x1000
 #define CONFIG_SOC_RTC_FAST_MEM_SUPPORTED         1
 #define CONFIG_ESP_INT_WDT                        1
 #define CONFIG_RTC_CLK_SRC_EXT_CRYS               1

@@ -53,7 +53,7 @@ bist_esp_err_t bist_ram_test_march_a(void)
         }
 
         // 2. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
-        ASM(" bist_ram_test_march_a_step2:");
+        ASM("bist_ram_test_march_a_step2:");
         for (size_t i = 0; i < current_chunk_size; i++) {
             if (start_addr[offset + i] != 0) {
                 test_passed = false;

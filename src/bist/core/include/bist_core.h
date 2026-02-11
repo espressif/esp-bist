@@ -3,14 +3,27 @@
  *
  * This file is part of Espressif's BIST (Built-In Self Test) Library.
  *
- * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+ * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
  *
  * BIST library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with BIST library. If not, see
- * <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License along with BIST library. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
+/**
+ * @file bist_core.h
+ * @brief Core BIST module aggregator
+ *
+ * Includes all individual BIST test module headers:
+ * - CPU register tests
+ * - Memory tests (RAM and Flash)
+ * - Program Counter tests
+ * - Clock integrity tests
+ * - Watchdog tests
+ * - GPIO tests
  */
 
 #pragma once

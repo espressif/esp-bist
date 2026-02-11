@@ -157,7 +157,7 @@ int main()
 
     test_malloc();
 
-    ESP_EARLY_LOGI(TAG, "Initializing WDT");
+    ESP_LOGI(TAG, "Initializing WDT");
     wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
     wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US);
 

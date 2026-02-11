@@ -1,5 +1,11 @@
 build/
 __pycache__/
 .pytest_cache/
-.vscode
 tools/
+.github/copilot-instructions.md
+*.dump
+*.ctu-info
+
+# Sphinx documentation
+docs/_build/
+docs/extensions/_build/

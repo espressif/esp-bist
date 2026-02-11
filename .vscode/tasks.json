@@ -1,0 +1,85 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build ESP32-C3 Application",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "cd ${input:appPath} && cmake -DSOC_TARGET=${input:socTarget} -B build -GNinja && ninja -C build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Flash ESP32-C3 Application",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "cd ${input:appPath} && ninja -C build flash"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Start OpenOCD",
+            "type": "shell",
+            "command": "openocd",
+            "args": [
+                "-c", "set ESP_RTOS none",
+                "-f", "board/esp32c3-builtin.cfg",
+                "-c", "init; halt; esp appimage_offset 0x1000"
+            ],
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Clean Build",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "cd ${input:appPath} && rm -rf build && cmake -DSOC_TARGET=${input:socTarget} -B build -GNinja && ninja -C build"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "appPath",
+            "type": "promptString",
+            "description": "Application path",
+            "default": "samples/standalone"
+        },
+        {
+            "id": "socTarget",
+            "type": "promptString",
+            "description": "SoC target (e.g., esp32c3, esp32c6)",
+            "default": "esp32c3"
+        }
+    ]
+}
