@@ -6,7 +6,11 @@
 #define BIST_TEST_GPIO_EXT_OUT_IO               (2)
 #define BIST_TEST_GPIO_EXT_IN_IO                (3)
 #define BIST_TEST_GPIO_SIGNAL_IDX               (SIG_IN_FUNC97_IDX)
+#ifdef SOC_TARGET_ESP32C6
+#define BIST_TEST_GPIO_INPUT_IO                 (8)
+#elif SOC_TARGET_ESP32C3
 #define BIST_TEST_GPIO_INPUT_IO                 (9)
+#endif
 #define BIST_TEST_GPIO_INPUT_LEVEL              (1)
 
 void test_BIST_IO_INVALID_GPIO(void)
