@@ -62,6 +62,23 @@ config ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
     help
       Specify the acceptable percentage of frequency drift for the clock test.
 
+config ESP_BIST_GPIO_TEST
+    bool "GPIO Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+      Enable tests for the GPIO pins.
+
+config ESP_BIST_PROGRAM_COUNTER_TEST
+    bool "Program Counter Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+      Enable tests for the program counter.
+
+config ESP_BIST_WATCHDOG_TEST
+    bool "Watchdog Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+      Enable tests for the watchdog timer.
 endmenu
 
 # Standalone build system configs (not available when building with Zephyr)
