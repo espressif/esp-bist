@@ -335,28 +335,13 @@ SECTIONS
     *cache_utils.*(.literal .text .literal.* .text.*)
 
     *libbist_esp.a:*(.text .text.*)
+
+    _pc_test_0_start = ABSOLUTE(.);
+    *(.pc_test_0 .pc_test_0.*)
+    _pc_test_0_end = ABSOLUTE(.);
+
     . = ALIGN(4) + 16;
 
-  } >iram0_0_seg AT>ROM
-
-  .iram0.pc_test_0 : ALIGN(4)
-  {
-    _pc_test_0_start = ABSOLUTE(.);
-   *(.pc_test_0 .pc_test_0.*)
-    _pc_test_0_end = ABSOLUTE(.);
-  } >iram0_0_seg AT>ROM
-
-  /* We want to place pc_test_1 in 0x403Bxxxx, where x is the inverted LSB (0-15) from pc_test_0 */
-  _pc_test_1_start_calc = (~_pc_test_0_start & 0xBFFFF) + SRAM1_IRAM_START;
-  _pc_test_1_gap = _pc_test_1_start_calc - _pc_test_0_end - 2;
-
-  .iram0.pc_test_1 :
-  {
-    . += _pc_test_1_gap;
-    . = ALIGN(4);
-    _pc_test_1_start = ABSOLUTE(.);
-   *(.pc_test_1 .pc_test_1.*)
-    _pc_test_1_end = ABSOLUTE(.);
   } >iram0_0_seg AT>ROM
 
   .iram0.text_end (NOLOAD) :
@@ -706,16 +691,28 @@ SECTIONS
     _instruction_reserved_start = ABSOLUTE(.);
     _flash_text_start = ABSOLUTE(.);
 
+#if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
+    /* PC stuck-at test: pc_test_1 sits at the section base where bits [15:3]
+     * are all 0; pc_test_2 is placed at offset 0xFFF8 where bits [15:3] are
+     * all 1.  Calling both and comparing their PC values detects stuck-at
+     * faults on address bits [3:15].  The gap is in Flash (not IRAM) to
+     * avoid consuming scarce SRAM. */
+    _pc_test_1_start = ABSOLUTE(.);
+    *(.pc_test_1 .pc_test_1.*)
+    _pc_test_1_end = ABSOLUTE(.);
+
+    . = 0xFFF8;
+    _pc_test_2_start = ABSOLUTE(.);
+    *(.pc_test_2 .pc_test_2.*)
+    _pc_test_2_end = ABSOLUTE(.);
+#endif
+
     *(.literal .text .literal.* .text.*)
     *(.stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
     *(.irom0.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.fini.literal)
     *(.fini)
     *(.gnu.version)
-
-    _pc_test_2_start = ABSOLUTE(.);
-    *(.pc_test_2 .pc_test_2.*)
-    _pc_test_2_end = ABSOLUTE(.);
 
     /** CPU will try to prefetch up to 16 bytes of
       * of instructions. This means that any configuration (e.g. MMU, PMS) must allow

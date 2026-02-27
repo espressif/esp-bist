@@ -29,14 +29,18 @@
 /**
  * @brief Test external 32.768 kHz crystal operation
  *
- * Monitors external oscillator using XT WDT (external crystal watchdog)
- * with 200-cycle timeout. Waits 2 ms for monitoring. If crystal fails,
- * watchdog callback fires.
+ * On SoCs with XT WDT: monitors external
+ * oscillator using XT WDT with 200-cycle timeout. Waits 2 ms for monitoring.
+ * If crystal fails, watchdog callback fires.
  *
- * @return BIST_ESP_OK if crystal operational (no callback triggered)
+ * On SoCs without XT WDT: this test is not available; the
+ * function returns BIST_ESP_OK (test skipped). Use bist_main_crystal_test()
+ * to validate main XTAL frequency on those targets.
+ *
+ * @return BIST_ESP_OK if crystal operational or test not supported (skipped)
  * @return BIST_ESP_CLOCK_TEST_ERR if crystal failure detected
  *
- * @note Requires hardware with external 32 kHz crystal installed
+ * @note Requires hardware with external 32 kHz crystal where XT WDT is supported
  */
 bist_esp_err_t bist_ext_crystal_fail_test(void);
 
