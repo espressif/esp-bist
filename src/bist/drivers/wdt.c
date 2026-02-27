@@ -26,7 +26,7 @@
 
 #define MWDT_DEFAULT_TICKS_PER_US       500
 
-const char *TAG = "WDT";
+static const char *TAG = "WDT";
 
 struct wdt_context {
     wdt_hal_context_t wdt_hal_ctx;
@@ -71,8 +71,20 @@ void wdt_deinit(void)
     wdt_hal_deinit(&wdt_ctx.wdt_hal_ctx);
 }
 
-void wdt_init(uint32_t timeout_us)
+int wdt_init(uint32_t timeout_us)
 {
+    if (timeout_us < MWDT_DEFAULT_TICKS_PER_US) {
+        ESP_LOGE(TAG, "Timeout %lu us too small (minimum %lu us)",
+                 (unsigned long)timeout_us, (unsigned long)MWDT_DEFAULT_TICKS_PER_US);
+        return -1;
+    }
+
+    uint32_t stage_timeout_ticks = timeout_us / MWDT_DEFAULT_TICKS_PER_US;
+
+    ESP_LOGI(TAG, "Enabling WDT(%lu us)", (unsigned long)timeout_us);
+    ESP_LOGI(TAG, "WDT prescaler: %u", MWDT_LL_DEFAULT_CLK_PRESCALER);
+    ESP_LOGI(TAG, "Stage timeout ticks: %u", stage_timeout_ticks);
+
     esp_cpu_intr_disable(1 << ETS_INT_WDT_INUM);
     esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_TG0_WDT_LEVEL_INTR_SOURCE, ETS_INT_WDT_INUM);
 
@@ -81,14 +93,14 @@ void wdt_init(uint32_t timeout_us)
     esp_cpu_intr_set_handler(ETS_INT_WDT_INUM, mwdt_default_callback, NULL);
     esp_cpu_intr_enable(1 << ETS_INT_WDT_INUM);
 
-    ESP_LOGD(TAG, "Enabling WDT(%d us)", timeout_us);
-
     wdt_hal_init(&wdt_ctx.wdt_hal_ctx, WDT_MWDT0, MWDT_LL_DEFAULT_CLK_PRESCALER, true);
     wdt_hal_write_protect_disable(&wdt_ctx.wdt_hal_ctx);
-    wdt_hal_config_stage(&wdt_ctx.wdt_hal_ctx, WDT_STAGE0, timeout_us / MWDT_DEFAULT_TICKS_PER_US, WDT_STAGE_ACTION_INT);
-    wdt_hal_config_stage(&wdt_ctx.wdt_hal_ctx, WDT_STAGE1, timeout_us / MWDT_DEFAULT_TICKS_PER_US * 2, WDT_STAGE_ACTION_RESET_SYSTEM);
+    wdt_hal_config_stage(&wdt_ctx.wdt_hal_ctx, WDT_STAGE0, stage_timeout_ticks, WDT_STAGE_ACTION_INT);
+    wdt_hal_config_stage(&wdt_ctx.wdt_hal_ctx, WDT_STAGE1, stage_timeout_ticks * 2, WDT_STAGE_ACTION_RESET_SYSTEM);
     wdt_hal_enable(&wdt_ctx.wdt_hal_ctx);
     wdt_hal_write_protect_enable(&wdt_ctx.wdt_hal_ctx);
+
+    return 0;
 }
 
 void wdt_feed(void)
@@ -139,11 +151,30 @@ void wdt_register_callback(void (*callback)(void *), void *arg)
     wdt_hal_write_protect_enable(&wdt_ctx.wdt_hal_ctx);
 }
 
-void wdt_init_windowed(uint32_t underflow_timeout_us)
+void wdt_windowed_deinit(void)
+{
+    if (wdt_ctx.is_windowed && periodic_timer != NULL) {
+        esp_timer_stop(periodic_timer);
+        esp_timer_delete(periodic_timer);
+        periodic_timer = NULL;
+    }
+
+    wdt_ctx.is_windowed = false;
+    wdt_ctx.underflow_timeout = 0;
+    wdt_ctx.window_open_flag = false;
+    wdt_ctx.stop_feed = false;
+}
+
+bool wdt_is_underflow_detected(void)
+{
+    return wdt_ctx.stop_feed;
+}
+
+int wdt_init_windowed(uint32_t underflow_timeout_us)
 {
     if(underflow_timeout_us == 0) {
         ESP_LOGE(TAG, "Underflow timeout cannot be 0");
-        return;
+        return -1;
     }
 
     wdt_ctx.is_windowed = true;
@@ -153,7 +184,7 @@ void wdt_init_windowed(uint32_t underflow_timeout_us)
     esp_err_t ret = esp_timer_init();
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(TAG, "Failed to initialize esp_timer: %d", ret);
-        return;
+        return -1;
     }
 
     /* Create timer with proper arguments */
@@ -167,7 +198,7 @@ void wdt_init_windowed(uint32_t underflow_timeout_us)
     ret = esp_timer_create(&periodic_timer_args, &periodic_timer);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to create periodic timer: %d", ret);
-        return;
+        return -1;
     }
 
     ESP_LOGI(TAG, "WDT windowed mode initialized");
@@ -179,5 +210,8 @@ void wdt_init_windowed(uint32_t underflow_timeout_us)
     ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start windowed timer: %d", ret);
+        return -1;
     }
+
+    return 0;
 }

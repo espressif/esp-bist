@@ -5,7 +5,7 @@
 
 void test_BIST_PC(void)
 {
-    wdt_init(10000);
+    TEST_ASSERT_EQUAL(0, wdt_init(10000));
     bist_esp_err_t ret = bist_pc_test();
     wdt_deinit();
     TEST_ASSERT_EQUAL(BIST_ESP_OK, ret);

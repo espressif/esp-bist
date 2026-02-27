@@ -79,6 +79,7 @@ config ESP_BIST_WATCHDOG_TEST
     default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for the watchdog timer.
+
 endmenu
 
 # Standalone build system configs (not available when building with Zephyr)

@@ -36,7 +36,7 @@ def wdt_test_routine(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
 def test_wdt_error(qemu_debug_instance, gdb_instance):
-    wdt_test_routine(qemu_debug_instance, gdb_instance, "test_BIST_WDT", "bist_test_wdt_timeout", "10000", "FAIL")
+    wdt_test_routine(qemu_debug_instance, gdb_instance, "test_BIST_WDT", "bist_test_wdt_timeout", "1000000", "FAIL")
 
 def test_wdt_success(qemu_debug_instance, gdb_instance):
-    wdt_test_routine(qemu_debug_instance, gdb_instance, "test_BIST_WDT", "bist_test_wdt_timeout", "100", "PASS")
+    wdt_test_routine(qemu_debug_instance, gdb_instance, "test_BIST_WDT", "bist_test_wdt_timeout", "10000", "PASS")

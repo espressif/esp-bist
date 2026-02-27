@@ -112,6 +112,14 @@ build_esp32c3_digital_io_test:
     TEST_APP_NAME: 'digital_io_test'
     SOC_TARGET: 'esp32c3'
 
+build_esp32c3_windowed_wdt_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'windowed_wdt_test'
+    SOC_TARGET: 'esp32c3'
+
 build_esp32c3_sample_standalone:
   extends:
     - .build_template
@@ -174,6 +182,14 @@ build_esp32c6_digital_io_test:
   variables:
     ROOT_DIR: 'tests'
     TEST_APP_NAME: 'digital_io_test'
+    SOC_TARGET: 'esp32c6'
+
+build_esp32c6_windowed_wdt_test:
+  extends:
+    - .build_template
+  variables:
+    ROOT_DIR: 'tests'
+    TEST_APP_NAME: 'windowed_wdt_test'
     SOC_TARGET: 'esp32c6'
 
 build_esp32c6_sample_standalone:
@@ -276,6 +292,14 @@ test_qemu_esp32c3_wdt_test:
     TEST_APP_NAME: 'wdt_test'
     SOC_TARGET: 'esp32c3'
 
+test_qemu_esp32c3_windowed_wdt_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c3_windowed_wdt_test"]
+  variables:
+    TEST_APP_NAME: 'windowed_wdt_test'
+    SOC_TARGET: 'esp32c3'
+
 test_qemu_esp32c6_cpu_reg_test:
   extends:
     - .test_qemu_template
@@ -322,6 +346,14 @@ test_qemu_esp32c6_wdt_test:
   needs: ["build_esp32c6_wdt_test"]
   variables:
     TEST_APP_NAME: 'wdt_test'
+    SOC_TARGET: 'esp32c6'
+
+test_qemu_esp32c6_windowed_wdt_test:
+  extends:
+    - .test_qemu_template
+  needs: ["build_esp32c6_windowed_wdt_test"]
+  variables:
+    TEST_APP_NAME: 'windowed_wdt_test'
     SOC_TARGET: 'esp32c6'
 
 .test_device_template:
@@ -406,6 +438,14 @@ test_device_esp32c3_digital_io_test:
     TEST_APP_NAME: 'digital_io_test'
     SOC_TARGET: 'esp32c3'
 
+test_device_esp32c3_windowed_wdt_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c3_windowed_wdt_test"]
+  variables:
+    TEST_APP_NAME: 'windowed_wdt_test'
+    SOC_TARGET: 'esp32c3'
+
 test_device_esp32c6_cpu_reg_test:
   extends:
     - .test_device_template
@@ -462,6 +502,14 @@ test_device_esp32c6_digital_io_test:
     TEST_APP_NAME: 'digital_io_test'
     SOC_TARGET: 'esp32c6'
 
+test_device_esp32c6_windowed_wdt_test:
+  extends:
+    - .test_device_template
+  needs: ["build_esp32c6_windowed_wdt_test"]
+  variables:
+    TEST_APP_NAME: 'windowed_wdt_test'
+    SOC_TARGET: 'esp32c6'
+
 # static_analysis:
 #   stage: Static-Analysis
 #   needs: ["build_esp32c3_sample_standalone"]
@@ -508,6 +556,8 @@ test_device_esp32c6_digital_io_test:
     - artifacts: true
       job: test_qemu_esp32c3_wdt_test
     - artifacts: true
+      job: test_qemu_esp32c3_windowed_wdt_test
+    - artifacts: true
       job: test_device_esp32c3_cpu_reg_test
     - artifacts: true
       job: test_device_esp32c3_cpu_stack_test
@@ -522,6 +572,8 @@ test_device_esp32c6_digital_io_test:
     - artifacts: true
       job: test_device_esp32c3_digital_io_test
     - artifacts: true
+      job: test_device_esp32c3_windowed_wdt_test
+    - artifacts: true
       job: test_qemu_esp32c6_cpu_reg_test
     - artifacts: true
       job: test_qemu_esp32c6_cpu_stack_test
@@ -533,6 +585,8 @@ test_device_esp32c6_digital_io_test:
       job: test_qemu_esp32c6_pc_test
     - artifacts: true
       job: test_qemu_esp32c6_wdt_test
+    - artifacts: true
+      job: test_qemu_esp32c6_windowed_wdt_test
     - artifacts: true
       job: test_device_esp32c6_cpu_reg_test
     - artifacts: true
@@ -547,6 +601,8 @@ test_device_esp32c6_digital_io_test:
       job: test_device_esp32c6_wdt_test
     - artifacts: true
       job: test_device_esp32c6_digital_io_test
+    - artifacts: true
+      job: test_device_esp32c6_windowed_wdt_test
 
 build_docs_html:
   extends:

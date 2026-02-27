@@ -1,5 +1,5 @@
 def test_wdt_success(dut):
-    tests_names = ["test_BIST_WDT"]
+    tests_names = ["test_BIST_WDT", "test_BIST_WDT_INIT_SUB_TICK_TIMEOUT"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 
     # expect from what esptool.py printed to sys.stdout

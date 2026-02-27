@@ -23,6 +23,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /**
  * @brief Deinitialize watchdog timer
@@ -35,10 +36,12 @@ void wdt_deinit(void);
  * @brief Initialize watchdog timer
  *
  * Configures and starts the watchdog timer with specified timeout.
+ * The minimum accepted value is 500 us (one MWDT tick).
  *
- * @param timeout_us Timeout period in microseconds
+ * @param timeout_us Timeout period in microseconds (>= 500)
+ * @return 0 on success, -1 if timeout_us is too small
  */
-void wdt_init(uint32_t timeout_us);
+int wdt_init(uint32_t timeout_us);
 
 /**
  * @brief Feed/refresh watchdog timer
@@ -64,5 +67,24 @@ void wdt_register_callback(void (*callback)(void *), void *arg);
  * will also trigger reset (ensures minimum execution time).
  *
  * @param underflow_timeout_us Underflow window in microseconds
+ * @return 0 on success, -1 if underflow_timeout_us is 0 or initialization fails
  */
-void wdt_init_windowed(uint32_t underflow_timeout_us);
+int wdt_init_windowed(uint32_t underflow_timeout_us);
+
+/**
+ * @brief Deinitialize windowed watchdog timer
+ *
+ * Stops the underflow timer, resets windowed state flags, and frees
+ * timer resources. Call this between tests to ensure clean state.
+ */
+void wdt_windowed_deinit(void);
+
+/**
+ * @brief Check if a windowed underflow was detected
+ *
+ * Returns true if wdt_feed() was called before the underflow window
+ * elapsed, indicating the application completed too quickly.
+ *
+ * @return true if underflow was detected, false otherwise
+ */
+bool wdt_is_underflow_detected(void);

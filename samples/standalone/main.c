@@ -161,8 +161,15 @@ int main()
     test_malloc();
 
     ESP_LOGI(TAG, "Initializing WDT");
-    wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
-    wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US);
+    if (wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US) != 0) {
+        ESP_LOGE(TAG, "WDT initialization failed");
+        fail_safe_exit();
+    }
+
+    if (wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US) != 0) {
+        ESP_LOGE(TAG, "Windowed WDT initialization failed");
+        fail_safe_exit();
+    }
 
     while (1) {
         set_led(get_button());

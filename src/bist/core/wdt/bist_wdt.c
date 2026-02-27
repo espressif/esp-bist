@@ -20,13 +20,12 @@
 #include "rom/ets_sys.h"
 #include "hal/wdt_hal.h"
 #include "esp_private/periph_ctrl.h"
-#include "esp32c3/rtc.h"
 #include "esp_rom_sys.h"
 #include "wdt.h"
 
 bist_esp_err_t bist_wdt_test(void)
 {
-    uint32_t wdt_timeout_us = 100;
+    uint32_t wdt_timeout_us = 10000;
     soc_reset_reason_t reset = esp_rom_get_reset_reason(0);
 
     if (reset == RESET_REASON_CORE_MWDT0) {
@@ -38,7 +37,7 @@ bist_esp_err_t bist_wdt_test(void)
     wdt_init(wdt_timeout_us);
 
     /* let watchdog callback happen or timeout */
-    ets_delay_us(1000);
+    ets_delay_us(50000);
 
     wdt_deinit();
 
