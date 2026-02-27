@@ -1,37 +1,39 @@
 /*
- * Copyright (c) 2024 Espressif Systems (Shanghai) Co., Ltd.
+ * Copyright (c) 2025 Espressif Systems (Shanghai) Co., Ltd.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * This file is part of Espressif's BIST (Built-In Self Test) Library.
+ *
+ * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * BIST library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with BIST library. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
 
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "sdkconfig.h"
-#include "hal/cache_hal.h"
-#include "hal/mmu_hal.h"
-#include "hal/cache_ll.h"
 #include "rom/ets_sys.h"
 #include "esp_rom_uart.h"
 #include "esp_log.h"
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
-#include "esp_private/periph_ctrl.h"
 #include "esp32c3/rtc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "wdt.h"
+#include "loader.h"
 
-#define CONFIG_MMU_PAGE_SIZE 0x10000
-#define MMU_FLASH_MASK       (~(CONFIG_MMU_PAGE_SIZE - 1))
-#define PARTITION_OFFSET     0x10000
-#define HDR_ATTR             __attribute__((section(".entry_addr"))) __attribute__((used))
+#define HDR_ATTR __attribute__((section(".entry_addr"))) __attribute__((used))
 
 extern uint32_t _image_irom_start, _image_irom_size, _image_irom_vaddr;
 extern uint32_t _image_drom_start, _image_drom_size, _image_drom_vaddr;
 extern uint32_t _image_rtc_start, _image_rtc_size, _image_rtc_vaddr;
 extern uint32_t _bss_start, _bss_end;
 extern uint32_t _rtc_bss_start, _rtc_bss_end;
-extern uint32_t _stack_top, _stack_overflow_protection_start;
 
 extern int _vector_table;
 
@@ -42,98 +44,6 @@ void __start(void);
 static HDR_ATTR void (*_entry_point)(void) = &__start;
 
 extern int main();
-
-void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t app_drom_size, uint32_t app_irom_start,
-    uint32_t app_irom_vaddr, uint32_t app_irom_size)
-
-{
-    uint32_t app_irom_start_aligned = app_irom_start & MMU_FLASH_MASK;
-    uint32_t app_irom_vaddr_aligned = app_irom_vaddr & MMU_FLASH_MASK;
-
-    uint32_t app_drom_start_aligned = app_drom_start & MMU_FLASH_MASK;
-    uint32_t app_drom_vaddr_aligned = app_drom_vaddr & MMU_FLASH_MASK;
-
-    uint32_t actual_mapped_len = 0;
-
-    /* Show map segments continue using same log format as during MCUboot phase */
-    ESP_EARLY_LOGD(TAG, "DROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_drom_start, app_drom_vaddr,
-        app_drom_size);
-    ESP_EARLY_LOGD(TAG, "IROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_irom_start, app_irom_vaddr,
-        app_irom_size);
-
-    cache_hal_disable(CACHE_TYPE_ALL);
-
-    /* Clear the MMU entries that are already set up,
-     * so the new app only has the mappings it creates.
-     */
-    mmu_hal_unmap_all();
-
-    mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_drom_vaddr_aligned, app_drom_start_aligned, app_drom_size,
-        &actual_mapped_len);
-
-    mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_irom_vaddr_aligned, app_irom_start_aligned, app_irom_size,
-        &actual_mapped_len);
-
-    /* ----------------------Enable corresponding buses---------------- */
-    cache_bus_mask_t bus_mask = cache_ll_l1_get_bus(0, app_drom_vaddr_aligned, app_drom_size);
-    cache_ll_l1_enable_bus(0, bus_mask);
-
-    bus_mask = cache_ll_l1_get_bus(0, app_irom_vaddr_aligned, app_irom_size);
-    cache_ll_l1_enable_bus(0, bus_mask);
-
-#if CONFIG_MP_MAX_NUM_CPUS > 1
-    bus_mask = cache_ll_l1_get_bus(1, app_drom_vaddr_aligned, app_drom_size);
-    cache_ll_l1_enable_bus(1, bus_mask);
-    bus_mask = cache_ll_l1_get_bus(1, app_irom_vaddr_aligned, app_irom_size);
-    cache_ll_l1_enable_bus(1, bus_mask);
-#endif
-
-    /* ----------------------Enable Cache---------------- */
-    cache_hal_enable(CACHE_TYPE_ALL);
-}
-
-void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t app_rtc_size)
-{
-    uint32_t app_rtc_start_aligned = app_rtc_start & MMU_FLASH_MASK;
-    uint32_t app_rtc_vaddr_aligned = app_rtc_vaddr & MMU_FLASH_MASK;
-    uint32_t size_after_paddr_aligned = (app_rtc_start - app_rtc_start_aligned) + app_rtc_size;
-    uint32_t actual_mapped_len = 0;
-
-    ESP_EARLY_LOGD(TAG, "RTC segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_rtc_start, app_rtc_vaddr,
-        app_rtc_size);
-
-    cache_hal_disable(CACHE_TYPE_ALL);
-
-    /**
-     * 	To load RTC content to its virtual address (0x50000000) we need to do the following:
-     *
-     * 1. Map RTC content to DCache (SOC_DROM_LOW = 0x3c000000) first in order to access it
-     * 2. Copy RTC content to its virtual address (0x50000000)
-     * 3. This mapping will be reverted in map_rom_segments()
-     */
-
-    mmu_hal_map_region(0, MMU_TARGET_FLASH0, SOC_DROM_LOW, app_rtc_start_aligned, size_after_paddr_aligned,
-        &actual_mapped_len);
-
-    cache_bus_mask_t bus_mask = cache_ll_l1_get_bus(0, app_rtc_vaddr_aligned, app_rtc_size);
-    cache_ll_l1_enable_bus(0, bus_mask);
-    cache_hal_enable(CACHE_TYPE_ALL);
-
-    /* Start of RTC content in DCache */
-    void *data = (void *)(SOC_DROM_LOW + (app_rtc_start - app_rtc_start_aligned));
-
-    /* Copy RTC content to its virtual address */
-    memcpy((void *)app_rtc_vaddr_aligned, data, app_rtc_size);
-}
-
-static void core_intr_matrix_clear(void)
-{
-    uint32_t core_id = esp_cpu_get_core_id();
-
-    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++) {
-        esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
-    }
-}
 
 static void setup_clock_glitch_reset(bool enable)
 {
@@ -147,18 +57,15 @@ static void setup_clock_glitch_reset(bool enable)
     }
 }
 
-void init_stack_pattern(void)
-{
-    uint32_t *stack_top = (uint32_t *)&_stack_top;
-    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_start;
-
-    for (uint32_t *p = stack_bottom; p < stack_top; p++) {
-        *p = 0xBADC0FFE;
-    }
-}
-
 void __start(void)
 {
+    if (esp_cpu_dbgr_is_attached()) {
+        /* Let debugger some time to detect that target started, halt it, enable ebreaks and resume.
+           500ms should be enough. */
+        for (uint32_t ms_num = 0; ms_num < 2; ms_num++) {
+            esp_rom_delay_us(100000);
+        }
+    }
     /* Configure the global pointer register
      * (This should be the first thing startup does,
      * as any other piece of code could be relaxed by
@@ -212,10 +119,8 @@ void __start(void)
     esp_clk_init();
     esp_perip_clk_init();
 
-    // Clear interrupt matrix for PRO CPU core
     core_intr_matrix_clear();
 
-    // esp_cache_err_int_init();
     ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
     init_stack_pattern();
 
