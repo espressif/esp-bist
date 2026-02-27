@@ -6,6 +6,7 @@
 #include "gpio.h"
 #include "rom/ets_sys.h"
 #include "esp_attr.h"
+#include "soc/soc_caps.h"
 
 #define LED_GPIO 7
 #define BTN_GPIO 9
@@ -147,7 +148,9 @@ int main()
     bist_cpu_stack_overflow_init();
 
     // Register Crystal WDT and Master WDT callbacks
+#if SOC_XT_WDT_SUPPORTED
     esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL);
+#endif
     wdt_register_callback(wdt_callback, NULL);
 
     runtime_tests();
