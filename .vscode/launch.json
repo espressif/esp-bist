@@ -36,6 +36,41 @@
             ],
             "svdFile": "${workspaceFolder}/src/soc/esp32c3/esp32c3.svd",
         },
+        {
+            "name": "Debug ESP32-C6 (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/${input:appPath}/build/${input:appName}.elf",
+            "servertype": "openocd",
+            "device": "ESP32-C6",
+            "interface": "jtag",
+            "configFiles": [
+                "board/esp32c6-builtin.cfg"
+            ],
+            "openOCDPreConfigLaunchCommands":[
+                "set ESP_RTOS none",
+            ],
+            "openOCDLaunchCommands": [
+                "init; halt; esp appimage_offset 0x1000",
+            ],
+            "toolchainPrefix": "riscv32-esp-elf",
+            "overrideAttachCommands": [
+                "set pagination off",
+                "mon reset halt"
+            ],
+            "postAttachCommands": [
+                "thb __start",
+                "continue"
+            ],
+            "overrideResetCommands": [
+                "set pagination off",
+                "mon reset halt",
+                "thb __start",
+                "continue"
+            ],
+            "svdFile": "${workspaceFolder}/src/soc/esp32c6/esp32c6.svd",
+        },
     ],
     "inputs": [
         {

@@ -16,6 +16,7 @@ The Espressif's Built-in Self Test library performs the following tests:
 ## Supported SoCs
 
 - ESP32-C3
+- ESP32-C6
 
 ## License
 
@@ -126,12 +127,13 @@ The `bist_pc_test` routine is designed for testing the Program Counter (PC) regi
 
 1. Overview
 
-The testing focuses on exercising specific bits of the 32-bit PC register, taking into consideration alignment requirements and memory mapping. The PC register is aligned to 4 bytes, implying the two least significant bits are always zero. The memory mapping covers different segments including IRAM, ROM, and RTC memory, each mapped to distinct address ranges.
+The testing focuses on exercising specific bits of the 32-bit PC register, taking into consideration alignment requirements and memory mapping. The PC register is aligned to 4 bytes, implying the two least significant bits are always zero. The memory mapping covers different segments including IRAM, Flash, and RTC memory, each mapped to distinct address ranges.
 
 1. Memory Mapping
 
-- IRAM: 0x40380000 - 0x403BEE00
-- ROM (Executed from ICache):
+- IRAM (ESP32-C3): 0x40380000 - 0x403BEE00
+- IRAM (ESP32-C6): 0x40800000 - 0x40880000
+- Flash (Executed from ICache):
   - 2MB: 0x42010000 - 0x421FFFFF
   - 4MB: 0x42010000 - 0x423FFFFF
   - 8MB: 0x42010000 - 0x427FFFFF
@@ -141,13 +143,13 @@ The testing focuses on exercising specific bits of the 32-bit PC register, takin
 
 The testing is divided into several parts, each aimed at validating different sets of bits within the PC register:
 
-`pc_test_0` and `pc_test_1` are designed to test bits 2-17. Both are placed in `IRAM`, with specific address placements ensuring coverage of these bits.
-`pc_test_2` is placed in `Flash` memory to test bits 19, 20, 21, and 25.
+`pc_test_0` is placed at the end of `IRAM` to test upper address bits that differ between IRAM and Flash/RTC regions.
+`pc_test_1` and `pc_test_2` are placed in `Flash` memory with a 64KB gap (offset 0xFFF8) between them, ensuring bits [3:15] are inverted. This placement avoids consuming scarce SRAM.
 `pc_test_3` is allocated in `RTC` memory, focusing on bit 28.
 
 Each test function is assigned to a specific memory section through the `__attribute__((section(".pc_test_X")))` directive, ensuring their placement in the intended memory areas.
 
-The core function `bist_pc_test` iterates through an array of function pointers, each pointing to a test function defined to return its own address. The test validates the PC register by ensuring that the address returned by each test function matches the function's address, thereby confirming the correct operation of bits 2-17, 19-21, 25, and 28 of the PC register.
+The core function `bist_pc_test` iterates through an array of function pointers, each pointing to a test function defined to return its own address. The test validates the PC register by ensuring that the address returned by each test function matches the function's address, thereby confirming the correct operation of the tested PC register bits across IRAM, Flash, and RTC address ranges.
 
 ### Indirect time-slot monitoring
 
@@ -177,9 +179,9 @@ The following clock sources are tested:
 
 ### External 32KHz Crystal Oscillator
 
-This test uses the XT WDT peripheral to verify the external 32KHz crystal oscillator stability.
+On SoCs with XT WDT support (e.g., ESP32-C3), this test uses the XT WDT peripheral to verify the external 32KHz crystal oscillator stability. If the XT WDT detects a failure of 200 cycles from the 32KHz crystal, it triggers an interrupt. The test then verifies if the interrupt was triggered and returns `BIST_ESP_CLOCK_TEST_ERR`.
 
-If the XT WDT detects a failure of 200 cycles from the 32KHz crystal, it triggers an interrupt. The test then verify if the interrupt was triggered and returns `BIST_ESP_CLOCK_TEST_ERR`.
+On SoCs without XT WDT support (e.g., ESP32-C6), this test is skipped and returns `BIST_ESP_OK`. Use `bist_main_crystal_test()` to validate the main XTAL frequency on those targets.
 
 ### Main 40 Mhz Crystal Oscillator
 
@@ -192,7 +194,7 @@ This test uses the External 32Khz as a reference for calculating the 40Mhz cryst
 The stack is a crucial section of RAM used by the CPU to temporarily store information such as data and addresses.
 Due to the limited number of CPU registers, the stack serves as an essential storage area.
 
-In the ESP32-C3, like in many other SoCs, the stack is located at the end of the RAM and grows downward.
+In Espressif RISC-V SoCs, the stack is located at the end of the RAM and grows downward.
 The stack pointer, which is 32 bits wide, is decremented with each PUSH instruction and incremented with each POP instruction.
 
 The primary goal of the stack overflow test is to ensure that the stack does not overlap with the program data memory during execution.

@@ -9,6 +9,7 @@ This repository includes the necessary files to build an application that runs t
 ## Supported SoCs
 
 - ESP32-C3
+- ESP32-C6
 
 ## License
 
@@ -65,22 +66,26 @@ The Critical Firmware is designed to run on top of the MCUboot bootloader.
 
 The current supported version of MCUboot is 2.2.0.
 
-MCUboot is a located at opt/mcuboot.
+MCUboot is located at opt/mcuboot.
 
 ```sh
 cd /opt/mcuboot/boot/espressif
-cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-esp32c3.cmake -DMCUBOOT_TARGET=esp32c3 -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-<SOC_TARGET>.cmake -DMCUBOOT_TARGET=<SOC_TARGET> -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
 ninja -C build
 ```
+
+Replace `<SOC_TARGET>` with the target SoC (e.g., `esp32c3`, `esp32c6`).
 
 ## Build
 
 Inside any of the tests or samples directories:
 
 ```sh
-cmake -DSOC_TARGET=esp32c3 -B build -GNinja
+cmake -DSOC_TARGET=<SOC_TARGET> -B build -GNinja
 ninja -C build
 ```
+
+Replace `<SOC_TARGET>` with the target SoC (e.g., `esp32c3`, `esp32c6`).
 
 ## Project Configuration
 
@@ -111,7 +116,7 @@ ninja -C build qemu_debug
 In another terminal, run gdb with the following command:
 
 ```sh
-riscv32-esp-elf-gdb build/critical_fw_esp32c3.elf -ex "target remote :1234" -ex "tb main" -ex "c"
+riscv32-esp-elf-gdb build/<app_name>.elf -ex "target remote :1234" -ex "tb main" -ex "c"
 ```
 
 ## Flash to Device
@@ -141,7 +146,7 @@ The tests are located in the `tests` directory. The tests are divided into two c
 We use Pytest in conjunction with Unity, GDB scripting and QEMU to run the test suite. The tests are meant to verify the correct execution of the BIST library and to introduce faults deliberately to verify that the system can detect and recover from such situations, either by restoring the correct data from backup or entering a safe state. To run the tests, execute the following command:
 
 ```sh
-pytest pytest_qemu_* --junitxml=build/tests/report.xml
+pytest pytest_qemu_* --executable=<app_name> --soc-target=<SOC_TARGET> --junitxml=build/tests/report.xml
 ```
 
 The test will output a report in the `build/tests` directory.
@@ -152,6 +157,17 @@ To run the tests on the device, execute the following command:
 
 ```sh
 pytest pytest_device_* --junitxml=build/tests/report.xml
+```
+
+### Kconfig Test Configuration
+
+Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable or disable individual tests:
+
+```
+CONFIG_ESP_BIST_CPU_REG_TEST=y
+CONFIG_ESP_BIST_CPU_CSR_REG_TEST=y
+CONFIG_ESP_BIST_MEMORY_RAM_TEST=n
+...
 ```
 
 ## Samples

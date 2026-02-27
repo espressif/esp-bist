@@ -47,7 +47,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - Program counter corruption causing execution outside intended code regions
      - High
      - 1.3 (Program Counter)
-     - ``bist_pc_test()`` exercises 24 PC bits by calling functions in IRAM, Flash, and RTC regions, detecting stuck PC or unexpected jumps
+     - ``bist_pc_test()`` exercises PC bits by calling functions placed in IRAM, Flash, and RTC regions, detecting stuck-at faults or unexpected jumps
 
    * - H4
      - Clock oscillator failure causing timing violations and missed deadlines

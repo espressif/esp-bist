@@ -761,7 +761,7 @@ Program Counter Test
         End [label = "End"];
     }
 
-This diagram shows the concrete implementation of the program counter integrity test. Each function is placed in a specific memory region by the linker script to exercise different PC register bits. The test verifies that each function returns its own address, detecting stuck-at faults in the PC register.
+This diagram shows the concrete implementation of the program counter integrity test. Each function is placed in a specific memory region by the linker script to exercise different PC register bits: ``pc_test_0`` at the end of IRAM, ``pc_test_1`` and ``pc_test_2`` in Flash with a 64KB gap to invert bits [3:15], and ``pc_test_3`` in RTC memory. The test verifies that each function returns its own address, detecting stuck-at faults in the PC register.
 
 Module API
 ^^^^^^^^^^
@@ -845,7 +845,7 @@ External 32kHz Crystal
         Success [label = "Return BIST_ESP_OK"];
     }
 
-**External 32kHz Crystal Test:** Uses XT WDT with 200-cycle timeout to detect 32kHz oscillator failure. Waits 2 ms and checks if the callback was triggered (indicating clock failure). If the callback fires during this wait period, it indicates the crystal has failed and the test returns an error.
+**External 32kHz Crystal Test:** On SoCs with ``SOC_XT_WDT_SUPPORTED``, uses XT WDT with 200-cycle timeout to detect 32kHz oscillator failure. Waits 2 ms and checks if the callback was triggered (indicating clock failure). If the callback fires during this wait period, it indicates the crystal has failed and the test returns an error. On SoCs without XT WDT hardware, this test is skipped and returns ``BIST_ESP_OK``.
 
 Main 40MHz Crystal
 ^^^^^^^^^^^^^^^^^^
@@ -918,6 +918,7 @@ Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
 - The clock test uses explicit error handling: if initialization or frequency measurement fails, the function returns an explicit error code. Callback registration is checked, and all error paths are handled.
+- The external crystal fail test is conditionally compiled using ``SOC_XT_WDT_SUPPORTED`` from ``soc/soc_caps.h``. On SoCs without this capability, the function returns ``BIST_ESP_OK`` (test skipped).
 - This test uses the external crystal watchdog driver (``esp_xt_wdt_*``), RTC clock functions, and linker-defined configuration.
 - Uses static variables for test state and callback.
 - No dynamic memory is used.
