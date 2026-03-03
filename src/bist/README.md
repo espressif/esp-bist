@@ -274,3 +274,5 @@ A Program Counter (PC) Fault is detected if the watchdog timer is not reset with
 The Underflow value is defined in microseconds by `CONFIG_ESP_BIST_WDT_UNDERFLOW_US` in the `sdkconfig.h` file. The overflow value is the same as the main watchdog timer timeout, defined by `CONFIG_ESP_BIST_WDT_TIMEOUT_US`.
 
 The windowed watchdog can be enabled with `void wdt_init_windowed(uint32_t underflow_timeout_us)`.
+
+The windowed WDT behavior is validated by the `windowed_wdt_test` application, which covers normal operation within the time window, underflow detection (feed before the underflow window), and consecutive feed cycles. CI runs both QEMU and device tests for this application.

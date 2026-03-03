@@ -141,6 +141,23 @@ To close the monitor, press `Ctrl+]`.
 
 The tests are located in the `tests` directory. The tests are divided into two categories: QEMU and device testing.
 
+### Test applications
+
+Available test applications (each in `tests/<name>/`):
+
+| Application         | Description |
+|---------------------|-------------|
+| `cpu_reg_test`      | CPU register integrity |
+| `cpu_stack_test`    | CPU stack overflow detection |
+| `ram_test`          | Volatile memory (March A / March X) |
+| `clock_test`        | Clock sources (32 kHz and 40 MHz oscillators) |
+| `flash_test`        | Non-volatile memory (CRC32) |
+| `pc_test`           | Program counter and indirect time-slot monitoring |
+| `digital_io_test`   | Digital I/O (GPIO) |
+| `wdt_test`          | Main system watchdog timer |
+| `windowed_wdt_test` | Windowed watchdog: normal operation, underflow detection, and consecutive feed cycles |
+| `esp_timer_test`    | High-resolution software timers (e.g. one-shot) |
+
 ### Qemu testing
 
 We use Pytest in conjunction with Unity, GDB scripting and QEMU to run the test suite. The tests are meant to verify the correct execution of the BIST library and to introduce faults deliberately to verify that the system can detect and recover from such situations, either by restoring the correct data from backup or entering a safe state. To run the tests, execute the following command:

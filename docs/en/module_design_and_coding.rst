@@ -1030,6 +1030,8 @@ Windowed WDT
 - If feed attempted too early, sets ``stop_feed=true`` and logs underflow error
 - Prevents PC faults (infinite loops, unexpected jumps) from masking as valid operation
 
+The windowed WDT behavior is validated by the ``windowed_wdt_test`` application (normal operation within the feed window, underflow detection, consecutive feed cycles). The esp_timer driver (``src/bist/drivers/esp_timer.c``) provides the high-resolution timer used for the underflow window.
+
 Module API
 ^^^^^^^^^^
 
