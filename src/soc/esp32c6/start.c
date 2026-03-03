@@ -101,7 +101,7 @@ void __start(void)
     esp_perip_clk_init();
 
     core_intr_matrix_clear();
-
+    esprv_intc_int_set_threshold(0);
     ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
     init_stack_pattern();
 

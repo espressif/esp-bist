@@ -1,12 +1,13 @@
     /*
-     * https://github.com/espressif/esp32c3-direct-boot-example/blob/main/common/vectors.S
-     *
-     * This is the vector table. MTVEC points here.
+     * This is the vector table for ESP32-C6 (PLIC interrupt controller).
+     * MTVEC points here.
      * Use 4-byte intructions here. 1 instruction = 1 entry of the table.
      * The CPU jumps to MTVEC (i.e. the first entry) in case of an exception,
      * and (MTVEC & 0xfffffffc) + (mcause & 0x7fffffff) * 4, in case of an interrupt.
      */
 #include "riscv/rvruntime-frames.h"
+#include "soc/soc.h"
+#include "soc/interrupt_reg.h"
 
     .equ SAVE_REGS, 32
     .equ CONTEXT_SIZE, (SAVE_REGS * 4)
@@ -142,8 +143,10 @@ _panic_handler:
 1:  j    1b
     .size  _panic_handler, .-_panic_handler
 
-    /* This is the interrupt handler.
-     * It is declared as a weak function, and can be overridden.
+    /* This is the interrupt handler for ESP32-C6 (PLIC).
+     * It saves registers, manages the PLIC interrupt threshold to allow
+     * nested interrupts from higher-priority sources, then dispatches
+     * to the C handler.
      */
     .global _interrupt_handler
     .weak _interrupt_handler
@@ -151,17 +154,48 @@ _panic_handler:
 _interrupt_handler:
     save_general_regs
     save_mepc
-    /* Before dispatch c handler, restore interrupt to enable nested intr */
+
     csrr    s1, mcause
     csrr    s2, mstatus
-    /* call the C dispatcher */
+
+    /* Save the PLIC interrupt threshold level */
+    li      t0, INTERRUPT_CORE0_CPU_INT_THRESH_REG
+    lw      s3, 0(t0)
+
+    /* Raise threshold to (current interrupt priority + 1) so only
+       higher-priority interrupts can nest. */
+    li      t2, 0x7fffffff
+    and     t1, s1, t2       /* t1 = mcause & mask (interrupt number) */
+    slli    t1, t1, 2        /* t1 = interrupt_number * 4 */
+    li      t2, INTC_INT_PRIO_REG(0)
+    add     t1, t2, t1       /* t1 = &INTC_INT_PRIO_REG[interrupt_number] */
+    lw      t2, 0(t1)        /* t2 = priority of this interrupt */
+    addi    t2, t2, 1        /* t2 = priority + 1 */
+    sw      t2, 0(t0)        /* PLIC threshold = priority + 1 */
+    fence
+
+    /* Re-enable machine interrupts to allow nesting */
+    li      t0, 0x8
+    csrrs   t0, mstatus, t0
+
+    /* Call the C dispatcher */
     mv      a0, sp      /* argument 1, stack pointer */
     mv      a1, s1      /* argument 2, interrupt number (mcause) */
-    /* mask off the interrupt flag of mcause */
-    li	    t0, 0x00000fff
+    li      t0, 0x7fffffff
     and     a1, a1, t0
     jal     _global_interrupt_handler
 
+    /* Disable machine interrupts before restoring threshold */
+    li      t0, 0x8
+    csrrc   t0, mstatus, t0
+
+    /* Restore the PLIC interrupt threshold level */
+    li      t0, INTERRUPT_CORE0_CPU_INT_THRESH_REG
+    sw      s3, 0(t0)
+    fence
+
+    csrw    mcause, s1
+    csrw    mstatus, s2
     restore_mepc
     restore_general_regs
 
