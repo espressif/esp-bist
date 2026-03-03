@@ -7,7 +7,7 @@
  #pragma once
 
  #define CONFIG_MMU_PAGE_SIZE                      0x10000
- #define CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ           80
+ #define CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ           160
  #define CONFIG_ESP_CONSOLE_UART_NUM               0
  #define CONFIG_RTC_CLK_CAL_CYCLES                 1024
  #define CONFIG_IDF_TARGET_ESP32C6                 1
