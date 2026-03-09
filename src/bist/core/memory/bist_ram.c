@@ -18,10 +18,10 @@
 
 #if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
 
-#ifndef SOC_TARGET_ESP32C6
-#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
-#else
+#if defined(SOC_TARGET_ESP32C6)
 #define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 128 // 512 bytes
+#else
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
 #endif
 
 extern uint32_t _bist_ram_test_start;
