@@ -202,7 +202,7 @@ build_esp32c6_sample_standalone:
 
 build_zephyr_esp32c6_sample:
   stage: Build
-  image: ghcr.io/zephyrproject-rtos/ci:latest
+  image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.28.7.20251127
   before_script: []
   variables:
     ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
@@ -210,6 +210,7 @@ build_zephyr_esp32c6_sample:
     - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
     - cd "$ZEPHYR_WORKSPACE"
     - west update --narrow -o=--depth=1
+    - west sdk install -t riscv64-zephyr-elf
     - west zephyr-export
     - west build -p -b esp32c6_devkitc/esp32c6/hpcore "$CI_PROJECT_DIR/samples/zephyr" --sysbuild -D ZEPHYR_EXTRA_MODULES="$CI_PROJECT_DIR"
   artifacts:
