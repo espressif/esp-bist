@@ -148,6 +148,38 @@ The ESP-BIST project uses a CMake-based build system with explicit toolchain and
 - **Compiler flags:** Strict warning flags (``-Wall -Wextra -Werror=all``) and safety-critical flags (``-fstrict-volatile-bitfields``) are applied to the BIST library target
 - **Build configuration authority:** Build settings are defined in ``src/bist/CMakeLists.txt`` and ``cmake/toolchain.cmake``; these files are the authoritative source for all build settings
 
+**Warning Suppressions:**
+
+The following compiler warning suppressions are applied to third-party ESP-IDF source files compiled as part of the BIST build. Each suppression is limited to the specific file and justified below.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - File
+     - Warning
+     - Justification
+   * - ``esp_system/panic.c`` (ESP-IDF)
+     - ``-Wno-shadow``
+     - ESP-IDF's panic handler intentionally declares a local ``rtc_wdt_ctx`` that shadows the file-scope static of the same name and type (``wdt_hal_context_t``). The local copy is used to avoid race conditions when multiple cores enter the panic handler simultaneously. This is a defensive coding pattern in the upstream IDF code (see IDF source comment at the declaration site). The shadowed variable is confined to a single function (``esp_panic_handler_enable_rtc_wdt``) and does not affect BIST safety-relevant code paths. No BIST-owned source files have this suppression applied.
+
+No warning suppressions are applied to any BIST-owned source files (``src/``, ``components/``).
+
+**Per-File Compiler Option Overrides:**
+
+The following non-default compiler options are applied to specific third-party ESP-IDF source files. Each override is limited to the specific file and justified below.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - File
+     - Option
+     - Justification
+   * - ``esp_hal_wdt/xt_wdt_hal.c`` (ESP-IDF)
+     - ``-fgnu89-inline``
+     - ESP-IDF's low-level XT WDT header (``hal/xt_wdt_ll.h``) declares helper functions as ``inline`` without ``static``. Under C17 semantics (the project default ``-std=gnu17``) with ``-O0`` (the BIST optimization level for traceability), the compiler is not required to inline these functions and instead emits external symbol references. Since no translation unit provides an external definition, the linker fails with undefined references. The ``-fgnu89-inline`` flag restores GNU89 inline semantics for this single translation unit, causing ``inline`` to behave as ``static inline`` so the function bodies are emitted in-place. This override is confined to a single ESP-IDF HAL source file compiled within the BIST library (``libbist_esp.a``) and does not alter the semantics of any BIST-owned code.
+
 For detailed information on tool versions, compiler/linker flags, toolchain configuration, and tool qualification methodology, see :doc:`tool_qualification`.
 
 Memory Model
