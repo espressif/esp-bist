@@ -1,8 +1,10 @@
 import pytest
+
+from tests.idf_targets import pytestmark  # noqa: F401
 import time
 import queue
 
-def test_cpu_reg_success(qemu_instance):
+def test_cpu_reg_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
     tests_names = ["test_BIST_Cpu_Regs", "test_BIST_Cpu_Csr_Regs"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
@@ -39,13 +41,11 @@ def cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name, script=None)
 
     # Set a breakpoint at the specific address
     tb testRegA_{}
-    continue
-
-    # Commands to run when breakpoint is hit
     commands
         set ${}=0x55555555
         continue
     end
+    continue
     '''.format(reg_name, reg_name)
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
@@ -69,7 +69,7 @@ def cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name, script=None)
     "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"
 ])
 
-def test_reg_error(qemu_debug_instance, gdb_instance, reg_name):
+def test_reg_error(qemu_debug_instance, gdb_instance, reg_name, target):
     cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name)
 
 @pytest.mark.parametrize("csr_name", [
@@ -78,19 +78,17 @@ def test_reg_error(qemu_debug_instance, gdb_instance, reg_name):
     "pmpaddr0", "pmpaddr1", "pmpaddr2", "pmpaddr3", "pmpaddr4", "pmpaddr5", "pmpaddr6", "pmpaddr7", "pmpaddr8", "pmpaddr9", "pmpaddr10", "pmpaddr11", "pmpaddr12", "pmpaddr13", "pmpaddr14", "pmpaddr15"
 ])
 
-def test_reg_csr_error(qemu_debug_instance, gdb_instance, csr_name):
+def test_reg_csr_error(qemu_debug_instance, gdb_instance, csr_name, target):
     script = '''
 #connect to remote server
 target remote :1234
 
 # Set a breakpoint at the specific address
 tb testRegA_{}
-continue
-
-# Commands to run when breakpoint is hit
 commands
     set $t0=0x55555555
     continue
 end
+continue
 '''.format(csr_name)
     cpu_reg_error_test(qemu_debug_instance, gdb_instance, csr_name, script)

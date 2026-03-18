@@ -1,7 +1,10 @@
 import time
 import queue
 
-def test_windowed_wdt_normal_success(qemu_instance):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_windowed_wdt_normal_success(qemu_instance, target):
     """Verify normal windowed feed passes without GDB intervention."""
     qemu, qemu_process, output_queue = qemu_instance
     expected_output = "test_BIST_WINDOWED_WDT_NORMAL:PASS"
@@ -18,7 +21,7 @@ def test_windowed_wdt_normal_success(qemu_instance):
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
 
-def test_windowed_wdt_underflow_success(qemu_instance):
+def test_windowed_wdt_underflow_success(qemu_instance, target):
     """Verify underflow detection passes without GDB intervention."""
     qemu, qemu_process, output_queue = qemu_instance
     expected_output = "test_BIST_WINDOWED_WDT_UNDERFLOW:PASS"
@@ -35,7 +38,7 @@ def test_windowed_wdt_underflow_success(qemu_instance):
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
 
-def test_windowed_wdt_consecutive_success(qemu_instance):
+def test_windowed_wdt_consecutive_success(qemu_instance, target):
     """Verify consecutive windowed feeds pass without GDB intervention."""
     qemu, qemu_process, output_queue = qemu_instance
     expected_output = "test_BIST_WINDOWED_WDT_CONSECUTIVE:PASS"

@@ -15,6 +15,9 @@
 #endif
 #define BIST_TEST_GPIO_INPUT_LEVEL              (1)
 
+void setUp(void) {}
+void tearDown(void) {}
+
 void test_BIST_IO_INVALID_GPIO(void)
 {
     bist_esp_err_t ret = bist_gpio_output_test(SOC_GPIO_PIN_COUNT);

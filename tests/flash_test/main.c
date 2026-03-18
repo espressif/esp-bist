@@ -3,6 +3,9 @@
 #include "bist_esp.h"
 #include "unity.h"
 
+void setUp(void) {}
+void tearDown(void) {}
+
 void test_BIST_flash(void)
 {
     bist_esp_err_t ret = bist_flash_test();

@@ -1,4 +1,7 @@
-def test_cpu_stack_success(dut):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_cpu_stack_success(dut, target):
     tests_names = ["test_BIST_Cpu_Stack_Overflow"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 
