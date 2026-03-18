@@ -87,20 +87,25 @@ ARG IDF_URL_PATH="https://github.com/espressif/esp-idf.git"
 
 ENV IDF_PATH=/opt/esp/idf
 ENV IDF_TOOLS_PATH=/opt/esp
-ENV IDF_VERSION=v5.1.4
+ENV IDF_VERSION=v6.0
 
 RUN git clone -b $IDF_VERSION --recursive $IDF_URL_PATH $IDF_PATH
 
 # Install IDF
 RUN : \
     && update-ca-certificates --fresh \
-    && $IDF_PATH/install.sh --enable-pytest --enable-ci \
+    && $IDF_PATH/install.sh --enable-ci \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install required --targets=all \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install cmake \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install-python-env \
     && $IDF_PATH/tools/idf_tools.py --non-interactive export --prefer-system \
     && rm -rf $IDF_TOOLS_PATH/dist \
     && :
+
+# Install ESP-IDF v5.1.4 (MCUboot v2.2.0 requires this version for its HAL layer)
+ARG MCUBOOT_IDF_VERSION=v5.1.4
+ENV MCUBOOT_IDF_PATH=/opt/esp/idf-v5.1.4
+RUN git clone -b $MCUBOOT_IDF_VERSION --depth 1 --recursive --shallow-submodules $IDF_URL_PATH $MCUBOOT_IDF_PATH
 
 # Download MCUboot
 ARG MCUBOOT_VER=v2.2.0

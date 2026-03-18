@@ -1,5 +1,4 @@
 stages:
-  - Build-Docker-Image
   - Build
   - Test Qemu
   - Test Device
@@ -39,23 +38,23 @@ stages:
   - windowed_wdt_test
 
 default:
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
   before_script:
     - . $IDF_PATH/export.sh
-    - echo "Building MCUboot for $SOC_TARGET"
+    - echo "Building MCUboot for $SOC_TARGET (using ESP-IDF at $MCUBOOT_IDF_PATH)"
     - cd $MCUBOOT_PATH/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$MCUBOOT_IDF_PATH -B build -GNinja
     - ninja -C build
     - cd $CI_PROJECT_DIR
 
 build_docker_image:
   before_script: []
   image: espressif/dind:1
-  stage: Build-Docker-Image
+  stage: Build
   timeout: 4h
   variables:
     DOCKER_TLS_CERTDIR: ""
-    IMAGE_NAME: espressif/esp-bist/build-env
+    IMAGE_NAME: espressif/esp-bist/build-env-2
     DOCKERFILE: .devcontainer/Dockerfile
   script:
     - mkdir -p config
@@ -64,10 +63,10 @@ build_docker_image:
     - docker --config=./config build --pull -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} -f ${DOCKERFILE} .
     - docker run --rm -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} /bin/bash -c "echo Hello Docker; exit 0"
     - docker --config=./config push ${CI_DOCKER_REGISTRY}/${IMAGE_NAME}
+  allow_failure: true
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      changes:
-        - ${DOCKERFILE}
+    - changes:
+        - .devcontainer/Dockerfile
       when: manual
   tags: [ "dind", "shiny" ]
 
@@ -78,7 +77,8 @@ build_docker_image:
     - cd $ROOT_DIR/$TEST_APP_NAME
     - cmake -DSOC_TARGET=$SOC_TARGET -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build -GNinja
     - ninja -C build
-  when: always
+  rules:
+    - when: always
   retry: 1
   tags: [build]
   cache:
@@ -116,6 +116,8 @@ build_zephyr_esp32c6_sample:
   stage: Build
   image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.28.7.20251127
   before_script: []
+  rules:
+    - when: always
   variables:
     ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
   script:
@@ -141,8 +143,9 @@ build_zephyr_esp32c6_sample:
   script:
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --executable=$TEST_APP_NAME --soc-target=$SOC_TARGET --junitxml=$REPORT_PATH
-  when: always
+    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH
+  rules:
+    - when: always
   retry: 1
   tags: [build]
   needs:
@@ -189,8 +192,9 @@ build_zephyr_esp32c6_sample:
     - cd $CI_PROJECT_DIR
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --executable=$TEST_APP_NAME --soc-target=$SOC_TARGET --junitxml=$REPORT_PATH
-  when: always
+    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH
+  rules:
+    - when: always
   retry: 1
   tags: [build]
   needs:
@@ -243,8 +247,9 @@ test_qemu_remote:
     - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
     - ninja -C build
     - ninja -C build flash_boot
-    - pytest pytest_device* --executable=$TEST_APP_NAME --junitxml=$REPORT_PATH
-  when: always
+    - pytest pytest_device* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH
+  rules:
+    - when: always
   retry: 1
   tags: [generic, $SOC_TARGET]
   needs:
@@ -308,6 +313,8 @@ test_device:
   image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
   before_script: []
   tags: [build]
+  rules:
+    - when: always
   needs:
     - test_qemu_upstream
     - test_qemu_remote
@@ -369,6 +376,8 @@ deploy_preview_docs:
     - build_docs_pdf
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: always
 
 deploy_prod_docs:
