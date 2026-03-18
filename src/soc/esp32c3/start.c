@@ -18,11 +18,11 @@
 #include <string.h>
 #include "sdkconfig.h"
 #include "rom/ets_sys.h"
-#include "esp_rom_uart.h"
+#include "esp_rom_serial_output.h"
 #include "esp_log.h"
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
-#include "esp32c3/rtc.h"
+#include "soc/reset_reasons.h"
 #include "soc/rtc_cntl_reg.h"
 #include "wdt.h"
 #include "loader.h"
@@ -59,13 +59,6 @@ static void setup_clock_glitch_reset(bool enable)
 
 void __start(void)
 {
-    if (esp_cpu_dbgr_is_attached()) {
-        /* Let debugger some time to detect that target started, halt it, enable ebreaks and resume.
-           500ms should be enough. */
-        for (uint32_t ms_num = 0; ms_num < 2; ms_num++) {
-            esp_rom_delay_us(100000);
-        }
-    }
     /* Configure the global pointer register
      * (This should be the first thing startup does,
      * as any other piece of code could be relaxed by
@@ -94,7 +87,7 @@ void __start(void)
     uint32_t _app_rtc_size = (uint32_t)&_image_rtc_size;
     uint32_t _app_rtc_vaddr = ((uint32_t)&_image_rtc_vaddr);
 
-    esp_rom_uart_tx_wait_idle(0);
+    esp_rom_output_tx_wait_idle(0);
 
     map_rtc_segment(_app_rtc_start, _app_rtc_vaddr, _app_rtc_size);
 

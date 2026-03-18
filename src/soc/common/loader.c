@@ -17,13 +17,15 @@
 #include <stdint.h>
 #include <string.h>
 #include "hal/cache_hal.h"
-#include "hal/mmu_hal.h"
 #include "hal/cache_ll.h"
+#include "hal/mmu_hal.h"
 #include "rom/ets_sys.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_log.h"
 #include "esp_cpu.h"
 #include "loader.h"
+
+#define CACHE_LEVEL CACHE_LL_LEVEL_EXT_MEM
 
 extern uint32_t _stack_top, _stack_overflow_protection_start;
 
@@ -45,7 +47,7 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
     ESP_EARLY_LOGI(TAG, "IROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_irom_start, app_irom_vaddr,
         app_irom_size);
 
-    cache_hal_disable(CACHE_TYPE_ALL);
+    cache_hal_disable(CACHE_LEVEL, CACHE_TYPE_ALL);
 
     /* Clear the MMU entries that are already set up,
      * so the new app only has the mappings it creates.
@@ -73,7 +75,7 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
 #endif
 
     /* ----------------------Enable Cache---------------- */
-    cache_hal_enable(CACHE_TYPE_ALL);
+    cache_hal_enable(CACHE_LEVEL, CACHE_TYPE_ALL);
 }
 
 void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t app_rtc_size)
@@ -86,7 +88,7 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
     ESP_EARLY_LOGI(TAG, "RTC segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_rtc_start, app_rtc_vaddr,
         app_rtc_size);
 
-    cache_hal_disable(CACHE_TYPE_ALL);
+    cache_hal_disable(CACHE_LEVEL, CACHE_TYPE_ALL);
 
     /**
      * To load RTC content to its virtual address (0x50000000) we need to:
@@ -101,7 +103,7 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
 
     cache_bus_mask_t bus_mask = cache_ll_l1_get_bus(0, app_rtc_vaddr_aligned, app_rtc_size);
     cache_ll_l1_enable_bus(0, bus_mask);
-    cache_hal_enable(CACHE_TYPE_ALL);
+    cache_hal_enable(CACHE_LEVEL, CACHE_TYPE_ALL);
 
     void *data = (void *)(SOC_DROM_LOW + (app_rtc_start - app_rtc_start_aligned));
 

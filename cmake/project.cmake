@@ -64,12 +64,11 @@ if (NOT DEFINED APP_SOURCES)
 endif()
 
 set(CMAKE_TOOLCHAIN_FILE ${BIST_ROOT_DIR}/cmake/toolchain.cmake)
+include(${CMAKE_TOOLCHAIN_FILE})
 
 set(APP_EXECUTABLE ${APP_NAME}.elf)
 
 add_executable(${APP_EXECUTABLE} ${APP_SOURCES})
-
-enable_language(C ASM)
 
 add_subdirectory(${BIST_ROOT_DIR}/src/bist ${CMAKE_BINARY_DIR}/bist)
 target_link_libraries(${APP_EXECUTABLE} PUBLIC bist_esp)
@@ -126,6 +125,13 @@ target_compile_options(
     ${CFLAGS}
     )
 
+target_compile_options(
+    ${APP_EXECUTABLE}
+    PUBLIC
+    $<$<COMPILE_LANGUAGE:C>:-include>
+    $<$<COMPILE_LANGUAGE:C>:esp_assert.h>
+    )
+
 target_compile_definitions(
     ${APP_EXECUTABLE} PUBLIC
     -DUNITY_INCLUDE_CONFIG_H
@@ -133,6 +139,12 @@ target_compile_definitions(
 
 # Target-specific includes, sources, linker script, and ROM LD files
 include(${BIST_ROOT_DIR}/cmake/${SOC_TARGET}.cmake)
+
+# Per-file warning suppression for third-party IDF sources (see docs/en/software_safety_requirements.rst)
+set_source_files_properties(
+    ${IDF_PATH}/components/esp_system/panic.c
+    PROPERTIES COMPILE_OPTIONS "-Wno-shadow"
+    )
 
 set(include_unity
     ${IDF_PATH}/components/unity/include
@@ -146,6 +158,12 @@ target_include_directories(
     ${include_hal}
     ${include_unity}
     ${CMAKE_CURRENT_BINARY_DIR}/include
+    )
+
+target_include_directories(
+    ${APP_EXECUTABLE}
+    SYSTEM PUBLIC
+    ${IDF_PATH}/components/esp_hw_support/include/esp_private
     )
 
 set(unity_srcs
@@ -260,10 +278,10 @@ add_custom_command(TARGET flash POST_BUILD
     USES_TERMINAL
     COMMAND
     ${esptool_path}
-    -p ${ESPPORT} -b 460800 --before default_reset --after hard_reset
-    --chip ${SOC_TARGET} write_flash
-    --flash_mode dio --flash_size detect
-    --flash_freq 40m 0x10000
+    -p ${ESPPORT} -b 460800 --before default-reset --after hard-reset
+    --chip ${SOC_TARGET} write-flash
+    --flash-mode dio --flash-size detect
+    --flash-freq 40m 0x10000
     ${APP_NAME}_signed.bin
     )
 
@@ -273,10 +291,10 @@ add_custom_command(TARGET flash_boot POST_BUILD
     USES_TERMINAL
     COMMAND
     ${esptool_path}
-    -p ${ESPPORT} -b 460800 --before default_reset --after hard_reset
-    --chip ${SOC_TARGET} write_flash
-    --flash_mode dio --flash_size detect --force
-    --flash_freq keep 0x0
+    -p ${ESPPORT} -b 460800 --before default-reset --after hard-reset
+    --chip ${SOC_TARGET} write-flash
+    --flash-mode dio --flash-size detect --force
+    --flash-freq keep 0x0
     ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin
     )
 

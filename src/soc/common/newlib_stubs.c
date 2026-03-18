@@ -93,3 +93,45 @@ int pthread_setcancelstate(int state, int *oldstate)
     }
     return 0;
 }
+
+void _exit(int status)
+{
+    (void)status;
+    while (1) {}
+}
+
+int _kill(int pid, int sig)
+{
+    (void)pid;
+    (void)sig;
+    return -1;
+}
+
+int _getpid(void)
+{
+    return 1;
+}
+
+/* Stubs for IDF v6.0 esp_sleep_sub_mode functions (bare metal: no sleep). */
+#include <stdbool.h>
+#include <stddef.h>
+
+typedef enum { ESP_SLEEP_RTC_USE_RC_FAST_MODE = 0 } esp_sleep_sub_mode_t;
+
+bool *esp_sleep_sub_mode_dump_config(bool *out)
+{
+    static bool dummy[1] = { false };
+    (void)out;
+    return dummy;
+}
+
+void esp_sleep_sub_mode_config(esp_sleep_sub_mode_t mode, bool activate)
+{
+    (void)mode;
+    (void)activate;
+}
+
+void esp_sleep_sub_mode_force_disable(esp_sleep_sub_mode_t mode)
+{
+    (void)mode;
+}

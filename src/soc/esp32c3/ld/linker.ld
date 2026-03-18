@@ -255,8 +255,11 @@ SECTIONS
     *rtc_*.*(.literal .text .literal.* .text.*)
     *periph_ctrl.*(.literal .text .literal.* .text.*)
 
-    /* [mapping:riscv] */
+    /* [mapping:riscv]
+     * rv_utils.c (e.g. rv_utils_dbgr_is_attached) has no IRAM_ATTR in IDF v6;
+     * pull the whole object into IRAM for early boot before I-cache is usable. */
     *interrupt.*(.text .text.* .literal .literal.*)
+    *rv_utils.*(.text .text.* .literal .literal.*)
 
     /* [mapping:hal] */
     *cache_hal.*(.text .text.* .literal .literal.*)
@@ -334,8 +337,16 @@ SECTIONS
     *esp_cache.*(.literal .literal.* .text .text.*)
     *cache_utils.*(.literal .text .literal.* .text.*)
 
+    /* newlib memcpy/memset must be in IRAM: map_rtc_segment calls memcpy
+     * before map_rom_segments has set up the flash (IROM) mapping. */
+    *libc.a:libc_a-memcpy.*(.text .text.* .literal .literal.*)
+    *libc.a:libc_a-memset.*(.text .text.* .literal .literal.*)
+
     *libbist_esp.a:*(.text .text.*)
 
+    /* Align to 8 so pcTestFunction0 has bit 2 = 0; the GDB fault-injection
+       test relies on XOR ^ 4 landing inside the function body, not before it. */
+    . = ALIGN(8);
     _pc_test_0_start = ABSOLUTE(.);
     *(.pc_test_0 .pc_test_0.*)
     _pc_test_0_end = ABSOLUTE(.);
@@ -415,6 +426,7 @@ SECTIONS
     *periph_ctrl.*(.rodata .rodata.* .srodata .srodata.*)
     *loader.*(.rodata .rodata.* .srodata .srodata.*)
     *cache_utils.*(.rodata .rodata.* .srodata .srodata.*)
+    *rv_utils.*(.rodata .rodata.* .srodata .srodata.*)
 
     /* [mapping:hal] */
     *mmu_hal.*(.rodata .rodata.* .srodata .srodata.*)
