@@ -214,6 +214,8 @@ SECTIONS
     *periph_ctrl.*(.literal .text .literal.* .text.*)
 
     *interrupt.*(.text .text.* .literal .literal.*)
+    /* IDF v6 rv_utils.c has no IRAM_ATTR; keep in IRAM for pre-cache boot. */
+    *rv_utils.*(.text .text.* .literal .literal.*)
 
     *cache_hal.*(.text .text.* .literal .literal.*)
     *mmu_hal.*(.text .text.* .literal .literal.*)
@@ -249,8 +251,16 @@ SECTIONS
 
     *(.literal.GPIO_HOLD_MASK .text.GPIO_HOLD_MASK)
 
+    /* newlib memcpy/memset must be in IRAM: map_rtc_segment calls memcpy
+     * before map_rom_segments has set up the flash (IROM) mapping. */
+    *libc.a:libc_a-memcpy.*(.text .text.* .literal .literal.*)
+    *libc.a:libc_a-memset.*(.text .text.* .literal .literal.*)
+    
     *libbist_esp.a:*(.text .text.*)
 
+    /* Align to 8 so pcTestFunction0 has bit 2 = 0; the GDB fault-injection
+       test relies on XOR ^ 4 landing inside the function body, not before it. */
+    . = ALIGN(8);
     _pc_test_0_start = ABSOLUTE(.);
     *(.pc_test_0 .pc_test_0.*)
     _pc_test_0_end = ABSOLUTE(.);
@@ -317,6 +327,7 @@ SECTIONS
     *loader.*(.rodata .rodata.* .srodata .srodata.*)
     *clock_init.*(.rodata .rodata.* .srodata .srodata.*)
     *periph_ctrl.*(.rodata .rodata.* .srodata .srodata.*)
+    *rv_utils.*(.rodata .rodata.* .srodata .srodata.*)
 
     /* [mapping:hal] */
     *mmu_hal.*(.rodata .rodata.* .srodata .srodata.*)
