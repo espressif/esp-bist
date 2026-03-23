@@ -18,3 +18,6 @@
 #define CONFIG_SOC_RTC_FAST_MEM_SUPPORTED         1
 #define CONFIG_ESP_INT_WDT                        1
 #define CONFIG_RTC_CLK_SRC_EXT_CRYS               1
+#define CONFIG_LOG_VERSION                        1
+#define CONFIG_FREERTOS_NUMBER_OF_CORES           1
+#define CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM    0
