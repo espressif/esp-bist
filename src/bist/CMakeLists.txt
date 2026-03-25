@@ -121,7 +121,7 @@ set(CFLAGS
     "-Wno-unused-parameter"
     "-Wno-sign-compare"
     "-ggdb"
-    "-O0"
+    "-Os"
     "-D_GNU_SOURCE"
     "-std=gnu17"
     "-Wno-old-style-declaration"
