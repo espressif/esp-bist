@@ -23,7 +23,7 @@ Compiler Toolchain
 
 **Tool**: RISC-V GCC Toolchain (riscv32-esp-elf-gcc)
 
-**Version**: Determined by ESP-IDF version in dev container (GCC 12.2.0 for ESP-IDF v5.1.4)
+**Version**: Determined by ESP-IDF version in dev container (GCC 15.2.0 for ESP-IDF v6.0)
 
 **Classification**: T3 (code generation tool)
 
@@ -36,11 +36,11 @@ Compiler Toolchain
    - Static analysis (see Static Analysis Tools section)
    - Runtime testing (QEMU and hardware validation)
    - Code review and inspection
-4. **Configuration**: Compiler flags are explicitly set to ``-O0 -ggdb`` for the BIST library to ensure traceability and debuggability
+4. **Configuration**: Compiler flags are explicitly set to ``-Os -ggdb`` for the BIST library to balance code-size optimization with debuggability. Individual functions that require unoptimized semantics are annotated with per-function attributes (see :doc:`software_safety_requirements`)
 
 **Compiler Flags** (from ``src/bist/CMakeLists.txt``):
 
-- ``-O0``: No optimization (ensures code matches source)
+- ``-Os``: Optimize for size.
 - ``-ggdb``: Full debug information
 - ``-Wall -Wextra -Werror=all``: Strict warnings treated as errors
 - ``-std=gnu17``: C standard

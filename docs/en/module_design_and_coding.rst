@@ -80,7 +80,8 @@ Coding and Interfaces
 - No pointer dereferencing or dynamic memory is used, reducing risk of undefined behavior.
 - Single public API declared in ``bist_cpu_regs.h``
 - This test is self-contained and does not call other modules. It only depends on the BIST error code definitions and configuration macros.
-- All operations are performed on CPU registers directly. No heap or stack allocation is required beyond the function call stack.
+- All operations are performed on CPU registers directly.
+- The function is declared ``__attribute__((naked))`` and manages its own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path). This is necessary because the function body is pure inline assembly that manually issues ``ret``; without ``naked``, the compiler may or may not generate a prologue depending on the optimization level (e.g. ``-Os`` omits it), which would cause a mismatch with the hand-written epilogue and corrupt the caller's stack.
 - The main function has a single entry and, under normal conditions, a single exit. Error handling uses a label (``errorCPU``) for early exit on failure, which is documented and justified for low-level assembly.
 - Branching is limited to error detection and is implemented via macro-generated assembly. There is no deep nesting or complex logic.
 - No explicit C loops are used; the test iterates over registers via repeated macro invocations. All operations are statically bounded.
@@ -163,7 +164,8 @@ Coding and Interfaces
 - Error code ``BIST_ESP_CPU_CSR_TEST_ERR`` on mismatch
 - Single API in ``bist_cpu_csr_regs.h``
 - This test is self-contained and does not call other modules. It only depends on the BIST error code definitions and configuration macros.
-- No dynamic or static data structures are used. All operations are performed on CPU CSRs directly. No heap or stack allocation is required beyond the function call stack.
+- No dynamic or static data structures are used. All operations are performed on CPU CSRs directly.
+- The function is declared ``__attribute__((naked))`` and manages its own 16-byte stack frame explicitly, for the same reason as ``bist_cpu_regs_test`` (see above): the function body is pure inline assembly with manual ``ret``, so the compiler must not generate a prologue or epilogue.
 - The main function has a single entry and, under normal conditions, a single exit. Error handling uses a label (``errorCSR``) for early exit on failure, which is documented and justified for low-level assembly.
 - No explicit C loops are used; the test iterates over CSRs via repeated macro invocations. All operations are statically bounded.
 - Only bitwise and equality operations are performed. No floating-point or complex arithmetic is used.
@@ -524,14 +526,45 @@ Source Files
      - v1.0.0
      - 83acc801a25f7fcea5942ba8a0129092
 
+Stack-Pointer Relocation (Safe Stack)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The linker defines the RAM test region as ``_bist_ram_test_start`` to ``_dram0_end``.
+Because ``_dram0_end`` is also ``_stack_top``, this region includes the active call stack.
+During the W0 pass the march algorithm writes zeros to every word in the current chunk;
+if that chunk overlaps the function's own stack frame, local variables (``start_addr``,
+loop counters, etc.) are corrupted, causing undefined behaviour whose symptom depends on
+the compiler's stack-frame layout — different GCC versions place variables at different
+offsets, so the defect can manifest as a crash on one toolchain and a silent early loop
+exit on another.
+
+To eliminate this class of failure the public entry points ``bist_ram_test_march_a()``
+and ``bist_ram_test_march_x()`` relocate the stack pointer into a 256-byte buffer
+(``ram_test_stack``) placed in ``.dram0.safe_ram`` — the same linker section that holds
+``backup_chunk``.  Because ``.dram0.safe_ram`` sits **below** ``_bist_ram_test_start``,
+the march algorithm never writes to the relocated stack, and the full linker-defined
+region — including the normal stack — is tested.
+
+The relocation is performed by ``run_on_safe_stack()``, a thin wrapper that:
+
+1. Saves the original SP and RA on the safe stack using inline assembly.
+2. Switches SP to the top of ``ram_test_stack``.
+3. Calls the march implementation via an indirect ``jalr``.
+4. Restores the original SP after the implementation returns.
+
+Callers' stack frames (``main()``, Unity runner, etc.) **are** inside the test region,
+but the chunk-based backup/restore cycle saves them to ``backup_chunk`` before each
+destructive pass and restores them afterwards, so they are intact when control returns.
+
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
 - The RAM test uses explicit backup and restore of memory regions to prevent data loss during testing. If a test fails, the original memory contents are restored before returning an error.
 - Explicit error codes; bounded loops sized by region and chunk size
-- No dynamic memory; statically allocated backup buffer
+- No dynamic memory; statically allocated backup buffer and safe stack
 - This test uses linker-defined symbols for RAM region boundaries and size.
-- Uses a statically allocated backup buffer (``backup_chunk``) in a dedicated RAM section to store and restore memory contents during testing.
+- Uses a statically allocated backup buffer (``backup_chunk``) and a 256-byte safe stack (``ram_test_stack``), both placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region.
+- The stack pointer is temporarily relocated to ``ram_test_stack`` via inline assembly before calling the march implementation, ensuring the march algorithm can test the entire linker-defined region — including the normal stack — without corrupting its own frame. See *Stack-Pointer Relocation* above.
 - No dynamic memory is used.
 - The main function has a single entry and, under normal conditions, a single exit. The use of ``goto`` for cleanup is documented and justified for resource safety.
 - Branching is limited to error detection and cleanup. No deep nesting or complex logic.
@@ -541,6 +574,7 @@ Coding and Interfaces
 - Pointers are used to access RAM regions and the backup buffer. All pointer arithmetic is explicit and bounds-checked.
 - No recursion is used in this test.
 - Division is only used to convert byte size to word count, and the size is guaranteed to be nonzero and aligned by the linker.
+- Inline assembly is used in ``run_on_safe_stack()`` to save/restore the stack pointer; the clobber list is explicit and covers all caller-saved registers.
 
 .. _flash-test:
 

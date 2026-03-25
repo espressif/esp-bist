@@ -144,7 +144,7 @@ The ESP-BIST project uses a CMake-based build system with explicit toolchain and
 **Key Safety Requirements:**
 
 - **Build reproducibility:** All builds use a pinned toolchain version from the development container (see :doc:`tool_qualification` for detailed tool versions and qualification evidence)
-- **Optimization level:** The BIST library is compiled with ``-O0 -ggdb`` (no optimization, full debug info) to ensure traceability, debuggability, and suitability for static analysis
+- **Optimization level:** The BIST library is compiled with ``-Os -ggdb`` (optimize for size, full debug info). The ``-Os`` level is used because at ``-O0`` all local variables are spilled to the stack, making safety-critical code vulnerable to self-corruption when a test writes to memory overlapping its own stack frame (see RAM test safe-stack design in :doc:`module_design_and_coding`). Individual functions that require ``-O0`` semantics (e.g., ``bist_cpu_stack_recursive``, which must genuinely consume stack on each recursive call) are annotated with ``__attribute__((optimize("O0")))``
 - **Compiler flags:** Strict warning flags (``-Wall -Wextra -Werror=all``) and safety-critical flags (``-fstrict-volatile-bitfields``) are applied to the BIST library target
 - **Build configuration authority:** Build settings are defined in ``src/bist/CMakeLists.txt`` and ``cmake/toolchain.cmake``; these files are the authoritative source for all build settings
 
@@ -263,7 +263,7 @@ Safety-Related Mapping
 
 - All ESP-BIST library code (from ``libbist_esp.a``) is placed in IRAM by default to guarantee deterministic execution independent of flash cache state. This eliminates timing variability and improves fault detection reliability.
 - The stack sentinel region is placed at the end of DRAM and filled with a known pattern for overflow detection.
-- Backup buffers for RAM tests are placed in a safe RAM section (``.dram0.safe_ram``) that is excluded from RAM test coverage.
+- Backup buffers and the RAM test safe stack are placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region. During march execution the stack pointer is temporarily relocated to this section so that the entire linker-defined test region — including the normal stack — can be tested without self-corruption.
 
 Configurability and Evidence
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
