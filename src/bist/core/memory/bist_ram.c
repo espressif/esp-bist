@@ -24,17 +24,58 @@
 #define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
 #endif
 
+#define MARCH_STACK_SIZE 256
+
 extern uint32_t _bist_ram_test_start;
 extern uint32_t _bist_ram_test_size;
 
 // Buffer to backup and restore 1024 bytes at a time
 volatile uint32_t __attribute__((section(".dram0.safe_ram"))) backup_chunk[BIST_ESP_RAM_BACKUP_CHUNK_SIZE];
 
-bist_esp_err_t bist_ram_test_march_a(void)
+// Stack for the RAM test
+static uint8_t __attribute__((section(".dram0.safe_ram"), aligned(16)))
+    ram_test_stack[MARCH_STACK_SIZE];
+
+/*
+ * Run fn() with SP relocated to ram_test_stack (.dram0.safe_ram).
+ * safe_ram sits below _bist_ram_test_start, so the march algorithms can
+ * test the entire linker-defined region — including the normal stack —
+ * without ever corrupting their own frame.
+ *
+ * The caller's stack frames ARE inside the test region, but the chunk-based
+ * backup/restore cycle saves them to backup_chunk before each test pass and
+ * restores them afterwards, so they are intact when control returns here.
+ */
+static bist_esp_err_t run_on_safe_stack(bist_esp_err_t (*fn)(void))
+{
+    bist_esp_err_t result;
+    uint8_t *safe_sp = ram_test_stack + MARCH_STACK_SIZE;
+
+    __asm__ volatile(
+        "mv   t0, sp\n"
+        "mv   sp, %[stk]\n"
+        "addi sp, sp, -8\n"
+        "sw   t0, 4(sp)\n"
+        "sw   ra, 0(sp)\n"
+        "jalr ra, 0(%[func])\n"
+        "mv   %[ret], a0\n"
+        "lw   ra, 0(sp)\n"
+        "lw   t0, 4(sp)\n"
+        "mv   sp, t0\n"
+        : [ret] "=r"(result)
+        : [stk] "r"(safe_sp), [func] "r"(fn)
+        : "t0", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+          "t1", "t2", "t3", "t4", "t5", "t6", "ra", "memory"
+    );
+
+    return result;
+}
+
+static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size/4; // 4 bytes per word
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
@@ -46,7 +87,7 @@ bist_esp_err_t bist_ram_test_march_a(void)
             backup_chunk[i] = start_addr[offset + i];
         }
 
-        // March X Test Sequence
+        // March A Test Sequence
         // 1. ↑ {W0} (Write 0 in ascending order)
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = 0;
@@ -57,7 +98,7 @@ bist_esp_err_t bist_ram_test_march_a(void)
         for (size_t i = 0; i < current_chunk_size; i++) {
             if (start_addr[offset + i] != 0) {
                 test_passed = false;
-                goto restore_original_chunk;
+                goto restore_a;
             }
             start_addr[offset + i] = 0xFFFFFFFF;
         }
@@ -66,12 +107,11 @@ bist_esp_err_t bist_ram_test_march_a(void)
         for (size_t i = 0; i < current_chunk_size; i++) {
             if (start_addr[offset + i] != 0xFFFFFFFF) {
                 test_passed = false;
-                goto restore_original_chunk;
+                goto restore_a;
             }
         }
 
-    restore_original_chunk:
-        // Restore the original values of the current chunk
+    restore_a:
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = backup_chunk[i];
         }
@@ -84,11 +124,11 @@ bist_esp_err_t bist_ram_test_march_a(void)
     return BIST_ESP_OK;
 }
 
-bist_esp_err_t bist_ram_test_march_x(void)
+static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size/4; // 4 bytes per word
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
@@ -111,7 +151,7 @@ bist_esp_err_t bist_ram_test_march_x(void)
         for (size_t i = 0; i < current_chunk_size; i++) {
             if (start_addr[offset + i] != 0) {
                 test_passed = false;
-                goto restore_original_chunk;
+                goto restore_x;
             }
             start_addr[offset + i] = 0xFFFFFFFF; // Write 1
         }
@@ -120,7 +160,7 @@ bist_esp_err_t bist_ram_test_march_x(void)
         for (size_t i = current_chunk_size; i != 0; i--) {
             if (start_addr[offset + i - 1] != 0xFFFFFFFF) {
                 test_passed = false;
-                goto restore_original_chunk;
+                goto restore_x;
             }
             start_addr[offset + i - 1] = 0; // Write 0
         }
@@ -129,7 +169,7 @@ bist_esp_err_t bist_ram_test_march_x(void)
         for (size_t i = 0; i < current_chunk_size; i++) {
             if (start_addr[offset + i] != 0) {
                 test_passed = false;
-                goto restore_original_chunk;
+                goto restore_x;
             }
             start_addr[offset + i] = 0xFFFFFFFF; // Write 1
         }
@@ -138,13 +178,12 @@ bist_esp_err_t bist_ram_test_march_x(void)
         for (size_t i = current_chunk_size; i != 0; i--) {
             if (start_addr[offset + i - 1] != 0xFFFFFFFF) {
                 test_passed = false;
-                goto restore_original_chunk;
+                goto restore_x;
             }
             start_addr[offset + i - 1] = 0; // Write 0
         }
 
-    restore_original_chunk:
-        // Restore the original values of the current chunk
+    restore_x:
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = backup_chunk[i];
         }
@@ -155,6 +194,16 @@ bist_esp_err_t bist_ram_test_march_x(void)
     }
 
     return BIST_ESP_OK;
+}
+
+bist_esp_err_t bist_ram_test_march_a(void)
+{
+    return run_on_safe_stack(march_a_impl);
+}
+
+bist_esp_err_t bist_ram_test_march_x(void)
+{
+    return run_on_safe_stack(march_x_impl);
 }
 
 #endif // CONFIG_ESP_BIST_MEMORY_RAM_TEST
