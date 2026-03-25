@@ -33,7 +33,7 @@ if(CONFIG_ESP_BIST)
                 core/memory/bist_ram.c
         )
 
-        zephyr_compile_options(-O0)
+        zephyr_compile_options(-Os)
 
         set(SOC_LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../soc/${CONFIG_SOC}/ld/bist_lpcore.ld" CACHE INTERNAL "Custom linker script for BIST")
 endif()
