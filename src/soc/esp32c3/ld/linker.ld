@@ -688,7 +688,6 @@ SECTIONS
     _stext = .;
     _instruction_reserved_start = ABSOLUTE(.);
     _text_start = ABSOLUTE(.);
-    _instruction_reserved_start = ABSOLUTE(.);
     _flash_text_start = ABSOLUTE(.);
 
 #if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
