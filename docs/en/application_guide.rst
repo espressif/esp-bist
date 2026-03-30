@@ -71,9 +71,9 @@ Post-Boot Self-Tests
 2. **External Crystal Test** (``bist_ext_crystal_fail_test()``)
 
    - **IEC 60730 Component**: 3 (Clock)
-   - **Purpose**: Validates 32.768 kHz external crystal oscillator via XT WDT
+   - **Purpose**: Validates 32.768 kHz external crystal oscillator via XT WDT (on SoCs with ``SOC_XT_WDT_SUPPORTED``)
    - **Rationale**: Low-frequency crystal is critical for RTC and timing functions; failure must be detected immediately
-   - **Implementation**: Registers XT WDT callback; test passes if no callback fires within timeout window
+   - **Implementation**: Registers XT WDT callback; test passes if no callback fires within timeout window. On SoCs without XT WDT hardware, the test is skipped and returns ``BIST_ESP_OK``.
 
 3. **Main Crystal Test** (``bist_main_crystal_test()``)
 
@@ -135,19 +135,19 @@ Watchdog Callback Registration
 
 **Functions**:
 
-- ``esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL)``
+- ``esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL)`` (on SoCs with ``SOC_XT_WDT_SUPPORTED``)
 - ``wdt_register_callback(wdt_callback, NULL)``
 
 **Purpose**: Registers callbacks for watchdog events to enable fail-safe response.
 
 **Rationale**:
 
-- **XT WDT Callback**: External crystal failure is a critical fault requiring immediate safe state transition
+- **XT WDT Callback**: External crystal failure is a critical fault requiring immediate safe state transition (available on SoCs with XT WDT hardware, e.g. ESP32-C3)
 - **MWDT Callback**: Master watchdog callback provides notification before reset (if needed for logging or state saving)
 
 **Implementation**:
 
-- XT WDT callback directly calls ``fail_safe_exit()`` for crystal failures
+- XT WDT callback directly calls ``fail_safe_exit()`` for crystal failures (guarded by ``SOC_XT_WDT_SUPPORTED`` at compile time)
 - MWDT callback logs the event (callback executes in IRAM before reset)
 
 Runtime Tests
@@ -469,7 +469,9 @@ For maximum safety coverage (as in standalone application):
 
         // Initialize all safety mechanisms
         bist_cpu_stack_overflow_init();
+    #if SOC_XT_WDT_SUPPORTED
         esp_xt_wdt_register_callback(fail_safe_exit, NULL);
+    #endif
         wdt_register_callback(wdt_callback, NULL);
 
         // Initialize application

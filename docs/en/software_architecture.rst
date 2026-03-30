@@ -16,7 +16,7 @@ The ESP-BIST standalone firmware uses a three-layer architecture:
 
 Key Build Properties
 ^^^^^^^^^^^^^^^^^^^^
-- CMake + Ninja build; toolchain pinned in dev container and ``cmake/toolchain-{IDF_TARGET_PATH_NAME}.cmake``
+- CMake + Ninja build; toolchain pinned in dev container and ``cmake/toolchain.cmake``
 - BIST library compiled with ``-O0``/``-ggdb``, strict warnings, ``-std=gnu17``, section flags, and volatile bitfield safety flags
 - All BIST objects placed in IRAM by linker for deterministic timing; CRC regions reserved in flash
 - Kconfig-driven configuration compiled into ``bist_conf.h``; timing and memory parameters recorded in build artifacts
@@ -26,7 +26,7 @@ Modules Architecture
 
 - **CPU tests** (``core/cpu/``): register integrity, CSR integrity, PC integrity (functions placed in IRAM/Flash/RTC), stack overflow detection
 - **Memory tests** (``core/memory/``): RAM March A/X; flash CRC validation
-- **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring; 40MHz crystal drift measurement
+- **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); 40MHz crystal drift measurement
 - **WDT tests** (``core/wdt/``): watchdog init and stack overflow handler registration
 - **IO tests** (``core/io/``): GPIO output/input plausibility checks
 - **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, GPIO, timer wrappers
@@ -66,16 +66,17 @@ Interrupt Handling
 
 - Vector table in ``soc/{IDF_TARGET_PATH_NAME}/vectors.S`` mapped to IRAM.
 - MWDT interrupt before reset; callback registered via ``wdt_register_callback`` must be short and deterministic.
-- XT WDT interrupt for 32kHz crystal failure via ``esp_xt_wdt_register_callback``.
+- XT WDT interrupt for 32kHz crystal failure via ``esp_xt_wdt_register_callback`` (available on SoCs with ``SOC_XT_WDT_SUPPORTED``; on other SoCs the external crystal fail test is skipped).
 - Library does not install ISRs; it exposes registration APIs only.
 
 Data Storage Model
 ------------------
 
 - **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash region.
-- **IRAM**: All ``libbist_esp.a`` code placed in IRAM for deterministic timing; PC test functions in dedicated sections.
+- **IRAM**: All ``libbist_esp.a`` code placed in IRAM for deterministic timing; ``pc_test_0`` placed at end of IRAM.
 - **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel at bottom of stack; safe RAM buffer excluded from RAM test.
-- **RTC/LP RAM**: Small RAM region used by PC test.
+- **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
+- **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
 - **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).
 
 Time-Based Dependencies
@@ -91,7 +92,7 @@ Time-Based Dependencies
 Hardware/Software Interfaces
 ----------------------------
 
-- Clock control via XT WDT and ESP timer
+- Clock control via XT WDT (where supported) and ESP timer
 - Flash CRC injection/readback via ``scripts/calculate_crc32.py`` and runtime CRC in ``bist_flash_test``
 - GPIO configuration and I/O via driver wrappers
 - Watchdog APIs for MWDT/windowed and XT WDT callbacks

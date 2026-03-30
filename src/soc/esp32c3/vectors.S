@@ -110,14 +110,36 @@ _vector_table:
     .option pop
     .size _vector_table, .-_vector_table
 
-    /* This should be the exception handler.
-     * It doesn't do anything useful yet, but you can set a breakpoint here, to see if an exception happens.
-     */
     .global _panic_handler
-    .weak _panic_handler
     .type _panic_handler, @function
 _panic_handler:
-    j _panic_handler
+    save_general_regs RV_STK_FRMSZ
+    save_mepc
+
+    /* Save original SP (before frame allocation) */
+    addi t0, sp, RV_STK_FRMSZ
+    sw   t0, RV_STK_SP(sp)
+
+    /* Save GP */
+    sw   gp, RV_STK_GP(sp)
+
+    /* Save machine CSRs */
+    csrr t0, mstatus
+    sw   t0, RV_STK_MSTATUS(sp)
+    csrr t0, mtvec
+    sw   t0, RV_STK_MTVEC(sp)
+    csrr t0, mcause
+    sw   t0, RV_STK_MCAUSE(sp)
+    csrr t0, mtval
+    sw   t0, RV_STK_MTVAL(sp)
+    csrr t0, mhartid
+    sw   t0, RV_STK_MHARTID(sp)
+
+    mv   a0, sp
+    la   t0, panic_handler_c
+    jalr t0
+
+1:  j    1b
     .size  _panic_handler, .-_panic_handler
 
     /* This is the interrupt handler.

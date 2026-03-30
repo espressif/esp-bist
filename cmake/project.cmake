@@ -11,6 +11,8 @@ else()
     # Set the minimum revision for each supported chip
     if ("${SOC_TARGET}" STREQUAL "esp32c3")
         set(ESP_MIN_REVISION 3)
+    elseif ("${SOC_TARGET}" STREQUAL "esp32c6")
+        set(ESP_MIN_REVISION 0)
     else()
         message(FATAL_ERROR "Unsupported target ${SOC_TARGET}")
     endif()
@@ -59,7 +61,7 @@ if (NOT DEFINED APP_SOURCES)
     message(FATAL_ERROR "APP_SOURCES not defined. Please set APP_SOURCES before including project.cmake")
 endif()
 
-set(CMAKE_TOOLCHAIN_FILE ${BIST_ROOT_DIR}/cmake/toolchain-${SOC_TARGET}.cmake)
+set(CMAKE_TOOLCHAIN_FILE ${BIST_ROOT_DIR}/cmake/toolchain.cmake)
 
 set(APP_EXECUTABLE ${APP_NAME}.elf)
 
@@ -78,7 +80,6 @@ set(CFLAGS
     "-W"
     "-Wdeclaration-after-statement"
     "-Wwrite-strings"
-    "-Wlogical-op"
     "-Wshadow"
     "-ffunction-sections"
     "-fdata-sections"
@@ -128,33 +129,8 @@ target_compile_definitions(
     -DUNITY_INCLUDE_CONFIG_H
 )
 
-set(include_soc
-    ${BIST_ROOT_DIR}/src/soc/include
-    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/include
-    )
-
-set(include_hal
-    ${IDF_PATH}/components/newlib/platform_include
-    ${IDF_PATH}/components/hal/include
-    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
-    ${IDF_PATH}/components/hal/platform_port/include
-    ${IDF_PATH}/components/hal/platform_port/include/hal
-    ${BIST_ROOT_DIR}/components/esp_common/include
-    ${IDF_PATH}/components/esp_common/include
-    ${IDF_PATH}/components/soc/include
-    ${IDF_PATH}/components/soc/${SOC_TARGET}/include
-    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
-    ${IDF_PATH}/components/esp_rom/include
-    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
-    ${IDF_PATH}/components/riscv/include
-    ${IDF_PATH}/components/esp_system/include
-    ${IDF_PATH}/components/esp_system/port/include
-    ${IDF_PATH}/components/esp_hw_support/include
-    ${IDF_PATH}/components/esp_hw_support/port/include
-    ${IDF_PATH}/components/esp_hw_support/include/soc
-    ${IDF_PATH}/components/spi_flash/include
-    ${IDF_PATH}/components/log/include
-    )
+# Target-specific includes, sources, linker script, and ROM LD files
+include(${BIST_ROOT_DIR}/cmake/${SOC_TARGET}.cmake)
 
 set(include_unity
     ${IDF_PATH}/components/unity/include
@@ -169,42 +145,6 @@ target_include_directories(
     ${include_unity}
     ${CMAKE_CURRENT_BINARY_DIR}/include
     )
-
-set(soc_srcs
-    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
-    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
-    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/newlib_stubs.c
-    )
-
-# IDF overwritten sources
-set(idf_ow_srcs
-    ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
-    ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
-)
-
-set(idf_srcs
-    ${IDF_PATH}/components/hal/cache_hal.c
-    ${IDF_PATH}/components/hal/mmu_hal.c
-    ${IDF_PATH}/components/hal/efuse_hal.c
-    ${IDF_PATH}/components/hal/${SOC_TARGET}/efuse_hal.c
-    ${IDF_PATH}/components/hal/wdt_hal_iram.c
-    ${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c
-    ${IDF_PATH}/components/esp_rom/patches/esp_rom_uart.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk_init.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_init.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_sleep.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_time.c
-    ${IDF_PATH}/components/newlib/abort.c
-    ${IDF_PATH}/components/esp_system/panic.c
-    ${IDF_PATH}/components/esp_system/port/soc/${SOC_TARGET}/clk.c
-    ${IDF_PATH}/components/log/log.c
-    ${IDF_PATH}/components/log/log_noos.c
-    ${IDF_PATH}/components/riscv/interrupt.c
-)
 
 set(unity_srcs
     ${IDF_PATH}/components/unity/unity/src/unity.c
@@ -227,7 +167,7 @@ endforeach()
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ld")
 
-set(ld_input ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/ld/linker.ld)
+set(ld_input ${LINKER_SCRIPT})
 set(ld_output ${CMAKE_CURRENT_BINARY_DIR}/ld/linker.ld)
 set(bist_conf ${CMAKE_CURRENT_BINARY_DIR}/bist/include)
 
@@ -235,15 +175,6 @@ add_custom_command(
     TARGET ${APP_EXECUTABLE} PRE_LINK
     COMMAND ${CMAKE_C_COMPILER} -x c -E -P -o ${ld_output} -I ${bist_conf} ${conf_defines} ${ld_input}
     COMMENT "Preprocessing linker scripts..."
-    )
-
-set(rom_ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.api.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib.ld
-    -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib-nano.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libgcc.ld
     )
 
 target_link_options(

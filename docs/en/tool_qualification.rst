@@ -49,7 +49,7 @@ Compiler Toolchain
 
 **Evidence Location**:
 
-- Toolchain configuration: ``cmake/toolchain-{IDF_TARGET_PATH_NAME}.cmake``
+- Toolchain configuration: ``cmake/toolchain.cmake``
 - Build configuration: ``src/bist/CMakeLists.txt``
 - Build artifacts: ``build/``
 
@@ -71,7 +71,7 @@ Linker Tool
    - Stack sentinel placement verification
    - IRAM code execution verification
 
-**Linker Flags** (from ``cmake/toolchain-{IDF_TARGET_PATH_NAME}.cmake``):
+**Linker Flags** (from ``cmake/toolchain.cmake``):
 
 - ``-nostartfiles``: Custom startup code
 - ``-march=rv32imc_zicsr_zifencei``: RISC-V ISA specification

@@ -11,18 +11,21 @@
 #include "esp_attr.h"
 #include "esp_err.h"
 #include "bist_log.h"
+#include "bist_conf.h"
 #include "esp_ipc.h"
 #include "esp_timer.h"
 
 #include "esp_private/startup_internal.h"
 #include "esp_private/system_internal.h"
 
-
-#include "esp32c3/rtc.h"
-
 #include "sdkconfig.h"
 
-//systimer
+#if CONFIG_IDF_TARGET_ESP32C3
+#include "esp32c3/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32C6
+#include "esp32c6/rtc.h"
+#endif
+
 #include "esp_private/systimer.h"
 #include "hal/systimer_ll.h"
 #include "hal/systimer_types.h"
@@ -31,9 +34,8 @@
 #include "soc/periph_defs.h"
 #include "esp_private/periph_ctrl.h"
 
-//isr
+#define ETS_INTERNAL_TIMER0_INTR_NO 6
 
-#define ETS_INTERNAL_TIMER0_INTR_NO 8
 /* Systimer HAL layer object */
 static systimer_hal_context_t systimer_hal;
 uint64_t timestamp_id[2] = { UINT64_MAX, UINT64_MAX };
@@ -88,7 +90,7 @@ esp_err_t esp_timer_create(const esp_timer_create_args_t* args,
     if (result == NULL) {
         return ESP_ERR_NO_MEM;
     }
-    
+
     result->callback = args->callback;
     result->arg = args->arg;
     result->flags = (args->dispatch_method ? FL_ISR_DISPATCH_METHOD : 0) |

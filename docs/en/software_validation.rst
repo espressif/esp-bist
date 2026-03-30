@@ -756,8 +756,8 @@ QEMU/Emulation Validation
 
 1. QEMU starts firmware first time
 2. Application calls ``bist_wdt_test()``
-3. Initialize MWDT with timeout (``CONFIG_ESP_BIST_WDT_TIMEOUT_US``, typically 100 µs in test)
-4. Delay for longer than timeout (e.g., 1000 µs)
+3. Initialize MWDT with timeout (``CONFIG_ESP_BIST_WDT_TIMEOUT_US``, typically 10000 µs in test)
+4. Delay for longer than timeout (e.g., 50000 µs)
 5. Watchdog timeout expires → system reset
 
 **Second Boot:**
@@ -795,8 +795,8 @@ QEMU/Emulation Validation
 **Fault Injection Method:**
 
 1. GDB sets breakpoint at WDT timeout initialization
-2. When hit, sets timeout to very large value (10000 µs)
-3. Test delay (1000 µs) completes before timeout expires
+2. When hit, sets timeout to very large value (1 second)
+3. Test delay (50 ms) completes before timeout expires
 4. No WDT reset occurs
 5. Returns ``BIST_ESP_WDT_TEST_ERR`` (watchdog failed)
 
@@ -845,6 +845,81 @@ CI Test Results
 
 .. xml-junit-test-results:: tests/wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Watchdog Device Test Results
+
+Windowed Watchdog Test
+----------------------
+
+**Purpose:** Verify that the windowed watchdog correctly enforces the feed window (minimum and maximum time between feeds) and detects underflow (feeding too early).
+
+QEMU/Emulation Validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/windowed_wdt_test/pytest_qemu_windowed_wdt_test.py``
+
+**Test Cases:**
+
+1. **Normal operation:** Feed after underflow timeout plus margin; no underflow detected.
+2. **Underflow detection:** Feed immediately after a previous feed (before underflow window); ``wdt_is_underflow_detected()`` returns true.
+3. **Consecutive cycles:** Multiple feed cycles within the allowed window; all pass without underflow.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_WINDOWED_WDT_NORMAL:PASS
+    test_BIST_WINDOWED_WDT_UNDERFLOW:PASS
+    test_BIST_WINDOWED_WDT_CONSECUTIVE:PASS
+
+Hardware Validation
+^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/windowed_wdt_test/pytest_device_windowed_wdt_test.py``
+
+**Execution:**
+
+1. Flash firmware to device
+2. Run ``pytest pytest_device_windowed_wdt_test.py``
+3. Application runs windowed WDT tests: normal feed window, underflow detection, consecutive cycles
+4. Serial output captured and validated
+
+**Expected Behavior:**
+
+- Normal feeds within the window pass; early feeds set underflow flag; consecutive valid feeds complete without error.
+
+CI Test Results
+^^^^^^^^^^^^^^^
+
+**QEMU Test:**
+
+.. xml-junit-test-results:: tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+   :title: Windowed WDT QEMU Test Results
+
+**Device Test:**
+
+.. xml-junit-test-results:: tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+   :title: Windowed WDT Device Test Results
+
+esp_timer Test
+--------------
+
+**Purpose:** Verify that the high-resolution software timer (esp_timer) driver operates correctly for one-shot timers (creation, start, callback invocation).
+
+**Test Application:** ``tests/esp_timer_test/``
+
+**Execution:**
+
+1. Build and run the esp_timer test application (QEMU or device).
+2. Test ``test_BIST_ESP_TIMER_ONESHOT`` initializes esp_timer, creates a one-shot timer, starts it with a 10 ms timeout.
+3. After waiting longer than the timeout, the test verifies the callback was invoked.
+4. Returns PASS if callback executed as expected.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_ESP_TIMER_ONESHOT:PASS
+
+**Note:** QEMU and device pytest scripts and CI jobs for esp_timer_test may be added in a future release. The test application can be run manually via ``ninja -C build qemu`` or ``ninja -C build flash`` and ``ninja -C build monitor``.
 
 GPIO Plausibility Test
 ----------------------
@@ -936,6 +1011,6 @@ CI Test Results
 Validation Summary
 ------------------
 
-- QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog with deterministic fault injection
-- Hardware covers all modules; clock and GPIO are hardware-only; watchdog requires two-boot sequence
-- Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths
+- QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
+- Hardware covers all modules; clock and GPIO are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
+- Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.

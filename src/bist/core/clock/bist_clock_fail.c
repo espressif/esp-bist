@@ -14,7 +14,7 @@
  */
 
 #include "bist_clock_fail.h"
-#include "esp_xt_wdt.h"
+#include "soc/soc_caps.h"
 #include "esp_attr.h"
 #include "soc/rtc.h"
 #include "bist_log.h"
@@ -22,16 +22,22 @@
 #include "rom/ets_sys.h"
 #include "bist_conf.h"
 
+#if SOC_XT_WDT_SUPPORTED
+#include "esp_xt_wdt.h"
 static volatile bool test_failed = false;
+#endif
 static const char *TAG = "BIST_CLOCK";
 
+#if SOC_XT_WDT_SUPPORTED
 static void test_callback(void *arg)
 {
     test_failed = true;
 }
+#endif
 
 bist_esp_err_t bist_ext_crystal_fail_test(void)
 {
+#if SOC_XT_WDT_SUPPORTED
     esp_err_t err;
 
     esp_xt_wdt_config_t cfg = {
@@ -55,27 +61,32 @@ bist_esp_err_t bist_ext_crystal_fail_test(void)
     }
 
     return BIST_ESP_OK;
+#else
+    /* SoCs without XT WDT have no hardware to detect 32k crystal
+     * failure; skip this test and report OK. */
+    ESP_LOGD(TAG, "SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.");
+    return BIST_ESP_OK;
+#endif
 }
 
 bist_esp_err_t bist_main_crystal_test(void)
 {
-    uint32_t expected_xtal_freq = rtc_clk_xtal_freq_get() * MHZ;
+    uint32_t xtal_freq_mhz = rtc_clk_xtal_freq_get();
+    uint32_t expected_xtal_freq = xtal_freq_mhz * MHZ;
 
     /*
-     * Returns the number of main XTAL cycles in one 32kHz XTAL cycle
+     * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).
+     * If the main XTAL drifts, the returned value shifts proportionally.
      */
-    uint32_t clk_ratio = rtc_clk_cal_ratio(RTC_CAL_32K_XTAL, 500);
-
-    if (clk_ratio == 0) {
+    uint32_t cal_val = rtc_clk_cal(RTC_CAL_32K_XTAL, 500);
+    if (cal_val == 0) {
         return BIST_ESP_CLOCK_TEST_ERR;
     }
 
     /*
-     * clk_ratio contains period of 32768 Hz clock in XTAL clock cycles
-     * (shifted by RTC_CLK_CAL_FRACT bits).
-     * Xtal frequency will be (clk_ratio / 2^19) * 32768
+     * Derive actual XTAL frequency from the calibration result:
      */
-    uint32_t xtal_freq = (clk_ratio >> RTC_CLK_CAL_FRACT) * 32768;
+    uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);
     float deviation = fabs((float)(int)(xtal_freq - expected_xtal_freq)) / expected_xtal_freq * 100;
 
     /*

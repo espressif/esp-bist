@@ -5,4 +5,4 @@ source "share/sysbuild/Kconfig"
 
 config REMOTE_BOARD
 	string "Remote board"
-	default "esp32c6_devkitc/esp32c6/lpcore" if "$(BOARD)${BOARD_QUALIFIERS}" = "esp32c6_devkitc/esp32c6/hpcore"
+	default "esp32c6_devkitc/esp32c6/lpcore" if "$(BOARD)/${BOARD_QUALIFIERS}" = "esp32c6_devkitc/esp32c6/hpcore"

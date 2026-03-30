@@ -6,6 +6,7 @@
 #include "gpio.h"
 #include "rom/ets_sys.h"
 #include "esp_attr.h"
+#include "soc/soc_caps.h"
 
 #define LED_GPIO 7
 #define BTN_GPIO 9
@@ -147,7 +148,9 @@ int main()
     bist_cpu_stack_overflow_init();
 
     // Register Crystal WDT and Master WDT callbacks
+#if SOC_XT_WDT_SUPPORTED
     esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL);
+#endif
     wdt_register_callback(wdt_callback, NULL);
 
     runtime_tests();
@@ -158,8 +161,15 @@ int main()
     test_malloc();
 
     ESP_LOGI(TAG, "Initializing WDT");
-    wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
-    wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US);
+    if (wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US) != 0) {
+        ESP_LOGE(TAG, "WDT initialization failed");
+        fail_safe_exit();
+    }
+
+    if (wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US) != 0) {
+        ESP_LOGE(TAG, "Windowed WDT initialization failed");
+        fail_safe_exit();
+    }
 
     while (1) {
         set_led(get_button());

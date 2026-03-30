@@ -217,6 +217,33 @@ Watchdog Test (IEC 60730 ID: 6.3)
 
 **Coverage**: 2 test cases (pass + fail)
 
+Windowed Watchdog Test (IEC 60730 ID: 6.3)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Requirement**: Windowed watchdog operation; underflow and normal feed window validation
+
+**Design**:
+
+- Module: ``src/bist/drivers/wdt.c`` (windowed WDT driver)
+- Functions: ``wdt_init_windowed()``, ``wdt_feed()``, ``wdt_is_underflow_detected()``, ``wdt_windowed_deinit()``
+- Design Doc: :doc:`module_design_and_coding` (Watchdog Operation Test / Windowed WDT section)
+
+**Test Implementation**:
+
+- QEMU: ``tests/windowed_wdt_test/pytest_qemu_windowed_wdt_test.py``
+  - Normal operation within feed window
+  - Underflow detection (feed before underflow timeout)
+  - Consecutive feed cycles
+- Hardware: ``tests/windowed_wdt_test/pytest_device_windowed_wdt_test.py``
+
+**Test Results**:
+
+- QEMU: ``tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Hardware: ``tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+
+**Coverage**: 3 test cases (normal, underflow, consecutive)
+
+
 GPIO Test (IEC 60730 ID: 7.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -245,8 +272,8 @@ Traceability Summary
 --------------------
 
 - **Total IEC 60730 Components**: 7 (1.1, 1.3, 3, 4.1, 4.2, 6.3, 7.1)
-- **Total Test Modules**: 9
-- **Total Test Cases**: 100+ (including fault injection variants)
+- **Total Test Modules**: 10
+- **Total Test Cases**: 100+
 - **Test Environments**: QEMU (emulation) + Hardware (real-world)
 - **Coverage**: 100% of safety-relevant functions tested
 

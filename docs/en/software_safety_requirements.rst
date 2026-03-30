@@ -146,7 +146,7 @@ The ESP-BIST project uses a CMake-based build system with explicit toolchain and
 - **Build reproducibility:** All builds use a pinned toolchain version from the development container (see :doc:`tool_qualification` for detailed tool versions and qualification evidence)
 - **Optimization level:** The BIST library is compiled with ``-O0 -ggdb`` (no optimization, full debug info) to ensure traceability, debuggability, and suitability for static analysis
 - **Compiler flags:** Strict warning flags (``-Wall -Wextra -Werror=all``) and safety-critical flags (``-fstrict-volatile-bitfields``) are applied to the BIST library target
-- **Build configuration authority:** Build settings are defined in ``src/bist/CMakeLists.txt`` and ``cmake/toolchain-{IDF_TARGET_PATH_NAME}.cmake``; these files are the authoritative source for all build settings
+- **Build configuration authority:** Build settings are defined in ``src/bist/CMakeLists.txt`` and ``cmake/toolchain.cmake``; these files are the authoritative source for all build settings
 
 For detailed information on tool versions, compiler/linker flags, toolchain configuration, and tool qualification methodology, see :doc:`tool_qualification`.
 
@@ -223,7 +223,7 @@ Code and data are mapped to specific regions:
 - ``.rodata`` and ``.flash.rodata`` (read-only data) to DROM
 - ``.data`` and ``.bss`` (initialized/uninitialized data) to DRAM
 - Stack and heap boundaries are explicitly defined
-- Special sections for test routines (e.g., ``.pc_test_X`` for PC test functions) are mapped to IRAM or RTC/LP IRAM to exercise specific address bits
+- Special sections for test routines (e.g., ``.pc_test_X`` for PC test functions) are mapped to IRAM, Flash, or RTC/LP IRAM to exercise specific address bits
 - A dedicated region for CRC checksums is reserved in flash for integrity validation
 
 Safety-Related Mapping

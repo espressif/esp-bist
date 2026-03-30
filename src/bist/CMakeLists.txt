@@ -25,61 +25,79 @@ if(NOT DEFINED SOC_TARGET)
     message(FATAL_ERROR "SOC_TARGET not defined. Please set -DSOC_TARGET.")
 endif()
 
+# Load Kconfig and parse config so CONFIG_* variables are available below
+include(${BIST_ROOT_DIR}/cmake/kconfig.cmake)
+
 message("Building Espressif's Built-In Self Test (BIST) Library for ${SOC_TARGET}")
 
+set(bist_src
+    drivers/wdt.c
+    drivers/gpio.c
+    drivers/esp_timer.c
+    )
 if(SOC_TARGET STREQUAL "esp32c3")
-    set(bist_src
-        drivers/xt_wdt.c
-        drivers/wdt.c
-        drivers/gpio.c
-        drivers/esp_timer.c
-        core/cpu/bist_cpu_regs.c
-        core/cpu/bist_cpu_csr_regs.c
-        core/cpu/bist_cpu_stack.c
-        core/memory/bist_ram.c
-        core/memory/bist_flash.c
-        core/cpu/bist_pc.c
-        core/clock/bist_clock_fail.c
-        core/wdt/bist_wdt.c
-        core/io/bist_gpio.c
-        )
+    list(APPEND bist_src drivers/xt_wdt.c)
+endif()
+if(CONFIG_ESP_BIST_CPU_REG_TEST)
+    list(APPEND bist_src core/cpu/bist_cpu_regs.c)
+endif()
+if(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
+    list(APPEND bist_src core/cpu/bist_cpu_csr_regs.c)
+endif()
+if(CONFIG_ESP_BIST_STACK_TEST)
+    list(APPEND bist_src core/cpu/bist_cpu_stack.c)
+endif()
+if(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
+    list(APPEND bist_src core/memory/bist_ram.c)
+endif()
+if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
+    list(APPEND bist_src core/memory/bist_flash.c)
+endif()
+if(CONFIG_ESP_BIST_CLOCK_TEST)
+    list(APPEND bist_src core/clock/bist_clock_fail.c)
+endif()
+if(CONFIG_ESP_BIST_GPIO_TEST)
+    list(APPEND bist_src core/io/bist_gpio.c)
+endif()
+if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST)
+    list(APPEND bist_src core/cpu/bist_pc.c)
+endif()
+if(CONFIG_ESP_BIST_WATCHDOG_TEST)
+    list(APPEND bist_src core/wdt/bist_wdt.c)
+endif()
 
-    set(idf_srcs
+set(idf_srcs
+    ${IDF_PATH}/components/log/log.c
+    ${IDF_PATH}/components/log/log_noos.c
+    ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
+    ${IDF_PATH}/components/hal/systimer_hal.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/systimer.c
+    )
+
+if(SOC_TARGET STREQUAL "esp32c3")
+    list(APPEND idf_srcs
         ${IDF_PATH}/components/hal/xt_wdt_hal.c
-        ${IDF_PATH}/components/log/log.c
-        ${IDF_PATH}/components/log/log_noos.c
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
-        ${IDF_PATH}/components/hal/systimer_hal.c
-        ${IDF_PATH}/components/esp_hw_support/port/esp32c3/systimer.c
-        )
-
-    add_library(bist_esp
-        ${idf_srcs}
-        ${bist_src}
     )
 endif()
 
-if(SOC_TARGET STREQUAL "esp32c6")
-    set(bist_src
-        core/cpu/bist_cpu_regs.c
-        core/cpu/bist_cpu_csr_regs.c
-        core/memory/bist_ram.c
-        core/cpu/bist_pc.c
-        core/cpu/bist_cpu_stack.c
-        )
+add_library(bist_esp
+    ${idf_srcs}
+    ${bist_src}
+)
 
-    add_library(bist_esp
-        ${bist_src}
-    )
-endif()
-
-include(${BIST_ROOT_DIR}/cmake/kconfig.cmake)
+# Ensure BIST header is generated before building (CONFIG_* were set when kconfig.cmake was included above)
+add_dependencies(bist_esp bist_conf_h)
 
 # Add the soc target definition to the build
 string(TOUPPER "${SOC_TARGET}" SOC_TARGET_UPPER)
 target_compile_definitions(bist_esp
     PUBLIC
     "SOC_TARGET_${SOC_TARGET_UPPER}"
+)
+
+target_compile_definitions(bist_esp
+    PUBLIC
+    "SOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE"
 )
 
 set(CFLAGS
@@ -89,7 +107,6 @@ set(CFLAGS
     "-W"
     "-Wdeclaration-after-statement"
     "-Wwrite-strings"
-    "-Wlogical-op"
     "-Wshadow"
     "-ffunction-sections"
     "-fdata-sections"

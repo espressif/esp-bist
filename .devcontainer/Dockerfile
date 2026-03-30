@@ -29,6 +29,7 @@ RUN : \
         libpixman-1-dev \
         minicom \
         ninja-build \
+        openssh-client \
         cppcheck \
         pkg-config \
         python-is-python3 \

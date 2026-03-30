@@ -8,9 +8,9 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 set(REMOTE_ZEPHYR_DIR ${CMAKE_CURRENT_BINARY_DIR}/../remote/zephyr)
 
 if(CONFIG_BOARD_ESP32C6_DEVKITC_ESP32C6_HPCORE)
-  message(STATUS "${BOARD}${BOARD_QUALIFIERS} compile as Main in this sample")
+  message(STATUS "${BOARD}/${BOARD_QUALIFIERS} compile as Main in this sample")
 else()
-  message(FATAL_ERROR "${BOARD}${BOARD_QUALIFIERS} is not supported for this sample")
+  message(FATAL_ERROR "${BOARD}/${BOARD_QUALIFIERS} is not supported for this sample")
 endif()
 
 project(zephyr_sample)

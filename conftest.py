@@ -1,11 +1,11 @@
 """
-Configuration and fixtures for pytest to support QEMU and GDB testing on RISC-V ESP32-C3 architecture.
+Configuration and fixtures for pytest to support QEMU and GDB testing on RISC-V ESP32 architecture.
 
 This module provides classes and pytest fixtures to manage QEMU emulation and GDB debugging sessions
-for ESP32-C3 RISC-V based projects.
+for ESP32 RISC-V based projects.
 
 Classes:
-        QEMU_RISCV: Manages QEMU emulation process for ESP32-C3.
+        QEMU_RISCV: Manages QEMU emulation process for a given target.
         GDB_RISCV: Manages GDB debugging session with script execution.
 
 Fixtures:
@@ -15,6 +15,7 @@ Fixtures:
 
 Command-line Options:
         --executable: Name of the executable file (without extension) to be tested/debugged.
+        --soc-target: QEMU machine target (e.g. esp32c3, esp32c6). Defaults to esp32c3.
 """
 
 import pytest
@@ -24,18 +25,20 @@ import threading
 import queue
 
 class QEMU_RISCV(object):
-    def __init__(self, directory=None, executable=None):
+    def __init__(self, directory=None, executable=None, target="esp32c3"):
         if directory is None:
             raise ValueError("Directory must be specified.")
         self.current_dir = directory
         self.executable = executable
+        self.target = target
 
     def start(self, debug=False):
         """Starts QEMU and returns the process and output queue."""
         qemu_image = "{}_qemu_image.bin".format(self.executable)
-        qemu_command = ["qemu-system-riscv32", "-nographic", "-icount", "3", "-machine", "esp32c3", "-drive", "file={}/build/{},if=mtd,format=raw".format(self.current_dir, qemu_image)]
+        drive = "file={}/build/{},if=mtd,format=raw".format(self.current_dir, qemu_image)
+        qemu_command = ["qemu-system-riscv32", "-nographic", "-icount", "3", "-machine", self.target, "-drive", drive]
         if debug:
-            qemu_command = ["qemu-system-riscv32", "-s", "-S", "-nographic", "-icount", "3", "-machine", "esp32c3", "-drive", "file={}/build/{},if=mtd,format=raw".format(self.current_dir, qemu_image)]
+            qemu_command = ["qemu-system-riscv32", "-s", "-S", "-nographic", "-icount", "3", "-machine", self.target, "-drive", drive]
         print("Starting QEMU with command: " + " ".join(qemu_command))
         qemu_process = subprocess.Popen(qemu_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
         output_queue = queue.Queue()
@@ -110,7 +113,8 @@ class GDB_RISCV(object):
 @pytest.fixture
 def qemu_instance(request):
     executable = request.config.getoption("--executable")
-    qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable)
+    target = request.config.getoption("--soc-target")
+    qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable, target=target)
     qemu_process, output_queue = qemu.start()
     yield qemu, qemu_process, output_queue
     qemu.stop(qemu_process)
@@ -119,7 +123,8 @@ def qemu_instance(request):
 @pytest.fixture
 def qemu_debug_instance(request):
     executable = request.config.getoption("--executable")
-    qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable)
+    target = request.config.getoption("--soc-target")
+    qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable, target=target)
     qemu_process, output_queue = qemu.start(debug=True)
     yield qemu, qemu_process, output_queue
     qemu.stop(qemu_process)
@@ -137,4 +142,10 @@ def pytest_addoption(parser):
         "--executable",
         action="store",
         help="Name of the executable (without file extension). "
+    )
+    parser.addoption(
+        "--soc-target",
+        action="store",
+        default="esp32c3",
+        help="QEMU machine target. Defaults to esp32c3."
     )
