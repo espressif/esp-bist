@@ -13,6 +13,8 @@ else()
         set(ESP_MIN_REVISION 3)
     elseif ("${SOC_TARGET}" STREQUAL "esp32c6")
         set(ESP_MIN_REVISION 0)
+    elseif ("${SOC_TARGET}" STREQUAL "esp32h2")
+        set(ESP_MIN_REVISION 0)
     else()
         message(FATAL_ERROR "Unsupported target ${SOC_TARGET}")
     endif()
@@ -274,7 +276,7 @@ add_custom_command(TARGET flash_boot POST_BUILD
     -p ${ESPPORT} -b 460800 --before default_reset --after hard_reset
     --chip ${SOC_TARGET} write_flash
     --flash_mode dio --flash_size detect --force
-    --flash_freq 40m 0x0
+    --flash_freq keep 0x0
     ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin
     )
 

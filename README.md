@@ -10,6 +10,7 @@ This repository includes the necessary files to build an application that runs t
 
 - ESP32-C3
 - ESP32-C6
+- ESP32-H2
 
 ## License
 
@@ -74,7 +75,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-<SOC_TARGET>.cmake -DMCUBOOT_TARGET
 ninja -C build
 ```
 
-Replace `<SOC_TARGET>` with the target SoC (e.g., `esp32c3`, `esp32c6`).
+Replace `<SOC_TARGET>` with the target SoC.
 
 ## Build
 
@@ -85,7 +86,7 @@ cmake -DSOC_TARGET=<SOC_TARGET> -B build -GNinja
 ninja -C build
 ```
 
-Replace `<SOC_TARGET>` with the target SoC (e.g., `esp32c3`, `esp32c6`).
+Replace `<SOC_TARGET>` with the target SoC.
 
 ## Project Configuration
 

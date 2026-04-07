@@ -7,6 +7,37 @@ stages:
   - Build Docs
   - Deploy Docs
 
+.socs: &socs
+  - esp32c3
+  - esp32c6
+  - esp32h2
+
+.qemu_upstream_socs: &qemu_upstream_socs
+  - esp32c3
+
+.qemu_remote_socs: &qemu_remote_socs
+  - esp32c6
+  - esp32h2
+
+.qemu_test_apps: &qemu_test_apps
+  - cpu_reg_test
+  - cpu_stack_test
+  - ram_test
+  - flash_test
+  - pc_test
+  - wdt_test
+  - windowed_wdt_test
+
+.device_test_apps: &device_test_apps
+  - cpu_reg_test
+  - cpu_stack_test
+  - ram_test
+  - flash_test
+  - pc_test
+  - wdt_test
+  - digital_io_test
+  - windowed_wdt_test
+
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env
   before_script:
@@ -16,7 +47,6 @@ default:
     - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
     - ninja -C build
     - cd $CI_PROJECT_DIR
-
 
 build_docker_image:
   before_script: []
@@ -56,149 +86,31 @@ build_docker_image:
       paths:
         - $ROOT_DIR/$TEST_APP_NAME/build
 
-build_esp32c3_cpu_reg_test:
+.build_tests_matrix: &build_tests_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *socs
+        TEST_APP_NAME: *device_test_apps
+
+.build_samples_matrix: &build_samples_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *socs
+        TEST_APP_NAME: ["standalone"]
+
+build_tests:
   extends:
     - .build_template
   variables:
     ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'cpu_reg_test'
-    SOC_TARGET: 'esp32c3'
+  <<: *build_tests_matrix
 
-build_esp32c3_cpu_stack_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'cpu_stack_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_ram_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'ram_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_flash_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'flash_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_pc_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'pc_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_wdt_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'wdt_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_digital_io_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'digital_io_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_windowed_wdt_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'windowed_wdt_test'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c3_sample_standalone:
+build_samples:
   extends:
     - .build_template
   variables:
     ROOT_DIR: 'samples'
-    TEST_APP_NAME: 'standalone'
-    SOC_TARGET: 'esp32c3'
-
-build_esp32c6_cpu_reg_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'cpu_reg_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_cpu_stack_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'cpu_stack_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_ram_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'ram_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_flash_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'flash_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_pc_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'pc_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_wdt_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'wdt_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_digital_io_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'digital_io_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_windowed_wdt_test:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'tests'
-    TEST_APP_NAME: 'windowed_wdt_test'
-    SOC_TARGET: 'esp32c6'
-
-build_esp32c6_sample_standalone:
-  extends:
-    - .build_template
-  variables:
-    ROOT_DIR: 'samples'
-    TEST_APP_NAME: 'standalone'
-    SOC_TARGET: 'esp32c6'
+  <<: *build_samples_matrix
 
 build_zephyr_esp32c6_sample:
   stage: Build
@@ -233,6 +145,12 @@ build_zephyr_esp32c6_sample:
   when: always
   retry: 1
   tags: [build]
+  needs:
+    - job: build_tests
+      parallel:
+        matrix:
+          - SOC_TARGET: *qemu_upstream_socs
+            TEST_APP_NAME: *qemu_test_apps
   artifacts:
     when: always
     expire_in: 1 week
@@ -249,6 +167,7 @@ build_zephyr_esp32c6_sample:
   stage: Test Qemu
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
+    QEMU_BRANCH: 'feature/esp32h2'
   before_script:
     - . $IDF_PATH/export.sh
     - apt-get update && apt-get install -y -q --no-install-recommends openssh-client
@@ -257,9 +176,9 @@ build_zephyr_esp32c6_sample:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -p 27227 gitlab.espressif.cn >> ~/.ssh/known_hosts
   script:
-    - echo "Cloning QEMU from espressif/qemu at branch feature/esp32c6"
+    - echo "Cloning QEMU from espressif/qemu at branch $QEMU_BRANCH"
     - cd /opt
-    - git clone -b feature/esp32c6 ssh://git@gitlab.espressif.cn:27227/idf/qemu.git
+    - git clone -b $QEMU_BRANCH ssh://git@gitlab.espressif.cn:27227/idf/qemu.git
     - cd qemu
     - mkdir build
     - cd build
@@ -274,6 +193,12 @@ build_zephyr_esp32c6_sample:
   when: always
   retry: 1
   tags: [build]
+  needs:
+    - job: build_tests
+      parallel:
+        matrix:
+          - SOC_TARGET: *qemu_remote_socs
+            TEST_APP_NAME: *qemu_test_apps
   artifacts:
     when: always
     expire_in: 1 week
@@ -286,117 +211,27 @@ build_zephyr_esp32c6_sample:
       paths:
         - tests/$TEST_APP_NAME/build
 
-test_qemu_esp32c3_cpu_reg_test:
+.test_qemu_upstream_matrix: &test_qemu_upstream_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *qemu_upstream_socs
+        TEST_APP_NAME: *qemu_test_apps
+
+test_qemu_upstream:
   extends:
     - .test_qemu_template
-  needs: ["build_esp32c3_cpu_reg_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_reg_test'
-    SOC_TARGET: 'esp32c3'
+  <<: *test_qemu_upstream_matrix
 
-test_qemu_esp32c3_cpu_stack_test:
-  extends:
-    - .test_qemu_template
-  needs: ["build_esp32c3_cpu_stack_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_stack_test'
-    SOC_TARGET: 'esp32c3'
+.test_qemu_remote_matrix: &test_qemu_remote_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *qemu_remote_socs
+        TEST_APP_NAME: *qemu_test_apps
 
-test_qemu_esp32c3_ram_test:
-  extends:
-    - .test_qemu_template
-  needs: ["build_esp32c3_ram_test"]
-  variables:
-    TEST_APP_NAME: 'ram_test'
-    SOC_TARGET: 'esp32c3'
-
-test_qemu_esp32c3_flash_test:
-  extends:
-    - .test_qemu_template
-  needs: ["build_esp32c3_flash_test"]
-  variables:
-    TEST_APP_NAME: 'flash_test'
-    SOC_TARGET: 'esp32c3'
-
-test_qemu_esp32c3_pc_test:
-  extends:
-    - .test_qemu_template
-  needs: ["build_esp32c3_pc_test"]
-  variables:
-    TEST_APP_NAME: 'pc_test'
-    SOC_TARGET: 'esp32c3'
-
-test_qemu_esp32c3_wdt_test:
-  extends:
-    - .test_qemu_template
-  needs: ["build_esp32c3_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'wdt_test'
-    SOC_TARGET: 'esp32c3'
-
-test_qemu_esp32c3_windowed_wdt_test:
-  extends:
-    - .test_qemu_template
-  needs: ["build_esp32c3_windowed_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'windowed_wdt_test'
-    SOC_TARGET: 'esp32c3'
-
-test_qemu_esp32c6_cpu_reg_test:
+test_qemu_remote:
   extends:
     - .test_qemu_template_remote
-  needs: ["build_esp32c6_cpu_reg_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_reg_test'
-    SOC_TARGET: 'esp32c6'
-
-test_qemu_esp32c6_cpu_stack_test:
-  extends:
-    - .test_qemu_template_remote
-  needs: ["build_esp32c6_cpu_stack_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_stack_test'
-    SOC_TARGET: 'esp32c6'
-
-test_qemu_esp32c6_ram_test:
-  extends:
-    - .test_qemu_template_remote
-  needs: ["build_esp32c6_ram_test"]
-  variables:
-    TEST_APP_NAME: 'ram_test'
-    SOC_TARGET: 'esp32c6'
-
-test_qemu_esp32c6_flash_test:
-  extends:
-    - .test_qemu_template_remote
-  needs: ["build_esp32c6_flash_test"]
-  variables:
-    TEST_APP_NAME: 'flash_test'
-    SOC_TARGET: 'esp32c6'
-
-test_qemu_esp32c6_pc_test:
-  extends:
-    - .test_qemu_template_remote
-  needs: ["build_esp32c6_pc_test"]
-  variables:
-    TEST_APP_NAME: 'pc_test'
-    SOC_TARGET: 'esp32c6'
-
-test_qemu_esp32c6_wdt_test:
-  extends:
-    - .test_qemu_template_remote
-  needs: ["build_esp32c6_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'wdt_test'
-    SOC_TARGET: 'esp32c6'
-
-test_qemu_esp32c6_windowed_wdt_test:
-  extends:
-    - .test_qemu_template_remote
-  needs: ["build_esp32c6_windowed_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'windowed_wdt_test'
-    SOC_TARGET: 'esp32c6'
+  <<: *test_qemu_remote_matrix
 
 .test_device_template:
   stage: Test Device
@@ -412,6 +247,12 @@ test_qemu_esp32c6_windowed_wdt_test:
   when: always
   retry: 1
   tags: [generic, $SOC_TARGET]
+  needs:
+    - job: build_tests
+      parallel:
+        matrix:
+          - SOC_TARGET: *socs
+            TEST_APP_NAME: *device_test_apps
   artifacts:
     when: always
     expire_in: 1 week
@@ -424,133 +265,16 @@ test_qemu_esp32c6_windowed_wdt_test:
       paths:
         - tests/$TEST_APP_NAME/build
 
-test_device_esp32c3_cpu_reg_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_cpu_reg_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_reg_test'
-    SOC_TARGET: 'esp32c3'
+.test_device_matrix: &test_device_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *socs
+        TEST_APP_NAME: *device_test_apps
 
-test_device_esp32c3_cpu_stack_test:
+test_device:
   extends:
     - .test_device_template
-  needs: ["build_esp32c3_cpu_stack_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_stack_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c3_ram_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_ram_test"]
-  variables:
-    TEST_APP_NAME: 'ram_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c3_flash_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_flash_test"]
-  variables:
-    TEST_APP_NAME: 'flash_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c3_pc_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_pc_test"]
-  variables:
-    TEST_APP_NAME: 'pc_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c3_wdt_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'wdt_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c3_digital_io_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_digital_io_test"]
-  variables:
-    TEST_APP_NAME: 'digital_io_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c3_windowed_wdt_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c3_windowed_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'windowed_wdt_test'
-    SOC_TARGET: 'esp32c3'
-
-test_device_esp32c6_cpu_reg_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_cpu_reg_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_reg_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_cpu_stack_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_cpu_stack_test"]
-  variables:
-    TEST_APP_NAME: 'cpu_stack_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_ram_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_ram_test"]
-  variables:
-    TEST_APP_NAME: 'ram_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_flash_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_flash_test"]
-  variables:
-    TEST_APP_NAME: 'flash_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_pc_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_pc_test"]
-  variables:
-    TEST_APP_NAME: 'pc_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_wdt_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'wdt_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_digital_io_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_digital_io_test"]
-  variables:
-    TEST_APP_NAME: 'digital_io_test'
-    SOC_TARGET: 'esp32c6'
-
-test_device_esp32c6_windowed_wdt_test:
-  extends:
-    - .test_device_template
-  needs: ["build_esp32c6_windowed_wdt_test"]
-  variables:
-    TEST_APP_NAME: 'windowed_wdt_test'
-    SOC_TARGET: 'esp32c6'
+  <<: *test_device_matrix
 
 # static_analysis:
 #   stage: Static-Analysis
@@ -585,66 +309,9 @@ test_device_esp32c6_windowed_wdt_test:
   before_script: []
   tags: [build]
   needs:
-    - artifacts: true
-      job: test_qemu_esp32c3_cpu_reg_test
-    - artifacts: true
-      job: test_qemu_esp32c3_cpu_stack_test
-    - artifacts: true
-      job: test_qemu_esp32c3_ram_test
-    - artifacts: true
-      job: test_qemu_esp32c3_flash_test
-    - artifacts: true
-      job: test_qemu_esp32c3_pc_test
-    - artifacts: true
-      job: test_qemu_esp32c3_wdt_test
-    - artifacts: true
-      job: test_qemu_esp32c3_windowed_wdt_test
-    - artifacts: true
-      job: test_device_esp32c3_cpu_reg_test
-    - artifacts: true
-      job: test_device_esp32c3_cpu_stack_test
-    - artifacts: true
-      job: test_device_esp32c3_ram_test
-    - artifacts: true
-      job: test_device_esp32c3_flash_test
-    - artifacts: true
-      job: test_device_esp32c3_pc_test
-    - artifacts: true
-      job: test_device_esp32c3_wdt_test
-    - artifacts: true
-      job: test_device_esp32c3_digital_io_test
-    - artifacts: true
-      job: test_device_esp32c3_windowed_wdt_test
-    - artifacts: true
-      job: test_qemu_esp32c6_cpu_reg_test
-    - artifacts: true
-      job: test_qemu_esp32c6_cpu_stack_test
-    - artifacts: true
-      job: test_qemu_esp32c6_ram_test
-    - artifacts: true
-      job: test_qemu_esp32c6_flash_test
-    - artifacts: true
-      job: test_qemu_esp32c6_pc_test
-    - artifacts: true
-      job: test_qemu_esp32c6_wdt_test
-    - artifacts: true
-      job: test_qemu_esp32c6_windowed_wdt_test
-    - artifacts: true
-      job: test_device_esp32c6_cpu_reg_test
-    - artifacts: true
-      job: test_device_esp32c6_cpu_stack_test
-    - artifacts: true
-      job: test_device_esp32c6_ram_test
-    - artifacts: true
-      job: test_device_esp32c6_flash_test
-    - artifacts: true
-      job: test_device_esp32c6_pc_test
-    - artifacts: true
-      job: test_device_esp32c6_wdt_test
-    - artifacts: true
-      job: test_device_esp32c6_digital_io_test
-    - artifacts: true
-      job: test_device_esp32c6_windowed_wdt_test
+    - test_qemu_upstream
+    - test_qemu_remote
+    - test_device
 
 build_docs_html:
   extends:
@@ -659,7 +326,7 @@ build_docs_html:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c6 --skip-reqs-check -l en
+    - build-docs -t esp32c3 esp32c6 esp32h2 --skip-reqs-check -l en
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/html/index.html"
 
 build_docs_pdf:
@@ -675,7 +342,7 @@ build_docs_pdf:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c6 --skip-reqs-check -l en -bs latex
+    - build-docs -t esp32c3 esp32c6 esp32h2 --skip-reqs-check -l en -bs latex
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf"
 
 deploy_preview_docs:
