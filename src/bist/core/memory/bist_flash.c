@@ -97,7 +97,7 @@ uint32_t calculate_crc32(uint8_t *data, size_t length)
 bist_esp_err_t bist_flash_test(void)
 {
     uint32_t crc_data, crc_text = 0;
-    size_t crc_section_len = 0;
+    volatile size_t crc_section_len = 0;
 
     ESP_EARLY_LOGD(TAG, "Flash text CRC addr: %p", &_crc_section_text_start);
     ESP_EARLY_LOGD(TAG, "flash.text CRC: 0x%lx", _crc_section_text_start);

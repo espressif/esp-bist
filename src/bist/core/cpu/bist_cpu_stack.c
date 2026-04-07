@@ -74,7 +74,7 @@ bist_esp_err_t bist_cpu_stack_overflow_check(void)
 
 bist_esp_err_t bist_cpu_stack_overflow_test(void)
 {
-    int count_max = 20000;
+    volatile int count_max = 20000;
 
     bist_cpu_stack_overflow_init();
 
