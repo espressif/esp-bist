@@ -102,22 +102,10 @@ RUN : \
     && rm -rf $IDF_TOOLS_PATH/dist \
     && :
 
-# Install ESP-IDF v5.1.4 (MCUboot v2.2.0 requires this version for its HAL layer)
-ARG MCUBOOT_IDF_VERSION=v5.1.4
-ENV MCUBOOT_IDF_PATH=/opt/esp/idf-v5.1.4
-RUN git clone -b $MCUBOOT_IDF_VERSION --depth 1 --recursive --shallow-submodules $IDF_URL_PATH $MCUBOOT_IDF_PATH
-
-# Download MCUboot
-ARG MCUBOOT_VER=v2.2.0
-ARG MCUBOOT_URL="https://github.com/mcu-tools/mcuboot"
-ARG MCUBOOT_SHA256=94d2e63fb6bc042d583267a1e82ab1481618eb7808a49fe455af435d5cd6072e
+# Clone MCUboot (branch with IDF v6.0 HAL support, no separate IDF version needed)
+ARG MCUBOOT_URL="https://github.com/almir-okato/mcuboot.git"
+ARG MCUBOOT_BRANCH=hal_update_idf_v6.0
 ENV MCUBOOT_PATH=/opt/mcuboot
-RUN : \
-    && wget --no-verbose ${MCUBOOT_URL}/archive/refs/tags/${MCUBOOT_VER}.tar.gz \
-    && echo "${MCUBOOT_SHA256} ${MCUBOOT_VER}.tar.gz" | sha256sum --check --strict - \
-    && mkdir -p ${MCUBOOT_PATH} \
-    && tar -xf ${MCUBOOT_VER}.tar.gz -C ${MCUBOOT_PATH} --strip-components=1 \
-    && rm ${MCUBOOT_VER}.tar.gz \
-    && :
+RUN git clone -b $MCUBOOT_BRANCH --depth 1 --recursive --shallow-submodules $MCUBOOT_URL $MCUBOOT_PATH
 
 RUN echo '. $IDF_PATH/export.sh' >> /root/.profile

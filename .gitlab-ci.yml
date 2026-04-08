@@ -41,11 +41,8 @@ default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
   before_script:
     - . $IDF_PATH/export.sh
-    - echo "Building MCUboot for $SOC_TARGET (using ESP-IDF at $MCUBOOT_IDF_PATH)"
-    - cd $MCUBOOT_PATH/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$MCUBOOT_IDF_PATH -B build -GNinja
-    - ninja -C build
-    - cd $CI_PROJECT_DIR
+    - mkdir -p $MCUBOOT_PATH/boot/espressif/build
+    - cp mcuboot_build/mcuboot_${SOC_TARGET}.bin $MCUBOOT_PATH/boot/espressif/build/
 
 build_docker_image:
   before_script: []
@@ -70,8 +67,33 @@ build_docker_image:
       when: manual
   tags: [ "dind", "shiny" ]
 
+build_mcuboot:
+  stage: Build
+  before_script:
+    - . $IDF_PATH/export.sh
+  script:
+    - echo "Building MCUboot for $SOC_TARGET"
+    - cd $MCUBOOT_PATH/boot/espressif
+    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+    - ninja -C build
+    - mkdir -p $CI_PROJECT_DIR/mcuboot_build
+    - cp build/mcuboot_${SOC_TARGET}.bin $CI_PROJECT_DIR/mcuboot_build/
+  parallel:
+    matrix:
+      - SOC_TARGET: *socs
+  artifacts:
+    paths:
+      - mcuboot_build/
+    expire_in: 1 week
+  rules:
+    - when: always
+  tags: [build]
+
 .build_template:
   stage: Build
+  needs:
+    - job: build_mcuboot
+      artifacts: true
   script:
     - echo "Building $ROOT_DIR/$TEST_APP_NAME"
     - cd $ROOT_DIR/$TEST_APP_NAME
@@ -253,6 +275,8 @@ test_qemu_remote:
   retry: 1
   tags: [generic, $SOC_TARGET]
   needs:
+    - job: build_mcuboot
+      artifacts: true
     - job: build_tests
       parallel:
         matrix:
