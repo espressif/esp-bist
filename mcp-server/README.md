@@ -29,7 +29,7 @@ With this server enabled, the assistant stops guessing and starts citing: it can
 
 The repo root also contains `.cursor/mcp.json` which registers this server with Cursor automatically when you open the `esp-bist` project.
 
-## Quick start (Cursor users)
+## Quick start
 
 One-time setup after cloning `esp-bist`:
 
@@ -39,11 +39,18 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Open the `esp-bist` project in Cursor. The MCP server is auto-registered via `.cursor/mcp.json` and the 6 tools become available in chat immediately. No further config needed -- the `${workspaceFolder}` variable resolves to the project root on any machine.
+The repository ships workspace-level configs for both editors, so opening the `esp-bist` project just works:
 
-Verify the server is registered in Cursor: **Settings > MCP > ESP-BIST** should show all 6 tools.
+| Editor | Config file | Verify |
+|--------|-------------|--------|
+| Cursor | `.cursor/mcp.json` | **Settings > MCP > ESP-BIST** lists 6 tools |
+| VS Code (Copilot Chat) | `.vscode/mcp.json` | **MCP: List Servers** shows `ESP-BIST` running |
 
-## Alternative: global setup
+Both files use `${workspaceFolder}` so the same checkout works on any machine. No per-user configuration is needed.
+
+The VS Code config additionally enables `dev.watch` -- the server auto-restarts when you edit anything under `mcp-server/`, useful when iterating on `ingest.py` or the tool implementations.
+
+## Alternative: global setup (Cursor)
 
 To make the server available outside this project, add to `~/.cursor/mcp.json`:
 
@@ -58,24 +65,55 @@ To make the server available outside this project, add to `~/.cursor/mcp.json`:
 }
 ```
 
+## Alternative: global setup (VS Code)
+
+Run **MCP: Open User Configuration** from the command palette and add:
+
+```json
+{
+  "servers": {
+    "ESP-BIST": {
+      "type": "stdio",
+      "command": "/absolute/path/to/esp-bist/mcp-server/.venv/bin/python3",
+      "args": ["/absolute/path/to/esp-bist/mcp-server/server.py"]
+    }
+  }
+}
+```
+
 ## Alternative: self-hosted remote server
 
 If you want to share a single instance across a team, you can host the server yourself and expose it over HTTP. The server is a standard FastMCP app, so any container platform or VM works:
 
 1. Run `python ingest.py /path/to/esp-bist` to refresh `data/`.
 2. Host `server.py` behind an HTTP transport of your choice (FastMCP supports both `stdio` and `streamable-http`; see the [MCP Python SDK docs](https://github.com/modelcontextprotocol/python-sdk)).
-3. Point team members at the hosted URL in their `~/.cursor/mcp.json`:
+3. Point team members at the hosted URL in their editor config.
 
-```json
-{
-  "mcpServers": {
-    "ESP-BIST": {
-      "url": "https://your-host.example.com/mcp",
-      "type": "http"
-    }
-  }
-}
-```
+   Cursor (`~/.cursor/mcp.json`):
+
+   ```json
+   {
+     "mcpServers": {
+       "ESP-BIST": {
+         "url": "https://your-host.example.com/mcp",
+         "type": "http"
+       }
+     }
+   }
+   ```
+
+   VS Code (run **MCP: Open User Configuration**):
+
+   ```json
+   {
+     "servers": {
+       "ESP-BIST": {
+         "type": "http",
+         "url": "https://your-host.example.com/mcp"
+       }
+     }
+   }
+   ```
 
 Since this repository is public, make sure any hosted deployment uses infrastructure you control -- do not rely on third-party hosting that you cannot audit or take down.
 

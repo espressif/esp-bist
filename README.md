@@ -196,3 +196,17 @@ The samples are located in the `samples` directory. The samples demonstrate how 
 ## BIST Library
 
 The proper documentation for the BIST library can be found in the [`src/bist`](src/bist) directory.
+
+## MCP Server (AI Assistant Integration)
+
+This repository ships with a [Model Context Protocol](https://modelcontextprotocol.io/) server in [`mcp-server/`](mcp-server/) that exposes ESP-BIST's documentation, API reference, Kconfig options, and source code to AI coding assistants in Cursor and VS Code (Copilot Chat).
+
+One-time setup:
+
+```sh
+cd mcp-server
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+Opening this repository in either Cursor or VS Code automatically registers the server via the committed [`.cursor/mcp.json`](.cursor/mcp.json) and [`.vscode/mcp.json`](.vscode/mcp.json) files. See [`mcp-server/README.md`](mcp-server/README.md) for details.
