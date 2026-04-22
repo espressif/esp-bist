@@ -71,6 +71,77 @@
             ],
             "svdFile": "${workspaceFolder}/src/soc/esp32c6/esp32c6.svd",
         },
+        {
+            "name": "Debug ESP32-C5 (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/${input:appPath}/build/${input:appName}.elf",
+            "servertype": "openocd",
+            "device": "ESP32-C5",
+            "interface": "jtag",
+            "configFiles": [
+                "board/esp32c5-builtin.cfg"
+            ],
+            "openOCDPreConfigLaunchCommands":[
+                "set ESP_RTOS none",
+            ],
+            "openOCDLaunchCommands": [
+                "init; halt; esp appimage_offset 0x1000",
+            ],
+            "toolchainPrefix": "riscv32-esp-elf",
+            "overrideAttachCommands": [
+                "set pagination off",
+                "mon reset halt"
+            ],
+            "postAttachCommands": [
+                "thb __start",
+                "continue"
+            ],
+            "overrideResetCommands": [
+                "set pagination off",
+                "mon reset halt",
+                "thb __start",
+                "continue"
+            ],
+            // TODO: Add SVD file for ESP32-C5
+            // "svdFile": "${workspaceFolder}/src/soc/esp32c5/esp32c5.svd",
+        },
+        {
+            "name": "Debug ESP32-H2 (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/${input:appPath}/build/${input:appName}.elf",
+            "servertype": "openocd",
+            "device": "ESP32-H2",
+            "interface": "jtag",
+            "configFiles": [
+                "board/esp32h2-builtin.cfg"
+            ],
+            "openOCDPreConfigLaunchCommands":[
+                "set ESP_RTOS none",
+            ],
+            "openOCDLaunchCommands": [
+                "init; halt; esp appimage_offset 0x1000",
+            ],
+            "toolchainPrefix": "riscv32-esp-elf",
+            "overrideAttachCommands": [
+                "set pagination off",
+                "mon reset halt"
+            ],
+            "postAttachCommands": [
+                "thb __start",
+                "continue"
+            ],
+            "overrideResetCommands": [
+                "set pagination off",
+                "mon reset halt",
+                "thb __start",
+                "continue"
+            ],
+            "svdFile": "${workspaceFolder}/src/soc/esp32h2/esp32h2.svd",
+        },
     ],
     "inputs": [
         {
@@ -82,7 +153,7 @@
         {
             "id": "appName",
             "type": "promptString",
-            "description": "Application name (e.g., standalone_critical_esp32c3 or cpu_reg_test)",
+            "description": "Application name",
             "default": "standalone_critical_esp32c3"
         }
     ]
