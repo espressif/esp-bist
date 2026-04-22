@@ -153,6 +153,8 @@ target_include_directories(
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
     ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/register
@@ -166,10 +168,11 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hal_gpio/include
     ${IDF_PATH}/components/esp_hal_gpio/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
-    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hw_support/etm/include
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ../../components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
+    ${IDF_PATH}/components/hal/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
