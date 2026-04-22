@@ -1,0 +1,2 @@
+# Extra pip dependencies (mcp and mcp_platform are pre-installed on the platform)
+rank_bm25>=0.2.2

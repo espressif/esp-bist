@@ -1,0 +1,959 @@
+[
+  {
+    "function": "bist_esp",
+    "signature": "",
+    "module": "core",
+    "description": "Main include file for ESP-BIST (Built-In Self Test) library",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_esp.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_esp_types",
+    "signature": "",
+    "module": "core",
+    "description": "Common types and error codes for ESP-BIST library",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_esp_types.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_esp_err_t",
+    "signature": "typedef enum { ... } bist_esp_err_t",
+    "module": "core",
+    "description": "Common types and error codes for ESP-BIST library",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_esp_types.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_ESP_OK",
+        "value": 0,
+        "description": "Test passed successfully"
+      },
+      {
+        "name": "BIST_ESP_CPU_TEST_ERR",
+        "value": 1,
+        "description": "CPU register test failed"
+      },
+      {
+        "name": "BIST_ESP_CPU_CSR_TEST_ERR",
+        "value": 2,
+        "description": "CPU CSR (Control and Status Register) test failed"
+      },
+      {
+        "name": "BIST_ESP_RAM_TEST_ERR",
+        "value": 3,
+        "description": "RAM integrity test failed (March A or March X)"
+      },
+      {
+        "name": "BIST_ESP_FLASH_TEST_ERR",
+        "value": 4,
+        "description": "Flash CRC validation test failed"
+      },
+      {
+        "name": "BIST_ESP_PC_TEST_ERR",
+        "value": 5,
+        "description": "Program Counter integrity test failed"
+      },
+      {
+        "name": "BIST_ESP_CLOCK_TEST_ERR",
+        "value": 6,
+        "description": "Clock integrity test failed (crystal or frequency)"
+      },
+      {
+        "name": "BIST_ESP_STACK_TEST_ERR",
+        "value": 7,
+        "description": "Stack overflow detection test failed"
+      },
+      {
+        "name": "BIST_ESP_STACK_TEST_OVERFLOW",
+        "value": 8,
+        "description": "Stack overflow detected"
+      },
+      {
+        "name": "BIST_ESP_WDT_TEST_ERR",
+        "value": 9,
+        "description": "Watchdog timer test failed"
+      },
+      {
+        "name": "BIST_ESP_IO_TEST_ERR",
+        "value": 10,
+        "description": "GPIO input/output test failed"
+      }
+    ]
+  },
+  {
+    "function": "bist_metrics",
+    "signature": "",
+    "module": "core",
+    "description": "Performance metrics collection for BIST tests",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_metrics.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_metrics_mode_t",
+    "signature": "typedef enum { ... } bist_metrics_mode_t",
+    "module": "core",
+    "description": "Performance metrics collection for BIST tests",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_metrics.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_METRICS_MODE_CYCLE",
+        "value": 0,
+        "description": "CPU cycles"
+      },
+      {
+        "name": "BIST_METRICS_MODE_INST",
+        "value": 1,
+        "description": "Instructions retired"
+      },
+      {
+        "name": "BIST_METRICS_MODE_LD_HAZARDS",
+        "value": 2,
+        "description": "Load use hazards"
+      },
+      {
+        "name": "BIST_METRICS_MODE_JMP_HAZARDS",
+        "value": 3,
+        "description": "Jump register hazards"
+      },
+      {
+        "name": "BIST_METRICS_MODE_IDLE",
+        "value": 4,
+        "description": "Cycles waiting for memory"
+      },
+      {
+        "name": "BIST_METRICS_MODE_LOAD",
+        "value": 5,
+        "description": "Load instructions"
+      },
+      {
+        "name": "BIST_METRICS_MODE_STORE",
+        "value": 6,
+        "description": "Store instructions"
+      },
+      {
+        "name": "BIST_METRICS_MODE_JMP_UNCOND",
+        "value": 7,
+        "description": "Unconditional jumps"
+      },
+      {
+        "name": "BIST_METRICS_MODE_BRANCH",
+        "value": 8,
+        "description": "Branch instructions"
+      },
+      {
+        "name": "BIST_METRICS_MODE_BRANCH_TAKEN",
+        "value": 9,
+        "description": "Branches taken"
+      },
+      {
+        "name": "BIST_METRICS_MODE_INST_COMP",
+        "value": 10,
+        "description": "Compressed instructions"
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_csr_regs_test",
+    "signature": "bist_esp_err_t bist_cpu_csr_regs_test(void)",
+    "module": "cpu",
+    "description": "CPU Control and Status Register (CSR) integrity test",
+    "params": [],
+    "returns": "BIST_ESP_OK if all CSRs pass; BIST_ESP_CPU_CSR_TEST_ERR if any CSR fails",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_csr_regs.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_regs_test",
+    "signature": "bist_esp_err_t bist_cpu_regs_test(void)",
+    "module": "cpu",
+    "description": "CPU general-purpose register integrity test",
+    "params": [],
+    "returns": "BIST_ESP_OK if all registers pass; BIST_ESP_CPU_TEST_ERR if any register fails",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_regs.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_stack_overflow_init",
+    "signature": "bist_esp_err_t bist_cpu_stack_overflow_init(void)",
+    "module": "cpu",
+    "description": "Stack overflow detection tests",
+    "params": [],
+    "returns": "BIST_ESP_OK on success",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_stack.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_stack_overflow_check",
+    "signature": "bist_esp_err_t bist_cpu_stack_overflow_check(void)",
+    "module": "cpu",
+    "description": "Check for stack overflow",
+    "params": [],
+    "returns": "BIST_ESP_OK if sentinel intact; BIST_ESP_STACK_TEST_OVERFLOW if sentinel corrupted (overflow detected)",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_stack.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_stack_overflow_test",
+    "signature": "bist_esp_err_t bist_cpu_stack_overflow_test(void)",
+    "module": "cpu",
+    "description": "Test stack overflow detection mechanism",
+    "params": [],
+    "returns": "BIST_ESP_OK if overflow successfully detected; BIST_ESP_STACK_TEST_ERR if overflow detection fails",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_stack.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_get_stack_high_watermark",
+    "signature": "uint32_t bist_get_stack_high_watermark(void)",
+    "module": "cpu",
+    "description": "Get the high watermark of the stack",
+    "params": [],
+    "returns": "uint32_t High watermark value (in bytes)",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_stack.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_pc_test",
+    "signature": "bist_esp_err_t bist_pc_test(void)",
+    "module": "cpu",
+    "description": "Program Counter integrity test",
+    "params": [],
+    "returns": "BIST_ESP_OK if all 4 functions return correctly; BIST_ESP_PC_TEST_ERR if return address mismatch detected",
+    "note": "Covers 24 of 30 addressable PC bits (bits 0-1 always 0 due to alignment)",
+    "header_file": "src/bist/core/cpu/include/bist_pc.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_flash_test",
+    "signature": "bist_esp_err_t bist_flash_test(void)",
+    "module": "memory",
+    "description": "Flash memory CRC validation test",
+    "params": [],
+    "returns": "BIST_ESP_OK if both CRCs match; BIST_ESP_FLASH_TEST_ERR if any CRC mismatch detected",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_flash.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_ram_test_march_a",
+    "signature": "bist_esp_err_t bist_ram_test_march_a(void)",
+    "module": "memory",
+    "description": "RAM integrity testing using March algorithms",
+    "params": [],
+    "returns": "BIST_ESP_OK if RAM passes test; BIST_ESP_RAM_TEST_ERR if mismatch detected",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_ram.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_ram_test_march_x",
+    "signature": "bist_esp_err_t bist_ram_test_march_x(void)",
+    "module": "memory",
+    "description": "Test RAM integrity using March X algorithm",
+    "params": [],
+    "returns": "BIST_ESP_OK if RAM passes test; BIST_ESP_RAM_TEST_ERR if mismatch detected",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_ram.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_ext_crystal_fail_test",
+    "signature": "bist_esp_err_t bist_ext_crystal_fail_test(void)",
+    "module": "clock",
+    "description": "Clock integrity tests",
+    "params": [],
+    "returns": "BIST_ESP_OK if crystal operational or test not supported (skipped); BIST_ESP_CLOCK_TEST_ERR if crystal failure detected",
+    "note": "Requires hardware with external 32 kHz crystal where XT WDT is supported",
+    "header_file": "src/bist/core/clock/include/bist_clock_fail.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_main_crystal_test",
+    "signature": "bist_esp_err_t bist_main_crystal_test(void)",
+    "module": "clock",
+    "description": "Test main 40 MHz crystal frequency accuracy",
+    "params": [],
+    "returns": "BIST_ESP_OK if frequency within tolerance; BIST_ESP_CLOCK_TEST_ERR if deviation exceeds tolerance",
+    "note": "Requires functional 32 kHz crystal as reference",
+    "header_file": "src/bist/core/clock/include/bist_clock_fail.h",
+    "kconfig_guards": [
+      "CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT"
+    ]
+  },
+  {
+    "function": "bist_wdt_test",
+    "signature": "bist_esp_err_t bist_wdt_test(void)",
+    "module": "wdt",
+    "description": "Watchdog timer operation test",
+    "params": [],
+    "returns": "BIST_ESP_OK if WDT reset detected (second execution); BIST_ESP_WDT_TEST_ERR if watchdog fails to trigger reset",
+    "note": "First execution will cause system reset. Success is detected on subsequent boot by checking reset reason.",
+    "header_file": "src/bist/core/wdt/include/bist_wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_gpio_output_test",
+    "signature": "bist_esp_err_t bist_gpio_output_test(gpio_num_t gpio_num)",
+    "module": "io",
+    "description": "GPIO plausibility tests",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO pin number to test"
+      }
+    ],
+    "returns": "BIST_ESP_OK if output levels read back correctly; BIST_ESP_IO_TEST_ERR if invalid GPIO, configuration fails, or level mismatch",
+    "note": "",
+    "header_file": "src/bist/core/io/include/bist_gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_gpio_input_test",
+    "signature": "bist_esp_err_t bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)",
+    "module": "io",
+    "description": "Test GPIO input functionality",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO pin number to test"
+      },
+      {
+        "name": "expected_level",
+        "description": "Expected logic level (0 or 1)"
+      }
+    ],
+    "returns": "BIST_ESP_OK if read level matches expected; BIST_ESP_IO_TEST_ERR if invalid GPIO, configuration fails, or level mismatch",
+    "note": "Requires external hardware setup to provide known logic level",
+    "header_file": "src/bist/core/io/include/bist_gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_log",
+    "signature": "",
+    "module": "drivers",
+    "description": "Logging macros for BIST library",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/bist_log.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_early_init",
+    "signature": "esp_err_t esp_timer_early_init(void)",
+    "module": "drivers",
+    "description": "microsecond-precision 64-bit timer API, replacement for ets_timer",
+    "params": [
+      {
+        "name": "arg",
+        "description": "pointer to opaque user-specific data"
+      }
+    ],
+    "returns": "*      - ESP_OK on success",
+    "note": "This function is called from startup code. Applications do not need to call this function before using other esp_timer APIs. * This function can be called very early in startup process, after this call only esp_timer_get_time function can be used.",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": [
+      "CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD"
+    ]
+  },
+  {
+    "function": "esp_timer_init",
+    "signature": "esp_err_t esp_timer_init(void)",
+    "module": "drivers",
+    "description": "Initialize esp_timer library",
+    "params": [],
+    "returns": "*      - ESP_OK on success - ESP_ERR_NO_MEM if allocation has failed - ESP_ERR_INVALID_STATE if already initialized - other errors from interrupt allocator",
+    "note": "This function is called from startup code. Applications do not need to call this function before using other esp_timer APIs. Before calling this function, esp_timer_early_init must be called by the startup code. * This function will be called from startup code on every core if CONFIG_ESP_TIMER_ISR_AFFINITY_NO_AFFINITY is enabled, It allocates the timer ISR on MULTIPLE cores and creates the timer task which can be run on any core.",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": [
+      "CONFIG_ESP_TIMER_ISR_AFFINITY_NO_AFFINITY"
+    ]
+  },
+  {
+    "function": "esp_timer_deinit",
+    "signature": "esp_err_t esp_timer_deinit(void)",
+    "module": "drivers",
+    "description": "De-initialize esp_timer library",
+    "params": [],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_STATE if not yet initialized",
+    "note": "Normally this function should not be called from applications",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_create",
+    "signature": "esp_err_t esp_timer_create(const esp_timer_create_args_t* create_args,\n                           esp_timer_handle_t* out_handle)",
+    "module": "drivers",
+    "description": "Create an esp_timer instance",
+    "params": [
+      {
+        "name": "create_args",
+        "description": "Pointer to a structure with timer creation arguments. Not saved by the library, can be allocated on the stack."
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_ARG if some of the create_args are not valid - ESP_ERR_INVALID_STATE if esp_timer library is not initialized yet - ESP_ERR_NO_MEM if memory allocation fails",
+    "note": "When done using the timer, delete it with esp_timer_delete function.",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_start_once",
+    "signature": "esp_err_t esp_timer_start_once(esp_timer_handle_t timer, uint64_t timeout_us)",
+    "module": "drivers",
+    "description": "Start one-shot timer",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle created using esp_timer_create"
+      },
+      {
+        "name": "timeout_us",
+        "description": "timer timeout, in microseconds relative to the current moment"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_ARG if the handle is invalid - ESP_ERR_INVALID_STATE if the timer is already running",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_start_periodic",
+    "signature": "esp_err_t esp_timer_start_periodic(esp_timer_handle_t timer, uint64_t period)",
+    "module": "drivers",
+    "description": "Start a periodic timer",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle created using esp_timer_create"
+      },
+      {
+        "name": "period",
+        "description": "timer period, in microseconds"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_ARG if the handle is invalid - ESP_ERR_INVALID_STATE if the timer is already running",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_restart",
+    "signature": "esp_err_t esp_timer_restart(esp_timer_handle_t timer, uint64_t timeout_us)",
+    "module": "drivers",
+    "description": "Restart a currently running timer",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer Handle created using esp_timer_create"
+      },
+      {
+        "name": "timeout_us",
+        "description": "Timeout, in microseconds relative to the current time. In case of a periodic timer, also represents the new period."
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_ARG if the handle is invalid - ESP_ERR_INVALID_STATE if the timer is not running",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_stop",
+    "signature": "esp_err_t esp_timer_stop(esp_timer_handle_t timer)",
+    "module": "drivers",
+    "description": "Stop the timer",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle created using esp_timer_create"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_STATE if the timer is not running",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_delete",
+    "signature": "esp_err_t esp_timer_delete(esp_timer_handle_t timer)",
+    "module": "drivers",
+    "description": "Delete an esp_timer instance",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle allocated using esp_timer_create"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_STATE if the timer is running",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_get_time",
+    "signature": "int64_t esp_timer_get_time(void)",
+    "module": "drivers",
+    "description": "Get time in microseconds since boot",
+    "params": [],
+    "returns": "number of microseconds since underlying timer has been started",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_get_next_alarm",
+    "signature": "int64_t esp_timer_get_next_alarm(void)",
+    "module": "drivers",
+    "description": "Get the timestamp when the next timeout is expected to occur",
+    "params": [],
+    "returns": "Timestamp of the nearest timer event, in microseconds. The timebase is the same as for the values returned by esp_timer_get_time.",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_get_next_alarm_for_wake_up",
+    "signature": "int64_t esp_timer_get_next_alarm_for_wake_up(void)",
+    "module": "drivers",
+    "description": "Get the timestamp when the next timeout is expected to occur skipping those which have skip_unhandled_events flag",
+    "params": [],
+    "returns": "Timestamp of the nearest timer event, in microseconds. The timebase is the same as for the values returned by esp_timer_get_time.",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_get_period",
+    "signature": "esp_err_t esp_timer_get_period(esp_timer_handle_t timer, uint64_t *period)",
+    "module": "drivers",
+    "description": "Get the period of a timer",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle allocated using esp_timer_create"
+      },
+      {
+        "name": "period",
+        "description": "memory to store the timer period value in microseconds"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_ARG if the arguments are invalid",
+    "note": "The timeout period is the time interval with which a timer restarts after expiry. For one-shot timers, the period is 0 as there is no periodicity associated with such timers.",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_get_expiry_time",
+    "signature": "esp_err_t esp_timer_get_expiry_time(esp_timer_handle_t timer, uint64_t *expiry)",
+    "module": "drivers",
+    "description": "Get the expiry time of a one-shot timer",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle allocated using esp_timer_create"
+      },
+      {
+        "name": "expiry",
+        "description": "memory to store the timeout value in microseconds"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_INVALID_ARG if the arguments are invalid - ESP_ERR_NOT_SUPPORTED if the timer type is periodic",
+    "note": "This API returns a valid expiry time only for a one-shot timer. It returns an error if the timer handle passed to the function is for a periodic timer.",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_dump",
+    "signature": "esp_err_t esp_timer_dump(FILE* stream)",
+    "module": "drivers",
+    "description": "Dump the list of timers to a stream",
+    "params": [
+      {
+        "name": "stream",
+        "description": "stream (such as stdout) to dump the information to"
+      }
+    ],
+    "returns": "*      - ESP_OK on success - ESP_ERR_NO_MEM if can not allocate temporary buffer for the output",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": [
+      "CONFIG_ESP_TIMER_PROFILING"
+    ]
+  },
+  {
+    "function": "esp_timer_isr_dispatch_need_yield",
+    "signature": "void esp_timer_isr_dispatch_need_yield(void)",
+    "module": "drivers",
+    "description": "Requests a context switch from a timer callback function.",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_is_active",
+    "signature": "bool esp_timer_is_active(esp_timer_handle_t timer)",
+    "module": "drivers",
+    "description": "Returns status of a timer, active or not",
+    "params": [
+      {
+        "name": "timer",
+        "description": "timer handle created using esp_timer_create"
+      }
+    ],
+    "returns": "*      - 1 if timer is still active - 0 if timer is not active.",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_new_etm_alarm_event",
+    "signature": "esp_err_t esp_timer_new_etm_alarm_event(esp_etm_event_handle_t *out_event)",
+    "module": "drivers",
+    "description": "Get the ETM event handle of esp_timer underlying alarm event",
+    "params": [],
+    "returns": "*      - ESP_OK Success - ESP_ERR_INVALID_ARG Parameter error",
+    "note": "The created ETM event object can be deleted later by calling `esp_etm_del_event`",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "esp_timer_dispatch_t",
+    "signature": "typedef enum { ... } esp_timer_dispatch_t",
+    "module": "core",
+    "description": "microsecond-precision 64-bit timer API, replacement for ets_timer",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "ESP_TIMER_TASK",
+        "value": "",
+        "description": "Callback is called from timer task"
+      },
+      {
+        "name": "if",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "1",
+        "value": "",
+        "description": "CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD"
+      },
+      {
+        "name": "ESP_TIMER_ISR",
+        "value": "",
+        "description": "Callback is called from timer ISR"
+      },
+      {
+        "name": "endif",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "ESP_TIMER_MAX",
+        "value": "",
+        "description": "Count of the methods for dispatching timer callback"
+      }
+    ]
+  },
+  {
+    "function": "gpio_config",
+    "signature": "esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)",
+    "module": "drivers",
+    "description": "GPIO interrupt handler",
+    "params": [
+      {
+        "name": "arg",
+        "description": "User registered data"
+      },
+      {
+        "name": "pGPIOConfig",
+        "description": "Pointer to GPIO configure struct"
+      }
+    ],
+    "returns": "*     - ESP_OK success - ESP_ERR_INVALID_ARG Parameter error",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_reset_pin",
+    "signature": "esp_err_t gpio_reset_pin(gpio_num_t gpio_num)",
+    "module": "drivers",
+    "description": "Reset an gpio to default state (select gpio function, enable pullup and disable input and output).",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number."
+      }
+    ],
+    "returns": "Always return ESP_OK.",
+    "note": "This function also configures the IOMUX for this pin to the GPIO function, and disconnects any other peripheral output configured via GPIO Matrix.",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_set_level",
+    "signature": "esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level)",
+    "module": "drivers",
+    "description": "GPIO set output level",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number. If you want to set the output level of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);"
+      },
+      {
+        "name": "level",
+        "description": "Output level. 0: low ; 1: high"
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG GPIO number error",
+    "note": "This function is allowed to be executed when Cache is disabled within ISR context, by enabling `CONFIG_GPIO_CTRL_FUNC_IN_IRAM`",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": [
+      "CONFIG_GPIO_CTRL_FUNC_IN_IRAM"
+    ]
+  },
+  {
+    "function": "gpio_get_level",
+    "signature": "int gpio_get_level(gpio_num_t gpio_num)",
+    "module": "drivers",
+    "description": "GPIO get input level",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number. If you want to get the logic level of e.g. pin GPIO16, gpio_num should be GPIO_NUM_16 (16);"
+      }
+    ],
+    "returns": "*     - 0 the GPIO input level is 0 - 1 the GPIO input level is 1",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_set_direction",
+    "signature": "esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode)",
+    "module": "drivers",
+    "description": "GPIO set direction",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "Configure GPIO pins number, it should be GPIO number. If you want to set direction of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);"
+      },
+      {
+        "name": "mode",
+        "description": "GPIO direction"
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG GPIO error",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_set_pull_mode",
+    "signature": "esp_err_t gpio_set_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull)",
+    "module": "drivers",
+    "description": "Configure GPIO pull-up/pull-down resistors",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number. If you want to set pull up or down mode for e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);"
+      },
+      {
+        "name": "pull",
+        "description": "GPIO pull up/down mode."
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG : Parameter error",
+    "note": "ESP32: Only pins that support both input & output have integrated pull-up and pull-down resistors. Input-only GPIOs 34-39 do not.",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_pullup_en",
+    "signature": "esp_err_t gpio_pullup_en(gpio_num_t gpio_num)",
+    "module": "drivers",
+    "description": "Enable pull-up on GPIO.",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number"
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG Parameter error",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_pullup_dis",
+    "signature": "esp_err_t gpio_pullup_dis(gpio_num_t gpio_num)",
+    "module": "drivers",
+    "description": "Disable pull-up on GPIO.",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number"
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG Parameter error",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_pulldown_en",
+    "signature": "esp_err_t gpio_pulldown_en(gpio_num_t gpio_num)",
+    "module": "drivers",
+    "description": "Enable pull-down on GPIO.",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number"
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG Parameter error",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "gpio_pulldown_dis",
+    "signature": "esp_err_t gpio_pulldown_dis(gpio_num_t gpio_num)",
+    "module": "drivers",
+    "description": "Disable pull-down on GPIO.",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number"
+      }
+    ],
+    "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG Parameter error",
+    "note": "",
+    "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_deinit",
+    "signature": "void wdt_deinit(void)",
+    "module": "drivers",
+    "description": "Watchdog timer driver interface",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_init",
+    "signature": "int wdt_init(uint32_t timeout_us)",
+    "module": "drivers",
+    "description": "Initialize watchdog timer",
+    "params": [
+      {
+        "name": "timeout_us",
+        "description": "Timeout period in microseconds (>= 500)"
+      }
+    ],
+    "returns": "0 on success, -1 if timeout_us is too small",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_feed",
+    "signature": "void wdt_feed(void)",
+    "module": "drivers",
+    "description": "Feed/refresh watchdog timer",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_register_callback",
+    "signature": "void wdt_register_callback(void (*callback)(void *), void *arg)",
+    "module": "drivers",
+    "description": "Register watchdog timeout callback",
+    "params": [
+      {
+        "name": "callback",
+        "description": "Callback function pointer"
+      },
+      {
+        "name": "arg",
+        "description": "User argument passed to callback"
+      }
+    ],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_init_windowed",
+    "signature": "int wdt_init_windowed(uint32_t underflow_timeout_us)",
+    "module": "drivers",
+    "description": "Initialize windowed watchdog timer",
+    "params": [
+      {
+        "name": "underflow_timeout_us",
+        "description": "Underflow window in microseconds"
+      }
+    ],
+    "returns": "0 on success, -1 if underflow_timeout_us is 0 or initialization fails",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_windowed_deinit",
+    "signature": "void wdt_windowed_deinit(void)",
+    "module": "drivers",
+    "description": "Deinitialize windowed watchdog timer",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "wdt_is_underflow_detected",
+    "signature": "bool wdt_is_underflow_detected(void)",
+    "module": "drivers",
+    "description": "Check if a windowed underflow was detected",
+    "params": [],
+    "returns": "true if underflow was detected, false otherwise",
+    "note": "",
+    "header_file": "src/bist/drivers/include/wdt.h",
+    "kconfig_guards": []
+  }
+]

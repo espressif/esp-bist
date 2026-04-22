@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "ESP-BIST": {
+      "command": "${workspaceFolder}/mcp-server/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/mcp-server/server.py"
+      ],
+      "env": {}
+    }
+  }
+}
