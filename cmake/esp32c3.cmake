@@ -47,6 +47,8 @@ set(include_hal
 set(soc_srcs
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/clock_init.c
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/bare_metal_stubs.c
     ${BIST_ROOT_DIR}/src/soc/common/loader.c
     ${BIST_ROOT_DIR}/src/soc/common/newlib_stubs.c
     ${BIST_ROOT_DIR}/src/soc/common/panic_handler.c

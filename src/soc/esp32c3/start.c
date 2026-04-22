@@ -23,7 +23,6 @@
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
 #include "soc/reset_reasons.h"
-#include "soc/rtc_cntl_reg.h"
 #include "wdt.h"
 #include "loader.h"
 
@@ -45,18 +44,6 @@ static HDR_ATTR void (*_entry_point)(void) = &__start;
 
 extern int main();
 
-static void setup_clock_glitch_reset(bool enable)
-{
-    REG_CLR_BIT(RTC_CNTL_FIB_SEL_REG, RTC_CNTL_FIB_GLITCH_RST);
-
-    if (enable) {
-        REG_SET_BIT(RTC_CNTL_ANA_CONF_REG, RTC_CNTL_GLITCH_RST_EN);
-    }
-    else {
-        REG_CLR_BIT(RTC_CNTL_ANA_CONF_REG, RTC_CNTL_GLITCH_RST_EN);
-    }
-}
-
 void __start(void)
 {
     /* Configure the global pointer register
@@ -73,6 +60,9 @@ void __start(void)
     __asm__ __volatile__("la sp, _stack_top");
 
     esp_cpu_intr_set_ivt_addr(&_vector_table);
+
+    ESP_EARLY_LOGD(TAG, "Clearing .bss section");
+    memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
 
     size_t _partition_offset = PARTITION_OFFSET;
     uint32_t _app_irom_start = (_partition_offset + (uint32_t)&_image_irom_start);
@@ -94,9 +84,6 @@ void __start(void)
     map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr,
         _app_irom_size);
 
-    ESP_EARLY_LOGD(TAG, "Clearing .bss section");
-    memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
-
     soc_reset_reason_t reset_reason = esp_rom_get_reset_reason(0);
 
     ESP_EARLY_LOGI(TAG, "Reset reason: %d", reset_reason);
@@ -106,8 +93,6 @@ void __start(void)
         ESP_EARLY_LOGD(TAG, "Clearing .rtc.bss section");
         memset(&_rtc_bss_start, 0, (&_rtc_bss_end - &_rtc_bss_start) * sizeof(_rtc_bss_start));
     }
-
-    setup_clock_glitch_reset(true);
 
     esp_clk_init();
     esp_perip_clk_init();
