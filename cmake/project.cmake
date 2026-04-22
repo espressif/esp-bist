@@ -11,10 +11,20 @@ else()
     # Set the minimum revision for each supported chip
     if ("${SOC_TARGET}" STREQUAL "esp32c3")
         set(ESP_MIN_REVISION 3)
+        set(BOOTLOADER_ADDR 0x0)
+        set(APP_ADDR 0x20000)
     elseif ("${SOC_TARGET}" STREQUAL "esp32c6")
         set(ESP_MIN_REVISION 0)
+        set(BOOTLOADER_ADDR 0x0)
+        set(APP_ADDR 0x20000)
     elseif ("${SOC_TARGET}" STREQUAL "esp32h2")
         set(ESP_MIN_REVISION 0)
+        set(BOOTLOADER_ADDR 0x0)
+        set(APP_ADDR 0x20000)
+    elseif ("${SOC_TARGET}" STREQUAL "esp32c5")
+        set(ESP_MIN_REVISION 0)
+        set(BOOTLOADER_ADDR 0x2000)
+        set(APP_ADDR 0x20000)
     else()
         message(FATAL_ERROR "Unsupported target ${SOC_TARGET}")
     endif()
@@ -245,11 +255,13 @@ add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
     )
 
 # Qemu image
+if(EXISTS ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin)
 add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
     COMMAND
     ${esptool_path}
-    --chip ${SOC_TARGET} merge_bin 0x0  ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin 0x10000 ${APP_NAME}_signed.bin --fill-flash-size 4MB -o ${APP_NAME}_qemu_image.bin > /dev/null
+    --chip ${SOC_TARGET} merge_bin ${BOOTLOADER_ADDR}  ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin ${APP_ADDR} ${APP_NAME}_signed.bin --fill-flash-size 4MB -o ${APP_NAME}_qemu_image.bin > /dev/null
     )
+endif()
 
 # Copy flasher_args.json to build folder
 add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
@@ -261,6 +273,7 @@ add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
     -DOUTPUT_FILE=${CMAKE_BINARY_DIR}/flasher_args.json
     -DAPP_NAME=${APP_NAME}
     -DSOC_TARGET=${SOC_TARGET}
+    -DAPP_ADDR=${APP_ADDR}
     -P ${BIST_ROOT_DIR}/cmake/flash_target.cmake
     )
 
@@ -281,7 +294,7 @@ add_custom_command(TARGET flash POST_BUILD
     -p ${ESPPORT} -b 460800 --before default-reset --after hard-reset
     --chip ${SOC_TARGET} write-flash
     --flash-mode dio --flash-size detect
-    --flash-freq 40m 0x10000
+    --flash-freq 40m ${APP_ADDR}
     ${APP_NAME}_signed.bin
     )
 
@@ -294,7 +307,7 @@ add_custom_command(TARGET flash_boot POST_BUILD
     -p ${ESPPORT} -b 460800 --before default-reset --after hard-reset
     --chip ${SOC_TARGET} write-flash
     --flash-mode dio --flash-size detect --force
-    --flash-freq keep 0x0
+    --flash-freq keep ${BOOTLOADER_ADDR}
     ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin
     )
 

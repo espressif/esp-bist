@@ -16,8 +16,8 @@
 #include "esp_cpu.h"
 #include "esp_rom_serial_output.h"
 #include "esp_rom_sys.h"
-#include "esp_private/periph_ctrl.h"
 #include "esp_private/esp_clk.h"
+#include "hal/clk_gate_ll.h"
 #include "esp_private/esp_modem_clock.h"
 #include "esp_private/esp_pmu.h"
 #include "soc/clk_tree_defs.h"
@@ -148,7 +148,9 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
 
 void esp_perip_clk_init(void)
 {
-    soc_rtc_slow_clk_src_t rtc_slow_clk_src = rtc_clk_slow_src_get();
-    ESP_EARLY_LOGI(TAG, "RTC_SLOW_CLK source: %d", rtc_slow_clk_src);
-    periph_module_enable(PERIPH_TIMG0_MODULE);
+    soc_reset_reason_t rst_reason = esp_rom_get_reset_reason(0);
+    periph_ll_clk_gate_config_t clk_gate_config = {0};
+    periph_ll_clk_gate_set_default(rst_reason, &clk_gate_config);
+
+    periph_ll_enable_clk_clear_rst(PERIPH_TIMG0_MODULE);
 }
