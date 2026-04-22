@@ -59,8 +59,8 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
-  - Success test: All 21 CSRs pass pattern test
-  - Failure test: GDB fault injection per CSR (21 test cases)
+  - Success test: All CSRs pass pattern test
+  - Failure test: GDB fault injection per CSR
 - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
 
 **Test Results**:
@@ -68,7 +68,7 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 - QEMU: ``tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 21 CSRs × 2 test cases (pass + fail) = 42 test cases total
+**Coverage**: CSR count varies by SoC — 25 on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint). Each CSR has 2 test cases (pass + fail).
 
 Program Counter Test (IEC 60730 ID: 1.3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
