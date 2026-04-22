@@ -20,7 +20,7 @@
 
 static const char *TAG = "panic";
 
-static const char *exc_cause_table[] = {
+static const char *bist_exc_cause_table[] = {
     [0]  = "Instruction address misaligned",
     [1]  = "Instruction access fault",
     [2]  = "Illegal instruction",
@@ -37,21 +37,23 @@ static const char *exc_cause_table[] = {
     [15] = "Store page fault",
 };
 
-#define NUM_EXC_CAUSE (sizeof(exc_cause_table) / sizeof(exc_cause_table[0]))
+#define NUM_EXC_CAUSE (sizeof(bist_exc_cause_table) / sizeof(bist_exc_cause_table[0]))
 
 void __attribute__((noreturn)) panic_handler_c(RvExcFrame *frame)
 {
     uint32_t mcause = frame->mcause;
+    uint32_t exc_code = mcause & 0x1F;
     const char *reason = "Unknown";
 
     if (mcause & 0x80000000) {
         ESP_LOGE(TAG, "Unexpected interrupt during exception handling (mcause=0x%08x)",
                  (unsigned)mcause);
     } else {
-        if (mcause < NUM_EXC_CAUSE && exc_cause_table[mcause] != NULL) {
-            reason = exc_cause_table[mcause];
+        if (exc_code < NUM_EXC_CAUSE && bist_exc_cause_table[exc_code] != NULL) {
+            reason = bist_exc_cause_table[exc_code];
         }
-        ESP_LOGE(TAG, "Guru Meditation Error: %s", reason);
+        ESP_LOGE(TAG, "Guru Meditation Error: %s (mcause=0x%08x, mtval=0x%08x)",
+                 reason, (unsigned)mcause, (unsigned)frame->mtval);
     }
 
     ESP_LOGE(TAG, "Core %d register dump:", (int)frame->mhartid);
