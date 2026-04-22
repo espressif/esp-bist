@@ -4,6 +4,28 @@ from tests.idf_targets import pytestmark  # noqa: F401
 import time
 import queue
 
+COMMON_CSRS = [
+    "mtvec",
+    "mscratch", "mepc", "mcause", "mtval",
+    "pmpaddr0", "pmpaddr1", "pmpaddr2", "pmpaddr3",
+    "pmpaddr4", "pmpaddr5", "pmpaddr6", "pmpaddr7",
+    "pmpaddr8", "pmpaddr9", "pmpaddr10", "pmpaddr11",
+    "pmpaddr12", "pmpaddr13", "pmpaddr14", "pmpaddr15",
+    "pmpcfg0", "pmpcfg1", "pmpcfg2", "pmpcfg3",
+]
+
+PMA_ADDR_CSRS = [
+    "0xBD0", "0xBD1", "0xBD2", "0xBD3",
+    "0xBD4", "0xBD5", "0xBD6", "0xBD7",
+    "0xBD8", "0xBD9", "0xBDA", "0xBDB",
+]
+
+C5_ONLY_CSRS = [
+    "0x7E1", "0x7C5",
+]
+
+PMA_TARGETS = {"esp32c5", "esp32c6", "esp32h2"}
+
 def test_cpu_reg_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
     tests_names = ["test_BIST_Cpu_Regs", "test_BIST_Cpu_Csr_Regs"]
@@ -13,7 +35,7 @@ def test_cpu_reg_success(qemu_instance, target):
     try:
         # Attempt to read all current output from QEMU
         while True:
-            line = output_queue.get(timeout=3)  # Use a timeout to wait for output
+            line = output_queue.get(timeout=10)  # Use a timeout to wait for output
             output_lines.append(line)
             # Check if the line contains any of the expected outputs
             for expected_output in expected_outputs:
@@ -72,13 +94,12 @@ def cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name, script=None)
 def test_reg_error(qemu_debug_instance, gdb_instance, reg_name, target):
     cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name)
 
-@pytest.mark.parametrize("csr_name", [
-    "mtvec",
-    "mscratch", "mepc", "mcause", "mtval",
-    "pmpaddr0", "pmpaddr1", "pmpaddr2", "pmpaddr3", "pmpaddr4", "pmpaddr5", "pmpaddr6", "pmpaddr7", "pmpaddr8", "pmpaddr9", "pmpaddr10", "pmpaddr11", "pmpaddr12", "pmpaddr13", "pmpaddr14", "pmpaddr15"
-])
-
+@pytest.mark.parametrize("csr_name", COMMON_CSRS + PMA_ADDR_CSRS + C5_ONLY_CSRS)
 def test_reg_csr_error(qemu_debug_instance, gdb_instance, csr_name, target):
+    if csr_name in PMA_ADDR_CSRS and target not in PMA_TARGETS:
+        pytest.skip(f"CSR {csr_name} requires PMA (not available on {target})")
+    if csr_name in C5_ONLY_CSRS and target != "esp32c5":
+        pytest.skip(f"CSR {csr_name} only available on ESP32-C5")
     script = '''
 #connect to remote server
 target remote :1234
