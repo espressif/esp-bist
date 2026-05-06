@@ -83,8 +83,8 @@ RUN : \
     && :
 
 # Clone MCUboot (branch with IDF v6.0 HAL support, no separate IDF version needed)
-ARG MCUBOOT_URL="https://github.com/almir-okato/mcuboot.git"
-ARG MCUBOOT_BRANCH=hal_update_idf_v6.0
+ARG MCUBOOT_URL="https://github.com/mcu-tools/mcuboot.git"
+ARG MCUBOOT_BRANCH=main
 ENV MCUBOOT_PATH=/opt/mcuboot
 RUN git clone -b $MCUBOOT_BRANCH --depth 1 --recursive --shallow-submodules $MCUBOOT_URL $MCUBOOT_PATH
 
