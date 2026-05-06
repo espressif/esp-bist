@@ -10,6 +10,8 @@
 #define BIST_TEST_GPIO_INPUT_IO                 (8)
 #elif SOC_TARGET_ESP32C5
 #define BIST_TEST_GPIO_INPUT_IO                 (8)
+#elif SOC_TARGET_ESP32C61
+#define BIST_TEST_GPIO_INPUT_IO                 (8)
 #elif SOC_TARGET_ESP32C3
 #define BIST_TEST_GPIO_INPUT_IO                 (9)
 #elif SOC_TARGET_ESP32H2

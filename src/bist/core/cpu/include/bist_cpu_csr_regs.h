@@ -27,10 +27,10 @@
  * PMP registers on all SOCs (skipped on Zephyr):
  *   - PMP address: PMPADDR0-PMPADDR15
  *     - C3/C6/H2: full 32-bit mask (4-byte granularity)
- *     - C5: mask 0x3FFFFFE0 (25 writable bits, 128-byte granularity)
+ *     - C5/C61: mask 0x3FFFFFE0 (25 writable bits, 128-byte granularity)
  *   - PMP configuration: PMPCFG0-PMPCFG3
  *     - C3/C6/H2: mask 0x1D1D1D1D (excludes L, reserved, and W bits)
- *     - C5: mask 0x0D0D0D0D (additionally excludes upper A-field bit
+ *     - C5/C61: mask 0x0D0D0D0D (additionally excludes upper A-field bit
  *       because A=NA4 is not selectable at G=5 per RISC-V spec)
  *     W (bit 1) is excluded on all SOCs because the 0xAA test pattern
  *     sets R=0,W=1 which is a reserved RISC-V encoding — hardware
