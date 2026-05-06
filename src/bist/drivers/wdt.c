@@ -23,7 +23,8 @@
 #include "bist_esp_types.h"
 #include "esp_timer.h"
 #include "hal/clk_tree_ll.h"
-#include "hal/clk_gate_ll.h"
+#include "esp_private/periph_ctrl.h"
+#include "soc/system_intr.h"
 
 #define MWDT_DEFAULT_TICKS_PER_US       500
 
@@ -86,10 +87,14 @@ int wdt_init(uint32_t timeout_us)
     ESP_LOGI(TAG, "WDT prescaler: %u", MWDT_LL_DEFAULT_CLK_PRESCALER);
     ESP_LOGI(TAG, "Stage timeout ticks: %u", stage_timeout_ticks);
 
-    periph_ll_enable_clk_clear_rst(PERIPH_TIMG0_MODULE);
+    /* Guard avoids -Wdeprecated-declarations on SoCs where IDF retired
+     * the legacy API (C5/C61/...); TIMG0 is on by reset default there. */
+#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API
+    periph_module_enable(PERIPH_TIMG0_MODULE);
+#endif
 
     esp_cpu_intr_disable(1 << ETS_INT_WDT_INUM);
-    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_TG0_WDT_LEVEL_INTR_SOURCE, ETS_INT_WDT_INUM);
+    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), SYS_TG0_WDT_INTR_SOURCE, ETS_INT_WDT_INUM);
 
     esp_cpu_intr_set_type(ETS_INT_WDT_INUM, 0);
     esp_cpu_intr_set_priority(ETS_INT_WDT_INUM, SOC_INTERRUPT_LEVEL_MEDIUM);
