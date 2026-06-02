@@ -45,26 +45,6 @@ RUN : \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && :
 
-
-ENV PIP_PACKAGES="\
-    cmake-format \
-    CodeChecker \
-    cvt2utf \
-    cxxfilt \
-    imgtool \
-    kconfiglib \
-    pexpect==4.8.0 \
-    pyelftools \
-    pyserial==3.5 \
-    setuptools \
-    wheel \
-    pytest==8.4.1 \
-    esptool==4.7.0 \
-"
-
-# install PIP packages for Python3
-RUN python3 -m pip install $PIP_PACKAGES
-
 # Install QEMU for RISC-V
 ARG QEMU_VER_SUFFIX=develop-8.2.0-20240122
 ARG QEMU_VER=esp-${QEMU_VER_SUFFIX}
@@ -107,5 +87,14 @@ ARG MCUBOOT_URL="https://github.com/almir-okato/mcuboot.git"
 ARG MCUBOOT_BRANCH=hal_update_idf_v6.0
 ENV MCUBOOT_PATH=/opt/mcuboot
 RUN git clone -b $MCUBOOT_BRANCH --depth 1 --recursive --shallow-submodules $MCUBOOT_URL $MCUBOOT_PATH
+
+# Install PIP packages inside the IDF environment
+ENV PIP_PACKAGES="\
+    kconfiglib \
+    imgtool==2.3.0 \
+    pre-commit \
+"
+RUN . /opt/esp/python_env/idf6.0_py3.10_env/bin/activate \
+    && python3 -m pip install $PIP_PACKAGES
 
 RUN echo '. $IDF_PATH/export.sh' >> /root/.profile
