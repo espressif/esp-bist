@@ -27,8 +27,15 @@ import queue
 
 class QEMU_RISCV(object):
     def __init__(self, directory=None, executable=None, target="esp32c3"):
-        if directory is None:
+        if directory is None or not os.path.isdir(directory):
             raise ValueError("Directory must be specified.")
+        if executable is None:
+            executable = os.path.basename(os.path.normpath(directory))
+            drive_path = os.path.join(directory, "build", executable + ".bin")
+            if not os.path.isfile(drive_path):
+                raise ValueError(f"Executable {drive_path} not found in build directory.")
+            print(f"Executable is not specified. Using the default executable: {executable}")
+
         self.current_dir = directory
         self.executable = executable
         self.target = target
@@ -80,8 +87,15 @@ class GDB_RISCV(object):
     TEMP_FILE_NAME = "gdb_script_temp.gdb"
 
     def __init__(self, directory=None, executable=None):
-        if directory is None:
+        if directory is None or not os.path.isdir(directory):
             raise ValueError("Directory must be specified.")
+        if executable is None:
+            executable = os.path.basename(os.path.normpath(directory))
+            drive_path = os.path.join(directory, "build", executable + ".bin")
+            if not os.path.isfile(drive_path):
+                raise ValueError(f"Executable {drive_path} not found in build directory.")
+            print(f"Executable is not specified. Using the default executable: {executable}")
+
         self.current_dir = directory
         self.executable = executable
         self.temp_file_path = self.current_dir + "/" + self.TEMP_FILE_NAME
