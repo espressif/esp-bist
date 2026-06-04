@@ -67,7 +67,7 @@ static bist_esp_err_t run_on_safe_stack(bist_esp_err_t (*fn)(void))
     __asm__ volatile(
         "mv   t0, sp\n"
         "mv   sp, %[stk]\n"
-        "addi sp, sp, -8\n"
+        "addi sp, sp, -16\n"
         "sw   t0, 4(sp)\n"
         "sw   ra, 0(sp)\n"
         "jalr ra, 0(%[func])\n"
