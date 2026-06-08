@@ -28,7 +28,7 @@ void __attribute__((weak)) handle_stack_overflow(void)
     /* handle the error (e.g., log it, halt the system) */
 }
 
-void bist_cpu_stack_recursive(int count)
+void __attribute__((optimize("O0"))) bist_cpu_stack_recursive(int count)
 {
     /* consume stack space by adding a large local array */
     volatile char buffer[128] = { 0 };
@@ -42,21 +42,31 @@ void bist_cpu_stack_recursive(int count)
 
 bist_esp_err_t bist_cpu_stack_overflow_init(void)
 {
-    uint32_t *protection_start = (uint32_t *)&_stack_overflow_protection_start;
-    *protection_start = STACK_PROTECTION_PATTERN;
+    /*
+     * Fill the entire protection region with the sentinel pattern.
+     * A single-word sentinel can fall in an unwritten gap between
+     * stack frames (saved regs + padding occupy ~32 bytes per 160-byte
+     * frame), making single-point detection unreliable. Filling the
+     * full region guarantees at least one word lands in a zeroed buffer.
+     */
+    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;
+    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;
+    for (; p <= end; p++) {
+        *p = STACK_PROTECTION_PATTERN;
+    }
 
     return BIST_ESP_OK;
 }
 
 bist_esp_err_t bist_cpu_stack_overflow_check(void)
 {
-    uint32_t *protection_start = (uint32_t *)&_stack_overflow_protection_start;
-
-    if (*protection_start != STACK_PROTECTION_PATTERN) {
-        /* stack overflow detected */
-        handle_stack_overflow();
-
-        return BIST_ESP_STACK_TEST_OVERFLOW;
+    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;
+    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;
+    for (; p <= end; p++) {
+        if (*p != STACK_PROTECTION_PATTERN) {
+            handle_stack_overflow();
+            return BIST_ESP_STACK_TEST_OVERFLOW;
+        }
     }
 
     return BIST_ESP_OK;
@@ -64,7 +74,7 @@ bist_esp_err_t bist_cpu_stack_overflow_check(void)
 
 bist_esp_err_t bist_cpu_stack_overflow_test(void)
 {
-    int count_max = 20000;
+    volatile int count_max = 20000;
 
     bist_cpu_stack_overflow_init();
 

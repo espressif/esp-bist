@@ -1,4 +1,0 @@
-[submodule "modules/mcuboot"]
-	path = modules/mcuboot
-	url = https://github.com/mcu-tools/mcuboot.git
-

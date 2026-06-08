@@ -1,4 +1,7 @@
-def test_windowed_wdt_success(dut):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_windowed_wdt_success(dut, target):
     tests_names = [
         "test_BIST_WINDOWED_WDT_NORMAL",
         "test_BIST_WINDOWED_WDT_UNDERFLOW",

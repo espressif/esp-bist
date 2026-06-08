@@ -18,13 +18,13 @@
 #include <string.h>
 #include "sdkconfig.h"
 #include "rom/ets_sys.h"
-#include "esp_rom_uart.h"
+#include "esp_rom_serial_output.h"
 #include "esp_log.h"
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
-#include "esp32h2/rtc.h"
+#include "riscv/interrupt.h"
+#include "soc/reset_reasons.h"
 #include "wdt.h"
-#include "bist_log.h"
 #include "loader.h"
 
 #define HDR_ATTR __attribute__((section(".entry_addr"))) __attribute__((used))
@@ -58,10 +58,10 @@ void __start(void)
 
     esp_cpu_intr_set_ivt_addr(&_vector_table);
 
-    ESP_LOGI(TAG, "Clearing .bss section");
+    ESP_EARLY_LOGD(TAG, "Clearing .bss section");
     memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
 
-    ESP_LOGI(TAG, "Clearing .iram.bss section");
+    ESP_EARLY_LOGD(TAG, "Clearing .iram.bss section");
     memset(&_iram_bss_start, 0, (&_iram_bss_end - &_iram_bss_start) * sizeof(_iram_bss_start));
 
     size_t _partition_offset = PARTITION_OFFSET;
@@ -77,7 +77,7 @@ void __start(void)
     uint32_t _app_rtc_size = (uint32_t)&_image_rtc_size;
     uint32_t _app_rtc_vaddr = ((uint32_t)&_image_rtc_vaddr);
 
-    esp_rom_uart_tx_wait_idle(0);
+    esp_rom_output_tx_wait_idle(0);
 
     map_rtc_segment(_app_rtc_start, _app_rtc_vaddr, _app_rtc_size);
 
@@ -88,7 +88,7 @@ void __start(void)
     ESP_EARLY_LOGI(TAG, "Reset reason: %d", reset_reason);
 
     if (reset_reason != RESET_REASON_CORE_DEEP_SLEEP) {
-        ESP_LOGI(TAG, "Clearing .rtc.bss section");
+        ESP_EARLY_LOGD(TAG, "Clearing .rtc.bss section");
         memset(&_rtc_bss_start, 0, (&_rtc_bss_end - &_rtc_bss_start) * sizeof(_rtc_bss_start));
     }
 
@@ -96,7 +96,7 @@ void __start(void)
     esp_perip_clk_init();
 
     core_intr_matrix_clear();
-    esprv_intc_int_set_threshold(0);
+    esprv_int_set_threshold(0);
     ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
     init_stack_pattern();
 

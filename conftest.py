@@ -15,7 +15,8 @@ Fixtures:
 
 Command-line Options:
         --executable: Name of the executable file (without extension) to be tested/debugged.
-        --soc-target: QEMU machine target (e.g. esp32c3, esp32c6). Defaults to esp32c3.
+
+QEMU uses the same ``target`` as idf-ci (``@pytest.mark.parametrize`` / ``tests/idf_targets.py``), not a separate CLI flag.
 """
 
 import pytest
@@ -84,7 +85,7 @@ class GDB_RISCV(object):
         self.current_dir = directory
         self.executable = executable
         self.temp_file_path = self.current_dir + "/" + self.TEMP_FILE_NAME
-
+        self._gdb_process = None
 
     def attach(self, script):
         # Creates a temporary file with script content
@@ -95,25 +96,28 @@ class GDB_RISCV(object):
         elf_file = "{}.elf".format(self.executable)
         gdb_command = ["riscv32-esp-elf-gdb", f"{self.current_dir}/build/{elf_file}","-q", f"--command={self.temp_file_path}"]
         print("Starting GDB with command: " + " ".join(gdb_command))
-        gdb_process = subprocess.Popen(gdb_command)
-        return gdb_process
+        self._gdb_process = subprocess.Popen(gdb_command)
+        return self._gdb_process
 
-    def stop(self, gdb_process):
-        """Terminates the GDB process."""
-        print("Removing temporary files.")
-        subprocess.run(["rm", self.temp_file_path])
-        print("Terminating GDB process.")
-        gdb_process.terminate()
-        try:
-            gdb_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            gdb_process.kill()
-            gdb_process.wait()
+    def stop(self, gdb_process=None):
+        """Terminates the GDB process and removes the temporary script file."""
+        proc = gdb_process or self._gdb_process
+        if os.path.exists(self.temp_file_path):
+            print("Removing temporary files.")
+            os.remove(self.temp_file_path)
+        if proc is not None:
+            print("Terminating GDB process.")
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        self._gdb_process = None
 
 @pytest.fixture
-def qemu_instance(request):
+def qemu_instance(request, target):
     executable = request.config.getoption("--executable")
-    target = request.config.getoption("--soc-target")
     qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable, target=target)
     qemu_process, output_queue = qemu.start()
     yield qemu, qemu_process, output_queue
@@ -121,9 +125,8 @@ def qemu_instance(request):
 
 
 @pytest.fixture
-def qemu_debug_instance(request):
+def qemu_debug_instance(request, target):
     executable = request.config.getoption("--executable")
-    target = request.config.getoption("--soc-target")
     qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable, target=target)
     qemu_process, output_queue = qemu.start(debug=True)
     yield qemu, qemu_process, output_queue
@@ -133,7 +136,10 @@ def qemu_debug_instance(request):
 @pytest.fixture
 def gdb_instance(request):
     executable = request.config.getoption("--executable")
-    return GDB_RISCV(os.path.dirname(request.fspath), executable=executable)
+    gdb = GDB_RISCV(os.path.dirname(request.fspath), executable=executable)
+    yield gdb
+    if gdb._gdb_process is not None:
+        gdb.stop()
 
 
 def pytest_addoption(parser):
@@ -142,10 +148,4 @@ def pytest_addoption(parser):
         "--executable",
         action="store",
         help="Name of the executable (without file extension). "
-    )
-    parser.addoption(
-        "--soc-target",
-        action="store",
-        default="esp32c3",
-        help="QEMU machine target. Defaults to esp32c3."
     )

@@ -78,7 +78,7 @@ bist_esp_err_t bist_main_crystal_test(void)
      * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).
      * If the main XTAL drifts, the returned value shifts proportionally.
      */
-    uint32_t cal_val = rtc_clk_cal(RTC_CAL_32K_XTAL, 500);
+    uint32_t cal_val = rtc_clk_cal(CLK_CAL_32K_XTAL, 500);
     if (cal_val == 0) {
         return BIST_ESP_CLOCK_TEST_ERR;
     }

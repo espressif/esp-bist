@@ -1,7 +1,10 @@
 import time
 import queue
 
-def test_flash_success(qemu_instance):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_flash_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
     tests_names = ["test_BIST_flash"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
@@ -37,13 +40,11 @@ def flash_error_test(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
 
     # Set a breakpoint at the specific address
     tb {}
-    continue
-
-    # Commands to run when breakpoint is hit
     commands
         set crc_section_len={}
         continue
     end
+    continue
     '''.format(test_bp, injected_value)
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
@@ -61,8 +62,8 @@ def flash_error_test(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
 
-def test_bist_flash_test_data(qemu_debug_instance, gdb_instance):
+def test_bist_flash_test_data(qemu_debug_instance, gdb_instance, target):
     flash_error_test(qemu_debug_instance, gdb_instance, "test_BIST_flash", "bist_flash_test_data", "0xFF")
 
-def test_bist_flash_test_text(qemu_debug_instance, gdb_instance):
+def test_bist_flash_test_text(qemu_debug_instance, gdb_instance, target):
     flash_error_test(qemu_debug_instance, gdb_instance, "test_BIST_flash",  "bist_flash_test_text", "0xFF")

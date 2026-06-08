@@ -144,9 +144,41 @@ The ESP-BIST project uses a CMake-based build system with explicit toolchain and
 **Key Safety Requirements:**
 
 - **Build reproducibility:** All builds use a pinned toolchain version from the development container (see :doc:`tool_qualification` for detailed tool versions and qualification evidence)
-- **Optimization level:** The BIST library is compiled with ``-O0 -ggdb`` (no optimization, full debug info) to ensure traceability, debuggability, and suitability for static analysis
+- **Optimization level:** The BIST library is compiled with ``-Os -ggdb`` (optimize for size, full debug info). The ``-Os`` level is used because at ``-O0`` all local variables are spilled to the stack, making safety-critical code vulnerable to self-corruption when a test writes to memory overlapping its own stack frame (see RAM test safe-stack design in :doc:`module_design_and_coding`). Individual functions that require ``-O0`` semantics (e.g., ``bist_cpu_stack_recursive``, which must genuinely consume stack on each recursive call) are annotated with ``__attribute__((optimize("O0")))``
 - **Compiler flags:** Strict warning flags (``-Wall -Wextra -Werror=all``) and safety-critical flags (``-fstrict-volatile-bitfields``) are applied to the BIST library target
 - **Build configuration authority:** Build settings are defined in ``src/bist/CMakeLists.txt`` and ``cmake/toolchain.cmake``; these files are the authoritative source for all build settings
+
+**Warning Suppressions:**
+
+The following compiler warning suppressions are applied to third-party ESP-IDF source files compiled as part of the BIST build. Each suppression is limited to the specific file and justified below.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - File
+     - Warning
+     - Justification
+   * - ``esp_system/panic.c`` (ESP-IDF)
+     - ``-Wno-shadow``
+     - ESP-IDF's panic handler intentionally declares a local ``rtc_wdt_ctx`` that shadows the file-scope static of the same name and type (``wdt_hal_context_t``). The local copy is used to avoid race conditions when multiple cores enter the panic handler simultaneously. This is a defensive coding pattern in the upstream IDF code (see IDF source comment at the declaration site). The shadowed variable is confined to a single function (``esp_panic_handler_enable_rtc_wdt``) and does not affect BIST safety-relevant code paths. No BIST-owned source files have this suppression applied.
+
+No warning suppressions are applied to any BIST-owned source files (``src/``, ``components/``).
+
+**Per-File Compiler Option Overrides:**
+
+The following non-default compiler options are applied to specific third-party ESP-IDF source files. Each override is limited to the specific file and justified below.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - File
+     - Option
+     - Justification
+   * - ``esp_hal_wdt/xt_wdt_hal.c`` (ESP-IDF)
+     - ``-fgnu89-inline``
+     - ESP-IDF's low-level XT WDT header (``hal/xt_wdt_ll.h``) declares helper functions as ``inline`` without ``static``. Under C17 semantics (the project default ``-std=gnu17``) with ``-O0`` (the BIST optimization level for traceability), the compiler is not required to inline these functions and instead emits external symbol references. Since no translation unit provides an external definition, the linker fails with undefined references. The ``-fgnu89-inline`` flag restores GNU89 inline semantics for this single translation unit, causing ``inline`` to behave as ``static inline`` so the function bodies are emitted in-place. This override is confined to a single ESP-IDF HAL source file compiled within the BIST library (``libbist_esp.a``) and does not alter the semantics of any BIST-owned code.
 
 For detailed information on tool versions, compiler/linker flags, toolchain configuration, and tool qualification methodology, see :doc:`tool_qualification`.
 
@@ -231,7 +263,7 @@ Safety-Related Mapping
 
 - All ESP-BIST library code (from ``libbist_esp.a``) is placed in IRAM by default to guarantee deterministic execution independent of flash cache state. This eliminates timing variability and improves fault detection reliability.
 - The stack sentinel region is placed at the end of DRAM and filled with a known pattern for overflow detection.
-- Backup buffers for RAM tests are placed in a safe RAM section (``.dram0.safe_ram``) that is excluded from RAM test coverage.
+- Backup buffers and the RAM test safe stack are placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region. During march execution the stack pointer is temporarily relocated to this section so that the entire linker-defined test region — including the normal stack — can be tested without self-corruption.
 
 Configurability and Evidence
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

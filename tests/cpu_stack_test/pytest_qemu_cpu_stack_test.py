@@ -1,7 +1,10 @@
 import time
 import queue
 
-def test_cpu_stack_success(qemu_instance):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_cpu_stack_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
     tests_names = ["test_BIST_Cpu_Stack_Overflow"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
@@ -37,13 +40,11 @@ def cpu_stack_error(qemu_debug_instance, gdb_instance, test_name, test_bp, injec
 
     # Set a breakpoint at the specific address
     tb {}
-    continue
-
-    # Commands to run when breakpoint is hit
     commands
         set count_max={}
         continue
     end
+    continue
     '''.format(test_bp, injected_value)
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
@@ -60,5 +61,5 @@ def cpu_stack_error(qemu_debug_instance, gdb_instance, test_name, test_bp, injec
     gdb.stop(gdb_process)
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
-def test_cpu_stack_error(qemu_debug_instance, gdb_instance):
+def test_cpu_stack_error(qemu_debug_instance, gdb_instance, target):
     cpu_stack_error(qemu_debug_instance, gdb_instance, "test_BIST_Cpu_Stack_Overflow", "bist_cpu_stack_overflow_data", "10")

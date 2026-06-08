@@ -13,4 +13,4 @@ set(APP_SOURCES
 
 include(${BIST_ROOT_DIR}/cmake/project.cmake)
 
-project(standalone)
+project(standalone LANGUAGES C ASM)

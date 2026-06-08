@@ -3,6 +3,9 @@
 #include "bist_esp.h"
 #include "unity.h"
 
+void setUp(void) {}
+void tearDown(void) {}
+
 void test_BIST_Cpu_Stack_Overflow(void)
 {
     uint8_t ret = bist_cpu_stack_overflow_test();

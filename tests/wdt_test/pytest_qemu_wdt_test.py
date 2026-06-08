@@ -1,6 +1,9 @@
 import time
 import queue
 
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
 def wdt_test_routine(qemu_debug_instance, gdb_instance, test_name, test_bp, injected_value, expected_output):
     qemu, qemu_process, output_queue = qemu_debug_instance
     gdb = gdb_instance
@@ -12,13 +15,11 @@ def wdt_test_routine(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
 
     # Set a breakpoint at the specific address
     tb {}
-    continue
-
-    # Commands to run when breakpoint is hit
     commands
         set wdt_timeout_us={}
         continue
     end
+    continue
     '''.format(test_bp, injected_value)
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
@@ -35,8 +36,8 @@ def wdt_test_routine(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
     gdb.stop(gdb_process)
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
-def test_wdt_error(qemu_debug_instance, gdb_instance):
+def test_wdt_error(qemu_debug_instance, gdb_instance, target):
     wdt_test_routine(qemu_debug_instance, gdb_instance, "test_BIST_WDT", "bist_test_wdt_timeout", "1000000", "FAIL")
 
-def test_wdt_success(qemu_debug_instance, gdb_instance):
+def test_wdt_success(qemu_debug_instance, gdb_instance, target):
     wdt_test_routine(qemu_debug_instance, gdb_instance, "test_BIST_WDT", "bist_test_wdt_timeout", "10000", "PASS")

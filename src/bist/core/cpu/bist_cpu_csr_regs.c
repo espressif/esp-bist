@@ -54,8 +54,10 @@
 
 #if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
 
+__attribute__((naked))
 bist_esp_err_t bist_cpu_csr_regs_test(void)
 {
+    ASM(" addi sp, sp, -16");
     // Machine Trap Setup CSRs
     BIST_TEST_CSR_REG_STACKED(mtvec, CSR_MTVEC_MASK, errorCSR);
 
@@ -92,7 +94,6 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     ASM(" errorCSR: li a0, 0x2");
     ASM(" addi	sp,sp,16");
     ASM(" ret");
-    return BIST_ESP_CPU_CSR_TEST_ERR;
 }
 
 #endif // CONFIG_ESP_BIST_CPU_CSR_REG_TEST

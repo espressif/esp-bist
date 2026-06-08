@@ -67,8 +67,8 @@ if(CONFIG_ESP_BIST_WATCHDOG_TEST)
 endif()
 
 set(idf_srcs
-    ${IDF_PATH}/components/log/log.c
-    ${IDF_PATH}/components/log/log_noos.c
+    ${IDF_PATH}/components/log/src/log.c
+    # ${IDF_PATH}/components/log/log_noos.c
     ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
     ${IDF_PATH}/components/hal/systimer_hal.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/systimer.c
@@ -76,7 +76,7 @@ set(idf_srcs
 
 if(SOC_TARGET STREQUAL "esp32c3")
     list(APPEND idf_srcs
-        ${IDF_PATH}/components/hal/xt_wdt_hal.c
+        ${IDF_PATH}/components/esp_hal_wdt/xt_wdt_hal.c
     )
 endif()
 
@@ -95,8 +95,10 @@ target_compile_definitions(bist_esp
     "SOC_TARGET_${SOC_TARGET_UPPER}"
 )
 
+# Some HAL paths include soc/*.h before ext_mem_defs.h; define locally for bist_esp only.
+# Do not use PUBLIC — app TUs get SOC_MMU_PAGE_SIZE from IDF soc/ext_mem_defs.h only.
 target_compile_definitions(bist_esp
-    PUBLIC
+    PRIVATE
     "SOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE"
 )
 
@@ -119,7 +121,7 @@ set(CFLAGS
     "-Wno-unused-parameter"
     "-Wno-sign-compare"
     "-ggdb"
-    "-O0"
+    "-Os"
     "-D_GNU_SOURCE"
     "-std=gnu17"
     "-Wno-old-style-declaration"
@@ -147,20 +149,39 @@ target_include_directories(
     ${IDF_PATH}/components/riscv/include
     ${IDF_PATH}/components/esp_common/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
     ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
+    ${IDF_PATH}/components/soc/${SOC_TARGET}/register
     ${IDF_PATH}/components/log/include
     ${IDF_PATH}/components/esp_system/include
     ${IDF_PATH}/components/esp_hw_support/include
     ${IDF_PATH}/components/esp_hw_support/include/soc
     ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_wdt/include
+    ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_gpio/include
+    ${IDF_PATH}/components/esp_hal_gpio/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hw_support/etm/include
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ../../components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
     )
+
+# Per-file compiler override for IDF source (see docs/en/software_safety_requirements.rst)
+if(SOC_TARGET STREQUAL "esp32c3")
+    set_source_files_properties(
+        ${IDF_PATH}/components/esp_hal_wdt/xt_wdt_hal.c
+        PROPERTIES COMPILE_OPTIONS "-fgnu89-inline"
+        )
+endif()
 
 set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
 

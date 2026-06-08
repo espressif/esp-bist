@@ -3,6 +3,9 @@
 #include "unity.h"
 #include "wdt.h"
 
+void setUp(void) {}
+void tearDown(void) {}
+
 void test_BIST_WDT(void)
 {
     uint8_t ret = bist_wdt_test();

@@ -14,16 +14,15 @@
 #include "esp_log.h"
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
-#include "esp_rom_uart.h"
+#include "esp_rom_serial_output.h"
 #include "esp_rom_sys.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/esp_clk.h"
 #include "esp_private/esp_modem_clock.h"
 #include "esp_private/esp_pmu.h"
+#include "soc/clk_tree_defs.h"
 #include "soc/rtc.h"
 #include "soc/soc.h"
-#include "esp32c6/rtc.h"
-#include "hal/wdt_hal.h"
 #include "ocode_init.h"
 
 /* Stub for modem_clock_select_lp_clock_source (power domain not used in BIST). */
@@ -96,7 +95,7 @@ void esp_clk_init(void)
     bool res = rtc_clk_cpu_freq_mhz_to_config(new_freq_mhz, &new_config);
     assert(res);
 
-    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    esp_rom_output_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
 
     if (res) {
         rtc_clk_cpu_freq_set_config(&new_config);
@@ -113,13 +112,13 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
     do {
         if (rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_XTAL32K || rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_OSC_SLOW) {
             ESP_EARLY_LOGI(TAG, "waiting for 32k oscillator to start up");
-            rtc_cal_sel_t cal_sel = 0;
+            soc_clk_freq_calculation_src_t cal_sel = CLK_CAL_RC_SLOW;
             if (rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_XTAL32K) {
                 rtc_clk_32k_enable(true);
-                cal_sel = RTC_CAL_32K_XTAL;
+                cal_sel = CLK_CAL_32K_XTAL;
             } else if (rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_OSC_SLOW) {
                 rtc_clk_32k_enable_external();
-                cal_sel = RTC_CAL_32K_OSC_SLOW;
+                cal_sel = CLK_CAL_32K_OSC_SLOW;
             }
             if (SLOW_CLK_CAL_CYCLES > 0) {
                 cal_val = rtc_clk_cal(cal_sel, SLOW_CLK_CAL_CYCLES);
@@ -137,7 +136,7 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
         rtc_clk_slow_src_set(rtc_slow_clk_src);
 
         if (SLOW_CLK_CAL_CYCLES > 0) {
-            cal_val = rtc_clk_cal(RTC_CAL_RTC_MUX, SLOW_CLK_CAL_CYCLES);
+            cal_val = rtc_clk_cal(CLK_CAL_RTC_SLOW, SLOW_CLK_CAL_CYCLES);
         } else {
             const uint64_t cal_dividend = (1ULL << RTC_CLK_CAL_FRACT) * 1000000ULL;
             cal_val = (uint32_t)(cal_dividend / rtc_clk_slow_freq_get_hz());

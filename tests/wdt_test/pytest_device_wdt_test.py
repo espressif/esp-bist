@@ -1,4 +1,7 @@
-def test_wdt_success(dut):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_wdt_success(dut, target):
     tests_names = ["test_BIST_WDT", "test_BIST_WDT_INIT_SUB_TICK_TIMEOUT"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 

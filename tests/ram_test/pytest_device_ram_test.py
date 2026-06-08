@@ -1,4 +1,7 @@
-def test_ram_success(dut):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_ram_success(dut, target):
     tests_names = ["test_BIST_ram_march_a", "test_BIST_ram_march_x"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 

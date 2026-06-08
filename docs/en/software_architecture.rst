@@ -17,7 +17,7 @@ The ESP-BIST standalone firmware uses a three-layer architecture:
 Key Build Properties
 ^^^^^^^^^^^^^^^^^^^^
 - CMake + Ninja build; toolchain pinned in dev container and ``cmake/toolchain.cmake``
-- BIST library compiled with ``-O0``/``-ggdb``, strict warnings, ``-std=gnu17``, section flags, and volatile bitfield safety flags
+- BIST library compiled with ``-Os``/``-ggdb``, strict warnings, ``-std=gnu17``, section flags, and volatile bitfield safety flags; per-function ``-O0`` overrides where needed
 - All BIST objects placed in IRAM by linker for deterministic timing; CRC regions reserved in flash
 - Kconfig-driven configuration compiled into ``bist_conf.h``; timing and memory parameters recorded in build artifacts
 
@@ -74,7 +74,7 @@ Data Storage Model
 
 - **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash region.
 - **IRAM**: All ``libbist_esp.a`` code placed in IRAM for deterministic timing; ``pc_test_0`` placed at end of IRAM.
-- **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel at bottom of stack; safe RAM buffer excluded from RAM test.
+- **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel at bottom of stack; ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
 - **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
 - **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
 - **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).

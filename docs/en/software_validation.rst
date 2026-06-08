@@ -401,15 +401,17 @@ QEMU/Emulation Validation
 
     # Corrupt memory to cause pattern mismatch
     commands
-        set *start_addr=0xFF
+        set _bist_ram_test_start=0xFF
         continue
     end
 
 **Fault Injection Method:**
 
-1. GDB sets breakpoint during RAM pattern verification
-2. When hit, modifies a memory location to incorrect value
-3. Test continues and reads memory, expecting original pattern
+1. GDB sets breakpoint during RAM pattern verification (step 2: Read 0, Write 1)
+2. When hit, writes ``0xFF`` to the first word of the test region via the linker
+   symbol ``_bist_ram_test_start`` (the local pointer ``start_addr`` is optimized
+   into a register by ``-Os`` and is not accessible to GDB)
+3. Test continues and reads memory, expecting the all-zeros pattern written in step 1
 4. Mismatch detected, returns ``BIST_ESP_RAM_TEST_ERR``
 5. Test prints "test_BIST_ram_march_x:FAIL"
 
@@ -583,7 +585,12 @@ QEMU/Emulation Validation
 
     test_BIST_PC:PASS
 
-**Failure Test 1: Return Address Modification (no WDT)**
+**Failure Test 1: Function Pointer Bit-Flip (no WDT)**
+
+This test simulates a single stuck-at fault on PC bit 2 by flipping that bit in
+the first function pointer. The CPU jumps to an offset within the function body,
+skipping the ``lui`` that loads the address constant, so the called code returns
+a wrong value and the verification detects the mismatch — without crashing.
 
 **GDB Fault Injection Script:**
 
@@ -592,20 +599,22 @@ QEMU/Emulation Validation
     # Connect to QEMU debug server
     target remote :1234
 
-    # Set breakpoint at PC verification
+    # Break at the PC verification loop entry; $sp points to
+    # the first element of the pcTestFunctions array on the stack.
     tb bist_verify_pc_test
     continue
 
-    # Watch return address and modify it
+    # Flip bit 2 of the first function pointer (stuck-at fault on PC bit 2).
     commands
-        watch returnFunctionAddress
-        continue
-        set returnFunctionAddress=pcTestFunction1
-        disable breakpoints
+        set *(int*)$sp = *(int*)$sp ^ 4
         continue
     end
 
-**Failure Test 2: Function Address Corruption (WDT Reset)**
+**Failure Test 2: Function Pointer Corruption (WDT Reset)**
+
+This test zeroes the first function pointer so that ``jalr`` jumps to address 0,
+triggering an instruction access fault. The firmware cannot recover, so the
+watchdog timer fires and resets the CPU (reset reason 7).
 
 **GDB Fault Injection Script:**
 
@@ -614,23 +623,26 @@ QEMU/Emulation Validation
     # Connect to QEMU debug server
     target remote :1234
 
-    # Set breakpoint at PC test
+    # Break at the PC verification loop entry; $sp points to
+    # the first element of the pcTestFunctions array on the stack.
     tb bist_verify_pc_test
     continue
 
-    # Corrupt function pointer to cause invalid jump
+    # Zero the first function pointer — causes an instruction access fault
+    # that leads to a WDT reset.
     commands
-        set pcTestFunctions[0]=(pcTestFunctions[0]-4)
+        set *(int*)$sp = 0
         continue
     end
 
 **Fault Injection Method:**
 
-1. GDB sets breakpoint at function call or return verification
-2. When hit, modifies return address or function pointer
-3. Test executes with incorrect address
-4. PC verification fails to match expected value
-5. Returns ``BIST_ESP_PC_TEST_ERR``
+1. GDB sets a breakpoint at ``bist_verify_pc_test`` (the loop label)
+2. At the breakpoint ``$sp`` points to the ``pcTestFunctions`` array on the stack
+3. Test 1 flips bit 2 of the pointer — the CPU jumps to a valid but wrong address
+   and the return-value comparison detects the mismatch (``BIST_ESP_PC_TEST_ERR``)
+4. Test 2 zeroes the pointer — the CPU jumps to address 0, faults, and the WDT
+   resets the system (reset reason 7)
 
 **Expected Output:**
 

@@ -17,28 +17,22 @@
 #include "esp_rom_sys.h"
 #include "esp_private/esp_clk.h"
 #include "hal/clk_tree_ll.h"
+#include "soc/rtc.h"
 
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp32/rom/rtc.h"
-#include "esp32/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/rom/rtc.h"
-#include "esp32s2/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/rom/rtc.h"
-#include "esp32s3/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32C3
 #include "esp32c3/rom/rtc.h"
-#include "esp32c3/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32C2
 #include "esp32c2/rom/rtc.h"
-#include "esp32c2/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32C6
 #include "esp32c6/rom/rtc.h"
-#include "esp32c6/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32H2
 #include "esp32h2/rom/rtc.h"
-#include "esp32h2/rtc.h"
 #endif
 
 #define MHZ (1000000)

@@ -66,8 +66,10 @@
  */
 #if defined(CONFIG_ESP_BIST_CPU_REG_TEST)
 
+__attribute__((naked))
 bist_esp_err_t bist_cpu_regs_test(void)
 {
+    ASM(" addi sp, sp, -16");
     // t0 test
     BIST_TEST_CPU_REG_NOT_STACKED(t0, t1, errorCPU);
     // t1 test
@@ -153,7 +155,8 @@ bist_esp_err_t bist_cpu_regs_test(void)
     ASM(" j errorCPU");
     ASM(" restoreGP: mv gp, t3");
     ASM(" errorCPU: li a0, 0x1");
-    return BIST_ESP_CPU_TEST_ERR;
+    ASM(" addi sp, sp, 16");
+    ASM(" ret");
 }
 
 #endif // CONFIG_ESP_BIST_CPU_REG_TEST

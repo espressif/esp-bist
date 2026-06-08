@@ -1,8 +1,10 @@
 import time
 import queue
 
+from tests.idf_targets import pytestmark  # noqa: F401
 
-def test_pc_success(qemu_instance):
+
+def test_pc_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
     tests_names = ["test_BIST_PC"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
@@ -30,7 +32,7 @@ def test_pc_success(qemu_instance):
 '''
 The script inject the wrong expected value to the PC BIST test, without triggering WDT
 '''
-def test_pc_error_no_wdt(qemu_debug_instance, gdb_instance):
+def test_pc_error_no_wdt(qemu_debug_instance, gdb_instance, target):
     qemu, qemu_process, output_queue = qemu_debug_instance
     gdb = gdb_instance
     expected_output = "test_BIST_PC:FAIL"
@@ -39,18 +41,20 @@ def test_pc_error_no_wdt(qemu_debug_instance, gdb_instance):
     #connect to remote server
     target remote :1234
 
-    # Set a breakpoint at the specific address
+    # Break at the PC verification loop entry.
+    # pcTestFunctions is a local array optimized onto the stack via memcpy;
+    # it is not accessible by name. At this breakpoint $sp points to the
+    # first element of the array. We flip bit 2 of the function pointer to
+    # simulate a stuck-at fault on PC bit 2: the CPU jumps to an offset
+    # within the function body (skipping the lui that loads the address
+    # constant), so the called code returns a wrong value and the
+    # verification detects the mismatch.
     tb bist_verify_pc_test
-    continue
-
-    # Commands to run when breakpoint is hit
     commands
-        watch returnFunctionAddress
-        continue
-        set returnFunctionAddress=pcTestFunction1
-        disable breakpoints
+        set *(int*)$sp = *(int*)$sp ^ 4
         continue
     end
+    continue
     '''
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
@@ -67,7 +71,7 @@ def test_pc_error_no_wdt(qemu_debug_instance, gdb_instance):
     gdb.stop(gdb_process)
     assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
 
-def test_pc_error_wdt(qemu_debug_instance, gdb_instance):
+def test_pc_error_wdt(qemu_debug_instance, gdb_instance, target):
     qemu, qemu_process, output_queue = qemu_debug_instance
     gdb = gdb_instance
     expected_outputs = ["Reset reason: 1", "Reset reason: 7"]
@@ -78,15 +82,18 @@ def test_pc_error_wdt(qemu_debug_instance, gdb_instance):
     #connect to remote server
     target remote :1234
 
-    # Set a breakpoint at the specific address
+    # Break at the PC verification loop entry.
+    # pcTestFunctions is a local array optimized onto the stack via memcpy;
+    # it is not accessible by name. At this breakpoint $sp points to the
+    # first element of the array, so we corrupt it through the stack pointer.
+    # Setting the pointer to 0 causes an instruction access fault that the
+    # firmware cannot recover from, so the WDT fires and resets the CPU.
     tb bist_verify_pc_test
-    continue
-
-    # Commands to run when breakpoint is hit
     commands
-        set pcTestFunctions[0]=(pcTestFunctions[0]-4)
+        set *(int*)$sp = 0
         continue
     end
+    continue
     '''
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script

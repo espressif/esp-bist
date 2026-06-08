@@ -1,4 +1,7 @@
-def test_io(dut):
+from tests.idf_targets import pytestmark  # noqa: F401
+
+
+def test_io(dut, target):
     tests_names = ["test_BIST_IO_INVALID_GPIO", "test_BIST_IO_OUTPUT_GPIO"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 

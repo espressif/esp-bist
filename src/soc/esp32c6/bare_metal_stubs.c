@@ -8,8 +8,7 @@
  */
 
 #include <stdint.h>
-
-
+#include <stdbool.h>
 
 /* -------------------------------------------------------------------------
  * Modem clock (optional for BIST). Stubs so rtc_clk and clock_init link.
@@ -17,12 +16,12 @@
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/esp_modem_clock.h"
 
-__attribute__((weak)) void modem_clock_module_enable(periph_module_t module)
+__attribute__((weak)) void modem_clock_module_enable(shared_periph_module_t module)
 {
     (void)module;
 }
 
-__attribute__((weak)) void modem_clock_module_disable(periph_module_t module)
+__attribute__((weak)) void modem_clock_module_disable(shared_periph_module_t module)
 {
     (void)module;
 }

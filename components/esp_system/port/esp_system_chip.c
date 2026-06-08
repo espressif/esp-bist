@@ -11,9 +11,9 @@
 #include "esp_private/rtc_clk.h"
 #include "esp_private/panic_internal.h"
 #include "esp_private/system_internal.h"
-#include "esp_private/mspi_timing_tuning.h"
+// mspi_timing_tuning.h moved in v6.0, not needed for bare-metal BIST
 // #include "esp_heap_caps.h"
-#include "esp_rom_uart.h"
+#include "esp_rom_serial_output.h"
 #include "esp_rom_sys.h"
 #include "sdkconfig.h"
 
