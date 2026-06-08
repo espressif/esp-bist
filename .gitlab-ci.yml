@@ -245,6 +245,15 @@ build_docker_image:
       when: manual
   tags: [ "dind", "shiny" ]
 
+host_unit_tests:
+  stage: Build
+  before_script: []
+  script:
+    - make -C tests/host check
+  rules:
+    - when: always
+  tags: [build]
+
 build_mcuboot:
   stage: Build
   before_script:
