@@ -183,15 +183,27 @@ bool wdt_is_underflow_detected(void)
     return wdt_ctx.stop_feed;
 }
 
+/*
+ * Initialize the windowed watchdog mode.
+ *
+ * Returns 0 on success, -1 on failure.
+ *
+ * Cleanup contract on failure:
+ *   - the periodic_timer object is owned only between a successful
+ *     esp_timer_create and a failure-or-success exit. On any failure
+ *     after create, the timer is deleted before returning.
+ *   - the esp_timer library, once initialized by this function, is
+ *     left initialized. esp_timer_init is idempotent, so this is safe.
+ *   - wdt_ctx.is_windowed is only set to true after every fallible step
+ *     has succeeded; callers can re-invoke this function after a -1
+ *     return without leaving wdt_feed in a poisoned state.
+ */
 int wdt_init_windowed(uint32_t underflow_timeout_us)
 {
     if (underflow_timeout_us == 0) {
         ESP_LOGE(TAG, "Underflow timeout cannot be 0");
         return -1;
     }
-
-    wdt_ctx.is_windowed = true;
-    wdt_ctx.underflow_timeout = underflow_timeout_us;
 
     /* Initialize esp_timer library first (idempotent - safe to call multiple times) */
     esp_err_t ret = esp_timer_init();
@@ -214,17 +226,23 @@ int wdt_init_windowed(uint32_t underflow_timeout_us)
         return -1;
     }
 
-    ESP_LOGI(TAG, "WDT windowed mode initialized");
-
-    /* Initialize window as open to allow first feed */
-    wdt_ctx.window_open_flag = true;
-
     /* Start the timer */
-    ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);
+    ret = esp_timer_start_once(periodic_timer, underflow_timeout_us);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start windowed timer: %d", ret);
+        esp_timer_delete(periodic_timer);
+        periodic_timer = NULL;
         return -1;
     }
+
+    /* Commit windowed-mode state only after all fallible steps succeed,
+     * so an early failure does not leave wdt_feed thinking we are in
+     * windowed mode and permanently disabling itself on the next call. */
+    wdt_ctx.is_windowed = true;
+    wdt_ctx.underflow_timeout = underflow_timeout_us;
+    wdt_ctx.window_open_flag = true;
+
+    ESP_LOGI(TAG, "WDT windowed mode initialized");
 
     return 0;
 }
