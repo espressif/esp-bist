@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2024 Espressif Systems (Shanghai) Co., Ltd.
+ * Copyright (c) 2025 Espressif Systems (Shanghai) Co., Ltd.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * ESP32-C6 clock init: esp_clk_init() and esp_perip_clk_init() reimplemented
+ * ESP32-C5 clock init: esp_clk_init() and esp_perip_clk_init() reimplemented
  * using only RTOS-agnostic IDF components (soc, hal, esp_rom, esp_hw_support).
  */
 
@@ -23,10 +23,7 @@
 #include "soc/clk_tree_defs.h"
 #include "soc/rtc.h"
 #include "soc/soc.h"
-#include "ocode_init.h"
 
-/* Stub for modem_clock_select_lp_clock_source (power domain not used in BIST). */
-/* Must match IDF esp_sleep.h declaration to avoid conflicting types. */
 #include "esp_sleep.h"
 #include "esp_err.h"
 esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_t option)
@@ -54,7 +51,6 @@ static rtc_clk_config_t get_bist_rtc_clk_config(void)
         .clk_8m_clk_div = 0,
         .slow_clk_dcap = RTC_CNTL_SCK_DCAP_DEFAULT,
         .clk_8m_dfreq = RTC_CNTL_CK8M_DFREQ_DEFAULT,
-        .rc32k_dfreq = RTC_CNTL_RC32K_DFREQ_DEFAULT,
     };
 
     return cfg;
@@ -64,14 +60,7 @@ void esp_clk_init(void)
 {
     pmu_init();
 
-    /* Run full RTC clock init (normally done by bootloader) since BIST runs standalone */
     rtc_clk_init(get_bist_rtc_clk_config());
-
-    if (esp_rom_get_reset_reason(0) == RESET_REASON_CHIP_POWER_ON) {
-        esp_ocode_calib_init();
-    }
-
-    assert(rtc_clk_xtal_freq_get() == RTC_XTAL_FREQ_40M);
 
     rtc_clk_8m_enable(true);
     rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_RC_FAST);
@@ -81,8 +70,6 @@ void esp_clk_init(void)
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_XTAL32K);
 #elif defined(CONFIG_RTC_CLK_SRC_EXT_OSC)
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_OSC_SLOW);
-#elif defined(CONFIG_RTC_CLK_SRC_INT_RC32K)
-    select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_RC32K);
 #else
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_RC_SLOW);
 #endif
@@ -130,8 +117,6 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
                     rtc_slow_clk_src = SOC_RTC_SLOW_CLK_SRC_RC_SLOW;
                 }
             }
-        } else if (rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_RC32K) {
-            rtc_clk_rc32k_enable(true);
         }
         rtc_clk_slow_src_set(rtc_slow_clk_src);
 

@@ -159,7 +159,7 @@ Hardware Validation
 CPU CSR Integrity Test
 ----------------------
 
-**Purpose:** Verify that CPU Control and Status Registers (MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL, PMPADDR0-PMPADDR15) maintain integrity and can be read/written reliably.
+**Purpose:** Verify that CPU Control and Status Registers maintain integrity and can be read/written reliably. Tested CSRs include trap registers (MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers (pma_addr0–11) on PMA-capable SoCs (C6, H2, C5), and MEXSTATUS/MHINT on C5 only.
 
 QEMU/Emulation Validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -200,12 +200,15 @@ QEMU/Emulation Validation
 
 **Script Parameterization:**
 
-The script is executed 21 times, once for each CSR:
+The script is executed once for each CSR. The full list varies by SoC:
 
-- Main CSRs: ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
-- PMP Address CSRs: ``pmpaddr0``, ``pmpaddr1``, ``pmpaddr2``, ``pmpaddr3``, ``pmpaddr4``, ``pmpaddr5``, ``pmpaddr6``, ``pmpaddr7``, ``pmpaddr8``, ``pmpaddr9``, ``pmpaddr10``, ``pmpaddr11``, ``pmpaddr12``, ``pmpaddr13``, ``pmpaddr14``, ``pmpaddr15``
+- **Trap CSRs** (all SoCs): ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
+- **PMP Address CSRs** (all SoCs): ``pmpaddr0``–``pmpaddr15``
+- **PMP Configuration CSRs** (all SoCs): ``pmpcfg0``–``pmpcfg3``
+- **PMA Address CSRs** (C6, H2, C5 only): ``0xBD0``–``0xBDB`` (pma_addr0–11)
+- **Custom CSRs** (C5 only): ``0x7E1`` (mexstatus), ``0x7C5`` (mhint)
 
-Each test replaces ``<csr_name>`` with the specific CSR name.
+Each test replaces ``<csr_name>`` with the specific CSR name or number.
 
 **Note:** GDB modifies the temporary register ``t0`` which is used by the test logic to verify CSR contents.
 
@@ -217,7 +220,7 @@ Each test replaces ``<csr_name>`` with the specific CSR name.
 4. Mismatch detected, test fails
 5. Returns ``BIST_ESP_CPU_CSR_TEST_ERR``
 
-**Test Coverage:** 21 test cases (5 main CSRs + 16 PMP address CSRs)
+**Test Coverage:** 25 test cases on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint)
 
 **Expected Output per CSR:**
 
@@ -234,7 +237,7 @@ Hardware Validation
 
 - Device running with standard CSR configuration
 - Machine mode privilege level (typical for bare-metal)
-- PMP registers available for testing
+- PMP registers available for testing; PMA address registers available on C6/H2/C5; mexstatus/mhint on C5 only
 
 **Execution:**
 
@@ -245,7 +248,7 @@ Hardware Validation
 
 **Expected Behavior:**
 
-- All 21 CSRs pass integrity checks on real hardware
+- All CSRs pass integrity checks on real hardware (25 on C3, 37 on C6/H2, 39 on C5)
 - No stuck-at faults or CSR corruption detected
 
 CI Test Results

@@ -60,13 +60,13 @@ bist_esp_err_t bist_ext_crystal_fail_test(void)
         return BIST_ESP_CLOCK_TEST_ERR;
     }
 
-    return BIST_ESP_OK;
 #else
     /* SoCs without XT WDT have no hardware to detect 32k crystal
      * failure; skip this test and report OK. */
     ESP_LOGD(TAG, "SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.");
-    return BIST_ESP_OK;
 #endif
+
+    return BIST_ESP_OK;
 }
 
 bist_esp_err_t bist_main_crystal_test(void)

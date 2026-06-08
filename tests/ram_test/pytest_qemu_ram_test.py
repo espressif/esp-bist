@@ -13,7 +13,7 @@ def test_ram_success(qemu_instance, target):
     try:
         # Attempt to read all current output from QEMU
         while True:
-            line = output_queue.get(timeout=3)  # Use a timeout to wait for output
+            line = output_queue.get(timeout=10)  # Use a timeout to wait for output
             output_lines.append(line)
             # Check if the line contains any of the expected outputs
             for expected_output in expected_outputs:

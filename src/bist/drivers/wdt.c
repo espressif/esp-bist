@@ -23,6 +23,7 @@
 #include "bist_esp_types.h"
 #include "esp_timer.h"
 #include "hal/clk_tree_ll.h"
+#include "hal/clk_gate_ll.h"
 
 #define MWDT_DEFAULT_TICKS_PER_US       500
 
@@ -84,6 +85,8 @@ int wdt_init(uint32_t timeout_us)
     ESP_LOGI(TAG, "Enabling WDT(%lu us)", (unsigned long)timeout_us);
     ESP_LOGI(TAG, "WDT prescaler: %u", MWDT_LL_DEFAULT_CLK_PRESCALER);
     ESP_LOGI(TAG, "Stage timeout ticks: %u", stage_timeout_ticks);
+
+    periph_ll_enable_clk_clear_rst(PERIPH_TIMG0_MODULE);
 
     esp_cpu_intr_disable(1 << ETS_INT_WDT_INUM);
     esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_TG0_WDT_LEVEL_INTR_SOURCE, ETS_INT_WDT_INUM);

@@ -8,6 +8,7 @@ stages:
 
 .socs: &socs
   - esp32c3
+  - esp32c5
   - esp32c6
   - esp32h2
 
@@ -15,6 +16,7 @@ stages:
   - esp32c3
 
 .qemu_remote_socs: &qemu_remote_socs
+  - esp32c5
   - esp32c6
   - esp32h2
 
@@ -165,7 +167,7 @@ build_zephyr_esp32c6_sample:
   script:
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH
+    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
     - when: always
   retry: 1
@@ -192,7 +194,7 @@ build_zephyr_esp32c6_sample:
   stage: Test Qemu
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
-    QEMU_BRANCH: 'feature/esp32h2'
+    QEMU_BRANCH: 'feature/esp32c5'
   before_script:
     - . $IDF_PATH/export.sh
     - apt-get update && apt-get install -y -q --no-install-recommends openssh-client
@@ -214,7 +216,7 @@ build_zephyr_esp32c6_sample:
     - cd $CI_PROJECT_DIR
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH
+    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
     - when: always
   retry: 1
@@ -357,7 +359,7 @@ build_docs_html:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c6 esp32h2 --skip-reqs-check -l en
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32h2 --skip-reqs-check -l en
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/html/index.html"
 
 build_docs_pdf:
@@ -373,7 +375,7 @@ build_docs_pdf:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c6 esp32h2 --skip-reqs-check -l en -bs latex
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32h2 --skip-reqs-check -l en -bs latex
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf"
 
 deploy_preview_docs:

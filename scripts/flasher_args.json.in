@@ -8,9 +8,9 @@
         "flash-freq": "80m"
     },
     "flash_files" : {
-        "0x10000" : "@APP_NAME@_signed.bin"
+        "@APP_ADDR@" : "@APP_NAME@_signed.bin"
     },
-    "app" : { "offset" : "0x10000", "file" : "@APP_NAME@_signed.bin", "encrypted" : "false" },
+    "app" : { "offset" : "@APP_ADDR@", "file" : "@APP_NAME@_signed.bin", "encrypted" : "false" },
     "extra_esptool_args" : {
         "after"  : "no_reset",
         "before" : "default_reset",

@@ -44,8 +44,8 @@ The following table provides code coverage information for each BIST module:
    * - CPU CSRs
      - 1
      - 1 (100%)
-     - 1 (21 CSRs)
-     - 21 (fault injection)
+     - 1 (25–39 CSRs depending on SoC: 25 C3, 37 C6/H2, 39 C5)
+     - 25–39 (fault injection)
      - :doc:`software_validation` (CPU CSR Test)
 
    * - Program Counter
@@ -139,7 +139,7 @@ Requirements Coverage Matrix
    * - 1.1
      - CPU CSR Integrity
      - ``bist_cpu_csr_regs_test()``
-     - QEMU + Hardware (21 CSRs, fault injection)
+     - QEMU + Hardware (25–39 CSRs depending on SoC: 25 C3, 37 C6/H2, 39 C5; fault injection)
      - ``tests/cpu_reg_test/build/tests/*_report.xml``
 
    * - 1.3

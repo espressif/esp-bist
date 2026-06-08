@@ -10,7 +10,8 @@
 #include "sdkconfig.h"
 
 #define MMU_FLASH_MASK       (~(CONFIG_MMU_PAGE_SIZE - 1))
-#define PARTITION_OFFSET     0x10000
+
+#define PARTITION_OFFSET     CONFIG_PARTITION_OFFSET
 
 void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t app_drom_size,
     uint32_t app_irom_start, uint32_t app_irom_vaddr, uint32_t app_irom_size);

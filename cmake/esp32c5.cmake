@@ -4,6 +4,7 @@ set(include_soc
     )
 
 set(include_hal
+    ${BIST_ROOT_DIR}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/newlib/platform_include
     ${IDF_PATH}/components/hal/include
     ${IDF_PATH}/components/esp_hal_timg/include
@@ -17,9 +18,12 @@ set(include_hal
     ${IDF_PATH}/components/esp_hal_gpio/include
     ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_rtc_timer/include
     ${IDF_PATH}/components/esp_hal_rtc_timer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/include
     ${IDF_PATH}/components/esp_hal_ana_conv/include
     ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_stdio/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${BIST_ROOT_DIR}/components/esp_common/include
@@ -55,32 +59,32 @@ set(soc_srcs
     )
 
 set(idf_ow_srcs
-    ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
     )
 
 set(idf_srcs
-    ${IDF_PATH}/components/hal/cache_hal.c
-    ${IDF_PATH}/components/hal/mmu_hal.c
+    ${BIST_ROOT_DIR}/components/hal/${SOC_TARGET}/cache_hal.c
+    ${BIST_ROOT_DIR}/components/hal/${SOC_TARGET}/mmu_hal.c
     ${IDF_PATH}/components/hal/efuse_hal.c
     ${IDF_PATH}/components/hal/${SOC_TARGET}/efuse_hal.c
     ${IDF_PATH}/components/esp_hal_wdt/wdt_hal_iram.c
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/modem_clock_hal.c
     ${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c
-    # ${IDF_PATH}/components/esp_rom/patches/esp_rom_uart.c
+    ${IDF_PATH}/components/esp_rom/patches/esp_rom_hp_regi2c_esp32c5.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk_init.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_time.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_init.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_sleep.c
-    # ${IDF_PATH}/components/newlib/abort.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_init.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_param.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/ocode_init.c
     ${IDF_PATH}/components/esp_system/panic.c
-    ${IDF_PATH}/components/esp_system/port/soc/${SOC_TARGET}/clk.c
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/log/src/noos/log_timestamp.c
     ${IDF_PATH}/components/riscv/interrupt.c
+    ${IDF_PATH}/components/riscv/interrupt_clic.c
     ${IDF_PATH}/components/riscv/rv_utils.c
     ${IDF_PATH}/components/esp_stdio/stdio_simple.c
     )
@@ -91,6 +95,5 @@ set(rom_ld
     -T${IDF_PATH}/components/riscv/ld/rom.api.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib.ld
     -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib-nano.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libgcc.ld
     )

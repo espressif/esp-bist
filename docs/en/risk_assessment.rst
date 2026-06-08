@@ -41,7 +41,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - CPU CSR corruption causing incorrect exception handling or memory protection failures
      - High
      - 1.1 (CPU CSRs)
-     - ``bist_cpu_csr_regs_test()`` validates critical CSRs (MTVEC, MEPC, MCAUSE, PMPADDR) maintain integrity
+     - ``bist_cpu_csr_regs_test()`` validates critical CSRs (MTVEC, MEPC, MCAUSE, PMPADDR, PMPCFG, and on PMA-capable SoCs: PMA address, MEXSTATUS, MHINT) maintain integrity
 
    * - H3
      - Program counter corruption causing execution outside intended code regions

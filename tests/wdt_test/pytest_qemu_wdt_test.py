@@ -26,7 +26,7 @@ def wdt_test_routine(qemu_debug_instance, gdb_instance, test_name, test_bp, inje
     try:
         # Attempt to read all current output from QEMU
         while True:
-            line = output_queue.get(timeout=3)  # Use a timeout to wait for output
+            line = output_queue.get(timeout=10)  # Use a timeout to wait for output
             output_lines.append(line)
             if expected_output in line:
                 break

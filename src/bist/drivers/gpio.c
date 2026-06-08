@@ -20,7 +20,6 @@
 #include "soc/periph_defs.h"
 
 #include "soc/soc_caps.h"
-#include "soc/gpio_periph.h"
 #include "bist_log.h"
 #include "esp_check.h"
 #include "hal/gpio_hal.h"
@@ -223,7 +222,6 @@ esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode)
 esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
 {
     uint64_t gpio_pin_mask = (pGPIOConfig->pin_bit_mask);
-    uint32_t io_reg = 0;
     uint32_t io_num = 0;
     uint8_t input_en = 0;
     uint8_t output_en = 0;
@@ -242,10 +240,7 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
     }
 
     do {
-        io_reg = GPIO_PIN_MUX_REG[io_num];
-
         if (((gpio_pin_mask >> io_num) & BIT(0))) {
-            assert(io_reg != (intptr_t)NULL);
 
             if ((pGPIOConfig->mode) & GPIO_MODE_DEF_INPUT) {
                 input_en = 1;
@@ -291,8 +286,7 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
                 "GPIO[%" PRIu32 "]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d",
                 io_num, input_en, output_en, od_en, pu_en, pd_en);
 
-            /* By default, all the pins have to be configured as GPIO pins. */
-            PIN_FUNC_SELECT(io_reg, PIN_FUNC_GPIO);
+            gpio_hal_func_sel(gpio_context.gpio_hal, io_num, PIN_FUNC_GPIO);
         }
 
         io_num++;

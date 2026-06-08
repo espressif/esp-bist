@@ -28,7 +28,7 @@
 #include "hal/systimer_hal.h"
 
 #include "soc/periph_defs.h"
-#include "esp_private/periph_ctrl.h"
+#include "hal/clk_gate_ll.h"
 
 #define ETS_INTERNAL_TIMER0_INTR_NO 6
 
@@ -375,7 +375,7 @@ static void IRAM_ATTR timer_alarm_isr(void *arg)
 
 esp_err_t esp_timer_init(void)
 {
-    periph_module_enable(PERIPH_SYSTIMER_MODULE);
+    periph_ll_enable_clk_clear_rst(PERIPH_SYSTIMER_MODULE);
     systimer_hal_tick_rate_ops_t ops = {
         .ticks_to_us = systimer_ticks_to_us,
         .us_to_ticks = systimer_us_to_ticks,
@@ -388,7 +388,7 @@ esp_err_t esp_timer_init(void)
     systimer_hal_connect_alarm_counter(&systimer_hal, SYSTIMER_ALARM_ESPTIMER, SYSTIMER_COUNTER_ESPTIMER);
 
     esp_cpu_intr_disable(1 << ETS_INTERNAL_TIMER0_INTR_NO);
-    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_SYSTIMER_TARGET2_EDGE_INTR_SOURCE, ETS_INTERNAL_TIMER0_INTR_NO);
+    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_SYSTIMER_TARGET2_INTR_SOURCE, ETS_INTERNAL_TIMER0_INTR_NO);
 
     esp_cpu_intr_set_type(ETS_INTERNAL_TIMER0_INTR_NO, 0);
     esp_cpu_intr_set_priority(ETS_INTERNAL_TIMER0_INTR_NO, 2);
