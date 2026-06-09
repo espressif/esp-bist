@@ -1,4 +1,5 @@
 stages:
+  - Lint
   - Build
   - Test Qemu
   - Test Device
@@ -45,6 +46,45 @@ default:
     - . $IDF_PATH/export.sh
     - mkdir -p $MCUBOOT_PATH/boot/espressif/build
     - cp mcuboot_build/mcuboot_${SOC_TARGET}.bin $MCUBOOT_PATH/boot/espressif/build/
+
+mcp_data_drift:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - changes:
+        - docs/en/**/*
+        - src/bist/**/*.c
+        - src/bist/**/*.h
+        - src/bist/Kconfig*
+        - "**/README.md"
+        - mcp-server/ingest.py
+        - mcp-server/requirements.txt
+  script:
+    - pip install --quiet -r mcp-server/requirements.txt
+    - python mcp-server/ingest.py .
+    - |
+      DRIFT=$(git status --porcelain mcp-server/data/)
+      if [ -n "$DRIFT" ]; then
+        echo "=========================================================="
+        echo "ERROR: mcp-server/data/ is out of date."
+        echo ""
+        echo "You changed content that the MCP server indexes (docs,"
+        echo "headers, Kconfig, source files, or READMEs) but did not"
+        echo "regenerate the pre-built JSON snapshot."
+        echo ""
+        echo "Run locally:"
+        echo "  cd mcp-server"
+        echo "  .venv/bin/python ingest.py .."
+        echo ""
+        echo "then commit the updated mcp-server/data/*.json files."
+        echo "=========================================================="
+        echo "$DRIFT"
+        git --no-pager diff --stat mcp-server/data/ || true
+        exit 1
+      fi
+    - echo "mcp-server/data/ is in sync with source content."
 
 build_docker_image:
   before_script: []
