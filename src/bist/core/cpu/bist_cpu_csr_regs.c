@@ -28,7 +28,8 @@
  * C5 additionally excludes bit 4 (upper A-field bit): with G=5 (128-byte
  * granularity), A=NA4 is not selectable, so the 0x55 pattern (A=10)
  * would WARL to A=00. */
-#if defined(SOC_TARGET_ESP32C5) || defined(SOC_TARGET_ESP32C61) || defined(SOC_TARGET_ESP32P4)
+#if defined(SOC_TARGET_ESP32C5) || defined(SOC_TARGET_ESP32C61) || defined(SOC_TARGET_ESP32P4) || \
+    defined(SOC_TARGET_ESP32H4)
 #define CSR_PMPCFG_MASK 0x0D0D0D0D
 #else
 #define CSR_PMPCFG_MASK 0x1D1D1D1D
@@ -36,7 +37,8 @@
 
 /* C5/C61 PMP have 128-byte granularity (bottom 5 bits hardwired 0, top 2 hardwired 0);
  * C3/C6/H2 have 4-byte granularity (full 32 bits writable) */
-#if defined(SOC_TARGET_ESP32C5) || defined(SOC_TARGET_ESP32C61) || defined(SOC_TARGET_ESP32P4)
+#if defined(SOC_TARGET_ESP32C5) || defined(SOC_TARGET_ESP32C61) || defined(SOC_TARGET_ESP32P4) || \
+    defined(SOC_TARGET_ESP32H4)
 #define CSR_PMPADDR_MASK 0x3FFFFFE0
 #else
 #define CSR_PMPADDR_MASK MASK_32BIT

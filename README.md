@@ -13,6 +13,7 @@ This repository includes the necessary files to build an application that runs t
 - ESP32-C6
 - ESP32-C61
 - ESP32-H2
+- ESP32-H4
 - ESP32-P4
 
 ## License

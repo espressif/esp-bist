@@ -18,6 +18,8 @@
 #define BIST_TEST_GPIO_INPUT_IO                 (9)
 #elif SOC_TARGET_ESP32P4
 #define BIST_TEST_GPIO_INPUT_IO                 (8)
+#elif SOC_TARGET_ESP32H4
+#define BIST_TEST_GPIO_INPUT_IO                 (34)
 #endif
 #define BIST_TEST_GPIO_INPUT_LEVEL              (1)
 

@@ -13,7 +13,7 @@ set -euo pipefail
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <target>"
-    echo "Supported targets: esp32c3, esp32c5, esp32c6, esp32c61, esp32h2, esp32p4"
+    echo "Supported targets: esp32c3, esp32c5, esp32c6, esp32c61, esp32h2, esp32p4, esp32h4"
     exit 1
 fi
 
