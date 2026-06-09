@@ -13,20 +13,20 @@
 #define FLASH_SIZE         (0x400000)
 #endif
 
-#define SRAM_SEG_START        (0x40800000)
+#define SRAM_SEG_START       (0x40800000)
 #define SRAM_SEG_END         (0x4086AD08)
 #define SRAM_SEG_LEN         (SRAM_SEG_END - SRAM_SEG_START)
 
-#define SRAM_LP_SEG_START        (0x50000000)
-#define SRAM_LP_SEG_LEN          (0x4000) // 16kB
+#define SRAM_LP_SEG_START    (0x50000000)
+#define SRAM_LP_SEG_LEN      (0x4000) /* 16 kB */
 
-#define ICACHE_SIZE           (0x8000) // 32kB
+#define ICACHE_SIZE          (0x8000) /* 32 kB */
 
-#define CACHE_ALIGN  CONFIG_MMU_PAGE_SIZE
-#define IROM_SEG_ORG 0x42000000
-#define IROM_SEG_LEN FLASH_SIZE
-#define DROM_SEG_ORG 0x42800000
-#define DROM_SEG_LEN FLASH_SIZE
+#define IDRAM0_SEG_SIZE      (CONFIG_MMU_PAGE_SIZE << 8)
+
+#define CACHE_ALIGN          CONFIG_MMU_PAGE_SIZE
+#define IROM_SEG_ORG         0x42000000
+#define DROM_SEG_ORG         0x42000000
 
 /* Global symbols required for espressif hal build */
 MEMORY
@@ -37,8 +37,8 @@ MEMORY
   ROM (RX): org = 0x80, len = FLASH_SIZE - 0x80
 
   sram(RX): org = SRAM_SEG_START, len = SRAM_SEG_LEN
-  irom0_0_seg(RX): org = IROM_SEG_ORG, len = IROM_SEG_LEN
-  drom0_0_seg(R):  org = DROM_SEG_ORG, len = DROM_SEG_LEN
+  irom0_0_seg(RX): org = IROM_SEG_ORG, len = IDRAM0_SEG_SIZE
+  drom0_0_seg(R):  org = DROM_SEG_ORG, len = IDRAM0_SEG_SIZE
 
   sram_lp(RW): org = SRAM_LP_SEG_START, len = SRAM_LP_SEG_LEN
 }
