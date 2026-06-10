@@ -51,6 +51,13 @@
 /* mhint: only SBE (bit 20) */
 #define CSR_MHINT_MASK  0x00100000
 
+#if defined(ESP_BIST_USE_FPU)
+/* FPU CSRs (RV32F): fflags[4:0], frm[2:0], fcsr[7:0] */
+#define CSR_FFLAGS_MASK 0x1F
+#define CSR_FRM_MASK    0x07
+#define CSR_FCSR_MASK   0xFF
+#endif
+
 #define CSR_GPIO_OEN_USER 0x803
 #define CSR_GPIO_IN_USER  0x804
 #define CSR_GPIO_OUT_USER 0x805
@@ -145,6 +152,13 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     // C6/H2 mexstatus only has SOFT_RST bits (unsafe to test); mhint absent.
     BIST_TEST_CSR_REG_STACKED(0x7E1, CSR_MEXSTATUS_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(0x7C5, CSR_MHINT_MASK, errorCSR);
+#endif
+
+#if defined(ESP_BIST_USE_FPU)
+    // FPU CSRs (RV32F).
+    BIST_TEST_CSR_REG_STACKED(fflags, CSR_FFLAGS_MASK, errorCSR);
+    BIST_TEST_CSR_REG_STACKED(frm, CSR_FRM_MASK, errorCSR);
+    BIST_TEST_CSR_REG_STACKED(fcsr, CSR_FCSR_MASK, errorCSR);
 #endif
 
     ASM(" li a0, 0x0");

@@ -34,6 +34,11 @@ else()
     endif()
 endif()
 
+if("${SOC_TARGET}" STREQUAL "esp32h4" OR "${SOC_TARGET}" STREQUAL "esp32p4")
+    set(ESP_BIST_USE_FPU 1)
+    message(STATUS "FPU enabled for ${SOC_TARGET}")
+endif()
+
 message("Building BIST project for ${SOC_TARGET}")
 
 if (DEFINED ENV{IDF_PATH})

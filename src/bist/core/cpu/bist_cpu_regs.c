@@ -38,6 +38,33 @@
     }                                                                                                                  \
     while (0)
 
+#if defined(ESP_BIST_USE_FPU)
+/*
+ * FPU registers cannot be loaded with li; use an integer temp and fmv.w.x instead.
+ * feq.s compares single-precision bit patterns (RV32F).
+ */
+#define BIST_TEST_FPU_REG_NOT_STACKED(reg, f_temp_reg, int_temp_reg, j_error)                                          \
+    do {                                                                                                               \
+        ASM(" li " #int_temp_reg ", 0xAAAAAAAA");                                                                      \
+        ASM(" fmv.w.x " #reg ", " #int_temp_reg);                                                                      \
+        ASM(" fmv.w.x " #f_temp_reg ", " #int_temp_reg);                                                               \
+        ASM("testFRegA_" #reg ": feq.s " #int_temp_reg ", " #reg ", " #f_temp_reg);                                    \
+        ASM(" beqz " #int_temp_reg ", " #j_error);                                                                     \
+        ASM(" li " #int_temp_reg ", 0x55555555");                                                                      \
+        ASM(" fmv.w.x " #reg ", " #int_temp_reg);                                                                      \
+        ASM(" fmv.w.x " #f_temp_reg ", " #int_temp_reg);                                                               \
+        ASM("testFReg5_" #reg ": feq.s " #int_temp_reg ", " #reg ", " #f_temp_reg);                                    \
+        ASM(" beqz " #int_temp_reg ", " #j_error);                                                                     \
+    } while (0)
+
+#define BIST_TEST_FPU_REG_STACKED(reg, f_temp_reg, int_temp_reg, j_error)                                              \
+    do {                                                                                                               \
+        ASM(" fsw " #reg ", 4(sp)");                                                                                   \
+        BIST_TEST_FPU_REG_NOT_STACKED(reg, f_temp_reg, int_temp_reg, j_error);                                         \
+        ASM(" flw " #reg ", 4(sp)");                                                                                   \
+    } while (0)
+#endif
+
 /*
  * RISC-V Register Mnemonics and Roles
  *
@@ -63,6 +90,21 @@
  * |    x30    |   t5     | Temporary/scratch   |
  * |    x31    |   t6     | Temporary/scratch   |
  * ========================
+ * ===========================
+ * |  f Registers (Floating Point Registers)   |
+ * ===========================
+ * | Register   | ABI Name   | Role                |
+ * |------------|------------|---------------------|
+ * |    f0-f7   |  ft0-ft7   | Temporary/scratch   |
+ * |    f8-f9   |  fs0-fs1   | Saved registers     |
+ * |    f10-f11 |  fa0-fa1   | Function arguments/return values |
+ * |    f12-f17 |  fa2-fa7   | Function arguments  |
+ * |    f18-f27 |  fs2-fs11  | Saved registers     |
+ * |    f28     |  ft8       | Temporary/scratch   |
+ * |    f29     |  ft9       | Temporary/scratch   |
+ * |    f30     |  ft10      | Temporary/scratch   |
+ * |    f31     |  ft11      | Temporary/scratch   |
+ * ===========================
  */
 #if defined(CONFIG_ESP_BIST_CPU_REG_TEST)
 
@@ -141,6 +183,72 @@ bist_esp_err_t bist_cpu_regs_test(void)
     BIST_TEST_CPU_REG_NOT_STACKED(a6, t0, errorCPU);
     // a7 test
     BIST_TEST_CPU_REG_NOT_STACKED(a7, t0, errorCPU);
+#if defined(ESP_BIST_USE_FPU)
+    // ft0 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft0, ft1, t2, errorCPU);
+    // ft1 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft1, ft0, t2, errorCPU);
+    // ft2 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft2, ft0, t2, errorCPU);
+    // ft3 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft3, ft0, t2, errorCPU);
+    // ft4 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft4, ft0, t2, errorCPU);
+    // ft5 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft5, ft0, t2, errorCPU);
+    // ft6 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft6, ft0, t2, errorCPU);
+    // ft7 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft7, ft0, t2, errorCPU);
+    // ft8 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft8, ft0, t2, errorCPU);
+    // ft9 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft9, ft0, t2, errorCPU);
+    // ft10 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft10, ft0, t2, errorCPU);
+    // ft11 test
+    BIST_TEST_FPU_REG_NOT_STACKED(ft11, ft0, t2, errorCPU);
+    // fs0 test
+    BIST_TEST_FPU_REG_STACKED(fs0, ft0, t2, errorCPU);
+    // fs1 test
+    BIST_TEST_FPU_REG_STACKED(fs1, ft0, t2, errorCPU);
+    // fs2 test
+    BIST_TEST_FPU_REG_STACKED(fs2, ft0, t2, errorCPU);
+    // fs3 test
+    BIST_TEST_FPU_REG_STACKED(fs3, ft0, t2, errorCPU);
+    // fs4 test
+    BIST_TEST_FPU_REG_STACKED(fs4, ft0, t2, errorCPU);
+    // fs5 test
+    BIST_TEST_FPU_REG_STACKED(fs5, ft0, t2, errorCPU);
+    // fs6 test
+    BIST_TEST_FPU_REG_STACKED(fs6, ft0, t2, errorCPU);
+    // fs7 test
+    BIST_TEST_FPU_REG_STACKED(fs7, ft0, t2, errorCPU);
+    // fs8 test
+    BIST_TEST_FPU_REG_STACKED(fs8, ft0, t2, errorCPU);
+    // fs9 test
+    BIST_TEST_FPU_REG_STACKED(fs9, ft0, t2, errorCPU);
+    // fs10 test
+    BIST_TEST_FPU_REG_STACKED(fs10, ft0, t2, errorCPU);
+    // fs11 test
+    BIST_TEST_FPU_REG_STACKED(fs11, ft0, t2, errorCPU);
+    // fa0 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa0, ft0, t2, errorCPU);
+    // fa1 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa1, ft0, t2, errorCPU);
+    // fa2 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa2, ft0, t2, errorCPU);
+    // fa3 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa3, ft0, t2, errorCPU);
+    // fa4 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa4, ft0, t2, errorCPU);
+    // fa5 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa5, ft0, t2, errorCPU);
+    // fa6 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa6, ft0, t2, errorCPU);
+    // fa7 test
+    BIST_TEST_FPU_REG_NOT_STACKED(fa7, ft0, t2, errorCPU);
+#endif
 
     // Success
     ASM(" li a0, 0x0");
