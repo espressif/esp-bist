@@ -1,0 +1,20 @@
+# Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: Zephyr BIST Sample
+tests:
+  sample.zephyr.bist:
+    sysbuild: true
+    platform_allow:
+      - esp32c5_devkitc/esp32c5/hpcore
+      - esp32c6_devkitc/esp32c6/hpcore
+    tags: bist
+    timeout: 90
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "Hello from HOST"
+        - "Pong"
