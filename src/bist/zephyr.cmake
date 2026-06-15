@@ -33,6 +33,18 @@ if(CONFIG_ESP_BIST)
                 core/memory/bist_ram.c
         )
 
+        if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
+                zephyr_library_sources(core/memory/bist_flash.c)
+                set(BIST_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
+                set_property(GLOBAL APPEND PROPERTY post_build_patch_elf_commands
+                        COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
+                        ARGS ${Python3_EXECUTABLE} ${BIST_ROOT_DIR}/scripts/calculate_crc32.py
+                             ${CMAKE_BINARY_DIR}/zephyr/${KERNEL_ELF_NAME} .text .crc_section_text
+                        COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
+                        ARGS ${Python3_EXECUTABLE} ${BIST_ROOT_DIR}/scripts/calculate_crc32.py
+                             ${CMAKE_BINARY_DIR}/zephyr/${KERNEL_ELF_NAME} .rodata .crc_section_data)
+        endif()
+
         zephyr_compile_options(-Os)
 
         set(SOC_LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../soc/${CONFIG_SOC}/ld/bist_lpcore.ld" CACHE INTERNAL "Custom linker script for BIST")

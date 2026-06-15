@@ -47,6 +47,12 @@ static void runPOST(void)
 		fail_safe_exit();
 	}
 
+	// test_err = bist_flash_test();
+	// if (test_err == BIST_ESP_FLASH_TEST_ERR) {
+	// 	printf("LP flash test failed\n");
+	// 	fail_safe_exit();
+	// }
+
 	// Enable interrupts
 	ulp_lp_core_intr_enable();
 
