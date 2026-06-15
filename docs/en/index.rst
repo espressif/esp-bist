@@ -35,3 +35,4 @@ This documentation provides a comprehensive overview of ESP-BIST, including its 
     Safety Case Summary <safety_case_summary>
     Application Guide <application_guide>
     API Reference <api>
+    MCP Server <mcp_server>

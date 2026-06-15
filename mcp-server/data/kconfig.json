@@ -1,0 +1,182 @@
+[
+  {
+    "name": "ESP_BIST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable the built-in self-test (BIST) feature for the system.\nThis feature allows for self-diagnosis and verification of system\ncomponents during startup or at runtime.\n\ndepends on ESP_BIST",
+    "menu": "",
+    "range": "",
+    "prompt": "Enable Built In Self Test (BIST)"
+  },
+  {
+    "name": "ESP_BIST_CPU_REG_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for CPU registers.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "CPU Register Test"
+  },
+  {
+    "name": "ESP_BIST_CPU_CSR_REG_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for CPU Control and Status Registers (CSRs).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "CPU CSR Register Test"
+  },
+  {
+    "name": "ESP_BIST_MEMORY_RAM_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the RAM memory integrity (March A and March X).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Memory RAM Test"
+  },
+  {
+    "name": "ESP_BIST_MEMORY_FLASH_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the Flash memory integrity.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Memory Flash Test"
+  },
+  {
+    "name": "BIST_FLASH_TEST_CHUNK_SIZE",
+    "type": "hex",
+    "default": "0x1000",
+    "depends_on": "ESP_BIST_MEMORY_FLASH_TEST",
+    "help": "Specify the chunk size in bytes for flash memory testing.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Flash Test Chunk Size"
+  },
+  {
+    "name": "ESP_BIST_STACK_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the stack integrity.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Stack Test"
+  },
+  {
+    "name": "ESP_BIST_CLOCK_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the main crystal clock.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Clock Test"
+  },
+  {
+    "name": "ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT",
+    "type": "int",
+    "default": "1",
+    "depends_on": "ESP_BIST_CLOCK_TEST",
+    "help": "Specify the acceptable percentage of frequency drift for the clock test.",
+    "menu": "ESP-BIST Tests",
+    "range": "0 100",
+    "prompt": "Clock Frequency Drift Percentage"
+  },
+  {
+    "name": "ESP_BIST_GPIO_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the GPIO pins.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "GPIO Test"
+  },
+  {
+    "name": "ESP_BIST_PROGRAM_COUNTER_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the program counter.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Program Counter Test"
+  },
+  {
+    "name": "ESP_BIST_WATCHDOG_TEST",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable tests for the watchdog timer.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Watchdog Test"
+  },
+  {
+    "name": "ESP_BIST_FLASH_SIZE",
+    "type": "hex",
+    "default": "0x400000",
+    "depends_on": "",
+    "help": "Specify the size of the flash memory in bytes.",
+    "menu": "",
+    "range": "",
+    "prompt": "Flash Size"
+  },
+  {
+    "name": "ESP_BIST_HEAP_SIZE",
+    "type": "hex",
+    "default": "0x1000",
+    "depends_on": "",
+    "help": "Specify the size of the heap in bytes. This is used for dynamic memory allocation\nduring BIST operations. A value of 0 means no heap is allocated.",
+    "menu": "",
+    "range": "",
+    "prompt": "Heap Size"
+  },
+  {
+    "name": "ESP_BIST_STACK_PROTECTION_BLOCK_SIZE",
+    "type": "hex",
+    "default": "0x100",
+    "depends_on": "",
+    "help": "Specify the size of the stack protection block in bytes. This is used to protect\nthe stack from overflow and underflow conditions. A value of 0 means no protection\nblock is allocated.",
+    "menu": "",
+    "range": "",
+    "prompt": "Stack Protection Block Size"
+  },
+  {
+    "name": "ESP_BIST_WDT_TIMEOUT_US",
+    "type": "int",
+    "default": "50000",
+    "depends_on": "",
+    "help": "Specify the watchdog timer (WDT) timeout in microseconds. This is the maximum time\nallowed for the application operations to complete before the watchdog timer triggers a reset.",
+    "menu": "",
+    "range": "",
+    "prompt": "WDT Timeout (us)"
+  },
+  {
+    "name": "ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US",
+    "type": "int",
+    "default": "10",
+    "depends_on": "",
+    "help": "Specify the timeout for the windowed underflow condition in microseconds.\nThis is used to ensure that the watchdog timer does not trigger an underflow\ncondition during application time-slot.",
+    "menu": "",
+    "range": "",
+    "prompt": "WDT Windowed Underflow Timeout (us)"
+  },
+  {
+    "name": "ESP_BIST_METRICS",
+    "type": "bool",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "depends_on": "",
+    "help": "Enable the collection of performance metrics during BIST operations, such as\nexecution time, CPU cycles, and instruction counts.",
+    "menu": "",
+    "range": "",
+    "prompt": "BIST Metrics Collection"
+  }
+]

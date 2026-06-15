@@ -1,0 +1,76 @@
+[
+  {
+    "soc": "esp32c3",
+    "name": "ESP32-C3",
+    "cpu": "Single-core RISC-V",
+    "max_freq_mhz": 160,
+    "sram_kb": "400 + 8 RTC",
+    "psram": false,
+    "gpio_count": "22 / 16",
+    "has_pma": false,
+    "has_xt_wdt": true,
+    "csr_count": 25,
+    "cmake_file": "cmake/esp32c3.cmake",
+    "linker_scripts": [
+      "src/soc/esp32c3/ld/linker.ld"
+    ],
+    "soc_dir": "src/soc/esp32c3",
+    "specific_notes": "CMake config at cmake/esp32c3.cmake (96 lines)"
+  },
+  {
+    "soc": "esp32c5",
+    "name": "ESP32-C5",
+    "cpu": "Single-core RISC-V + LP RISC-V",
+    "max_freq_mhz": 240,
+    "sram_kb": "384 HP + 16 LP",
+    "psram": true,
+    "gpio_count": "29",
+    "has_pma": true,
+    "has_xt_wdt": false,
+    "csr_count": 39,
+    "cmake_file": "cmake/esp32c5.cmake",
+    "linker_scripts": [
+      "src/soc/esp32c5/ld/linker.ld"
+    ],
+    "soc_dir": "src/soc/esp32c5",
+    "specific_notes": "CMake config at cmake/esp32c5.cmake (99 lines)"
+  },
+  {
+    "soc": "esp32c6",
+    "name": "ESP32-C6",
+    "cpu": "Single-core RISC-V + LP RISC-V",
+    "max_freq_mhz": 160,
+    "sram_kb": "512 HP + 16 LP",
+    "psram": false,
+    "gpio_count": "30 / 22",
+    "has_pma": true,
+    "has_xt_wdt": false,
+    "csr_count": 37,
+    "cmake_file": "cmake/esp32c6.cmake",
+    "linker_scripts": [
+      "src/soc/esp32c6/ld/bist_lpcore.ld",
+      "src/soc/esp32c6/ld/linker.ld",
+      "src/soc/esp32c6/ld/lp_core_riscv.ld"
+    ],
+    "soc_dir": "src/soc/esp32c6",
+    "specific_notes": "CMake config at cmake/esp32c6.cmake (98 lines)"
+  },
+  {
+    "soc": "esp32h2",
+    "name": "ESP32-H2",
+    "cpu": "Single-core RISC-V",
+    "max_freq_mhz": 96,
+    "sram_kb": "320 + 4 RTC",
+    "psram": false,
+    "gpio_count": "19",
+    "has_pma": true,
+    "has_xt_wdt": false,
+    "csr_count": 37,
+    "cmake_file": "cmake/esp32h2.cmake",
+    "linker_scripts": [
+      "src/soc/esp32h2/ld/linker.ld"
+    ],
+    "soc_dir": "src/soc/esp32h2",
+    "specific_notes": "CMake config at cmake/esp32h2.cmake (98 lines)"
+  }
+]

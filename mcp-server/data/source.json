@@ -1,0 +1,452 @@
+[
+  {
+    "function_name": "bist_cpu_csr_regs_test",
+    "body": "bist_esp_err_t bist_cpu_csr_regs_test(void)\n{\n    ASM(\" addi sp, sp, -16\");\n    // Machine Trap Setup CSRs\n    BIST_TEST_CSR_REG_STACKED(mtvec, CSR_MTVEC_MASK, errorCSR);\n\n    // Machine Trap Handling CSRs\n    BIST_TEST_CSR_REG_STACKED(mscratch, MASK_32BIT, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(mepc, CSR_MEPC_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(mcause, CSR_MCAUSE_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(mtval, MASK_32BIT, errorCSR);\n\n#if !defined(__ZEPHYR__)\n    // Physical Memory Protection (PMP) address CSRs\n    BIST_TEST_CSR_REG_STACKED(pmpaddr0, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr1, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr2, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr3, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr4, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr5, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr6, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr7, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr8, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr9, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr10, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr11, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr12, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr13, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr14, CSR_PMPADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpaddr15, CSR_PMPADDR_MASK, errorCSR);\n\n    // PMP configuration CSRs (mask excludes Lock and reserved bits)\n    BIST_TEST_CSR_REG_STACKED(pmpcfg0, CSR_PMPCFG_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpcfg1, CSR_PMPCFG_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpcfg2, CSR_PMPCFG_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(pmpcfg3, CSR_PMPCFG_MASK, errorCSR);\n#endif\n\n#if SOC_CPU_HAS_PMA\n    // PMA address CSRs (entries 0-11 only; 12-15 may be active NAPOT regions)\n    BIST_TEST_CSR_REG_STACKED(0xBD0, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD1, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD2, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD3, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD4, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD5, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD6, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD7, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD8, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBD9, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBDA, CSR_PMAADDR_MASK, errorCSR);\n    BIST_TEST_CSR_REG_STACKED(0xBDB, CSR_PMAADDR_MASK, errorCSR);\n#endif\n\n#if defined(SOC_TARGET_ESP32C5)\n    // mexstatus and mhint: C5-only (CLIC-capable core).\n    // C6/H2 mexstat\n    // ... (truncated)",
+    "file": "src/bist/core/cpu/bist_cpu_csr_regs.c",
+    "line_start": 89,
+    "line_end": 157,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_regs_test",
+    "body": "bist_esp_err_t bist_cpu_regs_test(void)\n{\n    ASM(\" addi sp, sp, -16\");\n    // t0 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t0, t1, errorCPU);\n    // t1 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t1, t0, errorCPU);\n    // t2 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t2, t0, errorCPU);\n    // t3 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t3, t0, errorCPU);\n    //  t4 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t4, t0, errorCPU);\n    //  t5 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t5, t0, errorCPU);\n    //  t6 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t6, t0, errorCPU);\n    // Push Ra to stack so we can return in case it fails\n    ASM(\" sw ra, 0(sp)\");\n    // ra test\n    BIST_TEST_CPU_REG_STACKED(ra, t0, restoreRA);\n    // sp test\n    // Push SP to temp so we can restore it later\n    ASM(\" mv t3, sp\");\n    BIST_TEST_CPU_REG_NOT_STACKED(sp, t0, restoreSP);\n    // Restore SP and continue\n    ASM(\" mv sp, t3\");\n    // gp test\n    ASM(\" mv t3, gp\");\n    BIST_TEST_CPU_REG_STACKED(gp, t0, restoreGP);\n    // Restore GP and continue\n    ASM(\" mv gp, t3\");\n    // tp test\n    BIST_TEST_CPU_REG_STACKED(tp, t0, errorCPU);\n    // s0 test\n    BIST_TEST_CPU_REG_STACKED(s0, t0, errorCPU);\n    // s1 test\n    BIST_TEST_CPU_REG_STACKED(s1, t0, errorCPU);\n    // s2 test\n    BIST_TEST_CPU_REG_STACKED(s2, t0, errorCPU);\n    // s3 test\n    BIST_TEST_CPU_REG_STACKED(s3, t0, errorCPU);\n    // s4 test\n    BIST_TEST_CPU_REG_STACKED(s4, t0, errorCPU);\n    // s5 test\n    BIST_TEST_CPU_REG_STACKED(s5, t0, errorCPU);\n    // s6 test\n    BIST_TEST_CPU_REG_STACKED(s6, t0, errorCPU);\n    // s7 test\n    BIST_TEST_CPU_REG_STACKED(s7, t0, errorCPU);\n    // s8 test\n    BIST_TEST_CPU_REG_STACKED(s8, t0, errorCPU);\n    // s9 test\n    BIST_TEST_CPU_REG_STACKED(s9, t0, errorCPU);\n    // s10 test\n    BIST_TEST_CPU_REG_STACKED(s10, t0, errorCPU);\n    // s11 test\n    BIST_TEST_CPU_REG_STACKED(s11, t0, errorCPU);\n    // a0 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a0, t0, errorCPU);\n    // a1 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a1, t0, errorCPU);\n    // a2 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a2, t0, errorCPU);\n    // a3 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a3, t0, errorCPU);\n    // a4 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a4, t0, errorCPU);\n    // a5 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a5, t0, errorCPU);\n    // a6 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a6, t0, errorCPU);\n    // a7 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a7, t0, errorCPU);\n\n    // Success\n    ASM(\" li a0, 0x0\");\n    // Restore RA and SP and return\n    ASM(\" lw ra, 0(sp)\");\n    ASM(\" addi\tsp,sp,16\");\n    ASM(\" ret\");\n    // ErrorCPU\n    ASM(\" restoreSP: mv sp, t3\");\n    ASM(\" j errorCPU\");\n    ASM(\" restoreRA: lw ra, 0(sp)\");\n    ASM(\" j errorCPU\");\n    ASM(\" restoreGP: mv gp, t3\");\n    ASM(\" errorCPU: li a0, 0x1\");\n    ASM(\" addi sp, sp, 16\");\n    ASM(\" ret\");\n}",
+    "file": "src/bist/core/cpu/bist_cpu_regs.c",
+    "line_start": 70,
+    "line_end": 160,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_stack_overflow_init",
+    "body": "bist_esp_err_t bist_cpu_stack_overflow_init(void)\n{\n    /*\n     * Fill the entire protection region with the sentinel pattern.\n     * A single-word sentinel can fall in an unwritten gap between\n     * stack frames (saved regs + padding occupy ~32 bytes per 160-byte\n     * frame), making single-point detection unreliable. Filling the\n     * full region guarantees at least one word lands in a zeroed buffer.\n     */\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p <= end; p++) {\n        *p = STACK_PROTECTION_PATTERN;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_stack.c",
+    "line_start": 43,
+    "line_end": 59,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_stack_overflow_check",
+    "body": "bist_esp_err_t bist_cpu_stack_overflow_check(void)\n{\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p <= end; p++) {\n        if (*p != STACK_PROTECTION_PATTERN) {\n            handle_stack_overflow();\n            return BIST_ESP_STACK_TEST_OVERFLOW;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_stack.c",
+    "line_start": 61,
+    "line_end": 73,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_stack_overflow_test",
+    "body": "bist_esp_err_t bist_cpu_stack_overflow_test(void)\n{\n    volatile int count_max = 20000;\n\n    bist_cpu_stack_overflow_init();\n\n    BIST_ADD_LABEL(\"bist_cpu_stack_overflow_data\");\n    for (int k = 0; k < count_max; k++) {\n        /* intentionally cause a stack overflow */\n        bist_cpu_stack_recursive(k);\n\n        if (bist_cpu_stack_overflow_check() == BIST_ESP_STACK_TEST_OVERFLOW) {\n            return BIST_ESP_OK;\n        }\n    }\n\n    return BIST_ESP_STACK_TEST_ERR;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_stack.c",
+    "line_start": 75,
+    "line_end": 92,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_get_stack_high_watermark",
+    "body": "uint32_t bist_get_stack_high_watermark(void)\n{\n    uint32_t *stack_top = (uint32_t *)&_stack_top;\n    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_start;\n    uint32_t high_watermark = 0;\n\n    /* We should check after the overflow protection region */\n    stack_bottom++;\n\n    for (uint32_t *p = stack_bottom; p < stack_top; p++) {\n        if (*p == STACK_FILL_PATTERN) {\n            high_watermark++;\n        } else {\n            break;\n        }\n    }\n\n    return high_watermark * sizeof(uint32_t);\n}",
+    "file": "src/bist/core/cpu/bist_cpu_stack.c",
+    "line_start": 94,
+    "line_end": 112,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "internal_crc32",
+    "body": "uint32_t internal_crc32(uint8_t *data, size_t len, uint32_t crc)\n{\n    crc = ~crc & 0xFFFFFFFF;\n    for (size_t i = 0; i < len; ++i) {\n        uint8_t b = data[i];\n        crc = crc_32_tab[(crc ^ b) & 0xFF] ^ (crc >> 8);\n    }\n    return ~crc & 0xFFFFFFFF;\n}",
+    "file": "src/bist/core/memory/bist_flash.c",
+    "line_start": 61,
+    "line_end": 69,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "calculate_crc32",
+    "body": "uint32_t calculate_crc32(uint8_t *data, size_t length)\n{\n    uint32_t calc_crc = 0;\n    size_t processed = 0; // Amount of data processed\n\n    // Process each chunk\n    while (processed < length) {\n        size_t chunk_size = length - processed;\n        if (chunk_size > CONFIG_BIST_FLASH_TEST_CHUNK_SIZE) {\n            chunk_size = CONFIG_BIST_FLASH_TEST_CHUNK_SIZE;\n        }\n\n        // Calculate the CRC for the current chunk\n        calc_crc = internal_crc32(data + processed, chunk_size, calc_crc);\n\n        // Update the amount of data processed\n        processed += chunk_size;\n    }\n\n    return calc_crc & 0xFFFFFFFF;\n}",
+    "file": "src/bist/core/memory/bist_flash.c",
+    "line_start": 71,
+    "line_end": 91,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_flash_test",
+    "body": "bist_esp_err_t bist_flash_test(void)\n{\n    uint32_t crc_data, crc_text = 0;\n    volatile size_t crc_section_len = 0;\n\n    ESP_EARLY_LOGD(TAG, \"Flash text CRC addr: %p\", &_crc_section_text_start);\n    ESP_EARLY_LOGD(TAG, \"flash.text CRC: 0x%lx\", _crc_section_text_start);\n    ESP_EARLY_LOGD(TAG, \"Flash data CRC addr: %p\", &_crc_section_data_start);\n    ESP_EARLY_LOGD(TAG, \"flash.rodata CRC: 0x%lx\", _crc_section_data_start);\n\n    ESP_EARLY_LOGD(TAG, \"Calculating CRC for flash.rodata section from %p to %p (%d B)\", &_flash_rodata_start,\n        &_flash_rodata_end, (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4);\n\n    // Calculate the CRC for the flash.rodata section\n    crc_section_len = (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4;\n    BIST_ADD_LABEL(\"bist_flash_test_data\");\n    crc_data = calculate_crc32((uint8_t *)&_flash_rodata_start, crc_section_len);\n\n    ESP_EARLY_LOGD(TAG, \"Calculated CRC for flash.rodata section: 0x%lx\", crc_data);\n    if (crc_data != _crc_section_data_start) {\n        ESP_EARLY_LOGE(TAG, \"CRC for flash.rodata section does not match the expected value\");\n        return BIST_ESP_FLASH_TEST_ERR;\n    }\n\n    ESP_EARLY_LOGD(TAG, \"Calculating CRC for flash.text section from %p to %p (%d B)\", &_flash_text_start,\n        &_flash_text_end, (size_t)(&_flash_text_end - &_flash_text_start) * 4);\n\n    // Calculate the CRC for the flash.text section\n    crc_section_len = (size_t)(&_flash_text_end - &_flash_text_start) * 4;\n    BIST_ADD_LABEL(\"bist_flash_test_text\");\n    crc_text = calculate_crc32((uint8_t *)&_flash_text_start, crc_section_len);\n    ESP_EARLY_LOGD(TAG, \"Calculated CRC for flash.text section: 0x%lx\", crc_text);\n    if (crc_text != _crc_section_text_start) {\n        ESP_EARLY_LOGE(TAG, \"CRC for flash.text section does not match the expected value\");\n        return BIST_ESP_FLASH_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/memory/bist_flash.c",
+    "line_start": 97,
+    "line_end": 135,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_ram_test_march_a",
+    "body": "bist_esp_err_t bist_ram_test_march_a(void)\n{\n    return run_on_safe_stack(march_a_impl);\n}",
+    "file": "src/bist/core/memory/bist_ram.c",
+    "line_start": 195,
+    "line_end": 198,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_ram_test_march_x",
+    "body": "bist_esp_err_t bist_ram_test_march_x(void)\n{\n    return run_on_safe_stack(march_x_impl);\n}",
+    "file": "src/bist/core/memory/bist_ram.c",
+    "line_start": 200,
+    "line_end": 203,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "test_callback",
+    "body": "static void test_callback(void *arg)\n{\n    test_failed = true;\n}",
+    "file": "src/bist/core/clock/bist_clock_fail.c",
+    "line_start": 32,
+    "line_end": 35,
+    "module": "clock",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_ext_crystal_fail_test",
+    "body": "bist_esp_err_t bist_ext_crystal_fail_test(void)\n{\n#if SOC_XT_WDT_SUPPORTED\n    esp_err_t err;\n\n    esp_xt_wdt_config_t cfg = {\n        .timeout = 200,\n        .auto_backup_clk_enable = false,\n    };\n\n    esp_xt_wdt_register_callback(test_callback, NULL);\n\n    err = esp_xt_wdt_init(&cfg);\n    if (err != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to initialize external watchdog timer\");\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    ets_delay_us(2000);\n\n    if (test_failed) {\n        test_failed = false;\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n#else\n    /* SoCs without XT WDT have no hardware to detect 32k crystal\n     * failure; skip this test and report OK. */\n    ESP_LOGD(TAG, \"SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.\");\n#endif\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/clock/bist_clock_fail.c",
+    "line_start": 38,
+    "line_end": 70,
+    "module": "clock",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_main_crystal_test",
+    "body": "bist_esp_err_t bist_main_crystal_test(void)\n{\n    uint32_t xtal_freq_mhz = rtc_clk_xtal_freq_get();\n    uint32_t expected_xtal_freq = xtal_freq_mhz * MHZ;\n\n    /*\n     * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).\n     * If the main XTAL drifts, the returned value shifts proportionally.\n     */\n    uint32_t cal_val = rtc_clk_cal(CLK_CAL_32K_XTAL, 500);\n    if (cal_val == 0) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    /*\n     * Derive actual XTAL frequency from the calibration result:\n     */\n    uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);\n    float deviation = fabs((float)(int)(xtal_freq - expected_xtal_freq)) / expected_xtal_freq * 100;\n\n    /*\n     * Check if the calculated XTAL frequency is within\n     * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT\n     */\n    if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/clock/bist_clock_fail.c",
+    "line_start": 72,
+    "line_end": 101,
+    "module": "clock",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_wdt_test",
+    "body": "bist_esp_err_t bist_wdt_test(void)\n{\n    volatile uint32_t wdt_timeout_us = 10000;\n    soc_reset_reason_t reset = esp_rom_get_reset_reason(0);\n\n    if (reset == RESET_REASON_CORE_MWDT0) {\n        return BIST_ESP_OK;\n    }\n\n    BIST_ADD_LABEL(\"bist_test_wdt_timeout\");\n\n    wdt_init(wdt_timeout_us);\n\n    /* let watchdog callback happen or timeout */\n    ets_delay_us(50000);\n\n    wdt_deinit();\n\n    return BIST_ESP_WDT_TEST_ERR;\n}",
+    "file": "src/bist/core/wdt/bist_wdt.c",
+    "line_start": 26,
+    "line_end": 45,
+    "module": "wdt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_gpio_set_and_check_level",
+    "body": "static bist_esp_err_t bist_gpio_set_and_check_level(gpio_num_t gpio_num, int set_level)\n{\n    if (gpio_set_level(gpio_num, set_level) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to set GPIO %d to %d\", gpio_num, set_level);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    int level = gpio_get_level(gpio_num);\n    \n    if (level != set_level) {\n        ESP_LOGE(TAG, \"GPIO %d output test failed, expected level: %d, got: %d\", gpio_num, set_level, level);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/io/bist_gpio.c",
+    "line_start": 8,
+    "line_end": 23,
+    "module": "io",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_gpio_output_test",
+    "body": "bist_esp_err_t bist_gpio_output_test(gpio_num_t gpio_num)\n{\n    if (!GPIO_IS_VALID_GPIO(gpio_num)) {\n        ESP_LOGE(TAG, \"GPIO number error: %d\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if(gpio_reset_pin(gpio_num) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to reset GPIO %d\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (gpio_set_direction(gpio_num, GPIO_MODE_INPUT_OUTPUT) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to set GPIO %d as output\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (bist_gpio_set_and_check_level(gpio_num, 0) != BIST_ESP_OK) {\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (bist_gpio_set_and_check_level(gpio_num, 1) != BIST_ESP_OK) {\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if(gpio_reset_pin(gpio_num) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to reset GPIO %d\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/io/bist_gpio.c",
+    "line_start": 25,
+    "line_end": 56,
+    "module": "io",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_gpio_input_test",
+    "body": "bist_esp_err_t bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)\n{\n    if (!GPIO_IS_VALID_GPIO(gpio_num)) {\n        ESP_LOGE(TAG, \"GPIO number error: %d\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if(gpio_reset_pin(gpio_num) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to reset GPIO %d\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (gpio_set_direction(gpio_num, GPIO_MODE_INPUT) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to set GPIO %d as input\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (gpio_get_level(gpio_num) != expected_level) {\n        ESP_LOGE(TAG, \"GPIO input test failed for GPIO %d, expected level: %d\", gpio_num, expected_level);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if(gpio_reset_pin(gpio_num) != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to reset GPIO %d\", gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/io/bist_gpio.c",
+    "line_start": 58,
+    "line_end": 86,
+    "module": "io",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_timer_create",
+    "body": "esp_err_t esp_timer_create(const esp_timer_create_args_t* args,\n                           esp_timer_handle_t* out_handle)\n{\n\n    if (args == NULL || args->callback == NULL || out_handle == NULL) {\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    esp_timer_handle_t result = (esp_timer_handle_t) calloc(1, sizeof(*result));\n    if (result == NULL) {\n        return ESP_ERR_NO_MEM;\n    }\n\n    result->callback = args->callback;\n    result->arg = args->arg;\n    result->flags = (args->dispatch_method ? FL_ISR_DISPATCH_METHOD : 0) |\n                    (args->skip_unhandled_events ? FL_SKIP_UNHANDLED_EVENTS : 0);\n    *out_handle = result;\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 77,
+    "line_end": 96,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_timer_start_periodic",
+    "body": "esp_err_t esp_timer_start_periodic(esp_timer_handle_t timer, uint64_t period_us)\n{\n    if (timer == NULL) {\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    period_us = MAX(period_us, esp_timer_impl_get_min_period_us());\n    int64_t alarm = systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER)) + period_us;\n    esp_err_t err;\n\n    /* Check if the timer is armed once the list is locked to avoid a data race */\n    if (timer_armed(timer)) {\n        err = ESP_ERR_INVALID_STATE;\n    } else {\n        timer->alarm = alarm;\n        timer->period = period_us;\n        err = timer_insert(timer, false);\n    }\n    return err;\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 173,
+    "line_end": 192,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_timer_delete",
+    "body": "esp_err_t esp_timer_delete(esp_timer_handle_t timer)\n{\n    if (timer == NULL) {\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    int64_t alarm = systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));\n    esp_err_t err;\n\n    /* Check if the timer is armed once the list is locked to avoid a data race */\n    if (timer_armed(timer)) {\n        err = ESP_ERR_INVALID_STATE;\n    } else {\n        // A case for the timer with ESP_TIMER_ISR:\n        // This ISR timer was removed from the ISR list in esp_timer_stop() or in timer_process_alarm() -> LIST_REMOVE(it, list_entry)\n        // and here this timer will be added to another the TASK list, see below.\n        // We do this because we want to free memory of the timer in a task context instead of an isr context.\n        timer->flags &= ~FL_ISR_DISPATCH_METHOD;\n        timer->event_id = EVENT_ID_DELETE_TIMER;\n        timer->alarm = alarm;\n        timer->period = 0;\n        err = timer_insert(timer, false);\n    }\n    return err;\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 211,
+    "line_end": 235,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_timer_init",
+    "body": "esp_err_t esp_timer_init(void)\n{\n    periph_ll_enable_clk_clear_rst(PERIPH_SYSTIMER_MODULE);\n    systimer_hal_tick_rate_ops_t ops = {\n        .ticks_to_us = systimer_ticks_to_us,\n        .us_to_ticks = systimer_us_to_ticks,\n    };\n    systimer_hal_init(&systimer_hal);\n    systimer_hal_set_tick_rate_ops(&systimer_hal, &ops);\n\n    systimer_hal_enable_counter(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER);\n    systimer_hal_select_alarm_mode(&systimer_hal, SYSTIMER_ALARM_ESPTIMER, SYSTIMER_ALARM_MODE_ONESHOT);\n    systimer_hal_connect_alarm_counter(&systimer_hal, SYSTIMER_ALARM_ESPTIMER, SYSTIMER_COUNTER_ESPTIMER);\n\n    esp_cpu_intr_disable(1 << ETS_INTERNAL_TIMER0_INTR_NO);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_SYSTIMER_TARGET2_INTR_SOURCE, ETS_INTERNAL_TIMER0_INTR_NO);\n\n    esp_cpu_intr_set_type(ETS_INTERNAL_TIMER0_INTR_NO, 0);\n    esp_cpu_intr_set_priority(ETS_INTERNAL_TIMER0_INTR_NO, 2);\n    esp_cpu_intr_set_handler(ETS_INTERNAL_TIMER0_INTR_NO, timer_alarm_isr, NULL);\n\n    systimer_hal_enable_alarm_int(&systimer_hal, SYSTIMER_ALARM_ESPTIMER);\n\n\n    esp_cpu_intr_enable(1 << ETS_INTERNAL_TIMER0_INTR_NO);\n\n    return ESP_OK;\n\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 376,
+    "line_end": 404,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_timer_deinit",
+    "body": "esp_err_t esp_timer_deinit(void)\n{\n    /* Check if there are any active timers */\n    for (esp_timer_dispatch_t dispatch_method = ESP_TIMER_TASK; dispatch_method < ESP_TIMER_MAX; ++dispatch_method) {\n        if (!LIST_EMPTY(&s_timers[dispatch_method])) {\n            return ESP_ERR_INVALID_STATE;\n        }\n    }\n\n    systimer_ll_enable_alarm(systimer_hal.dev, SYSTIMER_ALARM_ESPTIMER, false);\n    systimer_ll_enable_alarm_int(systimer_hal.dev, SYSTIMER_ALARM_ESPTIMER, false);\n    esp_cpu_intr_disable(1 << ETS_INTERNAL_TIMER0_INTR_NO);\n\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 406,
+    "line_end": 420,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_timer_get_time",
+    "body": "int64_t esp_timer_get_time(void)\n{\n    // we hope the execution time of this function won't > 1us\n    // thus, to save one function call, we didn't use the existing `systimer_hal_get_time`\n    return systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 490,
+    "line_end": 495,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_pullup_en",
+    "body": "esp_err_t gpio_pullup_en(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_pullup_en(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 68,
+    "line_end": 73,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_pullup_dis",
+    "body": "esp_err_t gpio_pullup_dis(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_pullup_dis(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 75,
+    "line_end": 80,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_pulldown_en",
+    "body": "esp_err_t gpio_pulldown_en(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_pulldown_en(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 82,
+    "line_end": 87,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_pulldown_dis",
+    "body": "esp_err_t gpio_pulldown_dis(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_pulldown_dis(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 89,
+    "line_end": 94,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_input_disable",
+    "body": "static esp_err_t gpio_input_disable(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_input_disable(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 96,
+    "line_end": 101,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_input_enable",
+    "body": "static esp_err_t gpio_input_enable(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_input_enable(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 103,
+    "line_end": 108,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_output_disable",
+    "body": "static esp_err_t gpio_output_disable(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_output_disable(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 110,
+    "line_end": 115,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_output_enable",
+    "body": "static esp_err_t gpio_output_enable(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(gpio_num), \"GPIO output gpio_num error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_output_enable(gpio_context.gpio_hal, gpio_num);\n    esp_rom_gpio_connect_out_signal(gpio_num, SIG_GPIO_OUT_IDX, false, false);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 117,
+    "line_end": 123,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_od_disable",
+    "body": "static esp_err_t gpio_od_disable(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_od_disable(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 125,
+    "line_end": 130,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_od_enable",
+    "body": "static esp_err_t gpio_od_enable(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_od_enable(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 132,
+    "line_end": 137,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_set_level",
+    "body": "esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level)\n{\n    GPIO_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(gpio_num), \"GPIO output gpio_num error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_set_level(gpio_context.gpio_hal, gpio_num, level);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 139,
+    "line_end": 144,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_get_level",
+    "body": "int gpio_get_level(gpio_num_t gpio_num)\n{\n    return gpio_hal_get_level(gpio_context.gpio_hal, gpio_num);\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 146,
+    "line_end": 149,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_set_pull_mode",
+    "body": "esp_err_t gpio_set_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    GPIO_CHECK(pull <= GPIO_FLOATING, \"GPIO pull mode error\", ESP_ERR_INVALID_ARG);\n    esp_err_t ret = ESP_OK;\n\n    switch (pull) {\n        case GPIO_PULLUP_ONLY:\n            gpio_pulldown_dis(gpio_num);\n            gpio_pullup_en(gpio_num);\n            break;\n\n        case GPIO_PULLDOWN_ONLY:\n            gpio_pulldown_en(gpio_num);\n            gpio_pullup_dis(gpio_num);\n            break;\n\n        case GPIO_PULLUP_PULLDOWN:\n            gpio_pulldown_en(gpio_num);\n            gpio_pullup_en(gpio_num);\n            break;\n\n        case GPIO_FLOATING:\n            gpio_pulldown_dis(gpio_num);\n            gpio_pullup_dis(gpio_num);\n            break;\n\n        default:\n            ESP_LOGE(GPIO_TAG, \"Unknown pull up/down mode,gpio_num=%u,pull=%u\", gpio_num, pull);\n            ret = ESP_ERR_INVALID_ARG;\n            break;\n    }\n\n    return ret;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 151,
+    "line_end": 185,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_set_direction",
+    "body": "esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n\n    if ((GPIO_IS_VALID_OUTPUT_GPIO(gpio_num) != true) && (mode & GPIO_MODE_DEF_OUTPUT)) {\n        ESP_LOGE(GPIO_TAG, \"io_num=%d can only be input\", gpio_num);\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    esp_err_t ret = ESP_OK;\n\n    if (mode & GPIO_MODE_DEF_INPUT) {\n        gpio_input_enable(gpio_num);\n    }\n    else {\n        gpio_input_disable(gpio_num);\n    }\n\n    if (mode & GPIO_MODE_DEF_OUTPUT) {\n        gpio_output_enable(gpio_num);\n    }\n    else {\n        gpio_output_disable(gpio_num);\n    }\n\n    if (mode & GPIO_MODE_DEF_OD) {\n        gpio_od_enable(gpio_num);\n    }\n    else {\n        gpio_od_disable(gpio_num);\n    }\n\n    return ret;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 187,
+    "line_end": 220,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_config",
+    "body": "esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)\n{\n    uint64_t gpio_pin_mask = (pGPIOConfig->pin_bit_mask);\n    uint32_t io_num = 0;\n    uint8_t input_en = 0;\n    uint8_t output_en = 0;\n    uint8_t od_en = 0;\n    uint8_t pu_en = 0;\n    uint8_t pd_en = 0;\n\n    if (pGPIOConfig->pin_bit_mask == 0 || pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_GPIO_MASK) {\n        ESP_LOGE(GPIO_TAG, \"GPIO_PIN mask error \");\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    if (pGPIOConfig->mode & GPIO_MODE_DEF_OUTPUT && pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_OUTPUT_GPIO_MASK) {\n        ESP_LOGE(GPIO_TAG, \"GPIO can only be used as input mode\");\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    do {\n        if (((gpio_pin_mask >> io_num) & BIT(0))) {\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_INPUT) {\n                input_en = 1;\n                gpio_input_enable(io_num);\n            }\n            else {\n                gpio_input_disable(io_num);\n            }\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OD) {\n                od_en = 1;\n                gpio_od_enable(io_num);\n            }\n            else {\n                gpio_od_disable(io_num);\n            }\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OUTPUT) {\n                output_en = 1;\n                gpio_output_enable(io_num);\n            }\n            else {\n                gpio_output_disable(io_num);\n            }\n\n            if (pGPIOConfig->pull_up_en) {\n                pu_en = 1;\n                gpio_pullup_en(io_num);\n            }\n            else {\n                gpio_pullup_dis(io_num);\n            }\n\n            if (pGPIOConfig->pull_down_en) {\n                pd_en = 1;\n                gpio_pulldown_en(io_num);\n            }\n            else {\n                gpio_pulldown_dis(io_num);\n            }\n\n            ESP_LOGD(GPIO_TAG,\n                \"GPIO[%\" PRIu32 \"]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d\",\n                io_num, input_en, output_en, od_en, pu_en, pd_en);\n\n            gpio_hal_func_sel(gpio_context.gpio_hal, io_num, PIN_FUNC_GPIO);\n        }\n\n        io_num++;\n    }\n    while (io_num < GPIO_PIN_COUNT);\n\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 222,
+    "line_end": 297,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "gpio_reset_pin",
+    "body": "esp_err_t gpio_reset_pin(gpio_num_t gpio_num)\n{\n    assert(GPIO_IS_VALID_GPIO(gpio_num));\n    gpio_config_t cfg = {\n        .pin_bit_mask = BIT64(gpio_num),\n        .mode = GPIO_MODE_DISABLE,\n        // for powersave reasons, the GPIO should not be floating, select pullup\n        .pull_up_en = true,\n        .pull_down_en = false,\n    };\n    gpio_config(&cfg);\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/gpio.c",
+    "line_start": 299,
+    "line_end": 311,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_windowed_underflow_callback",
+    "body": "void wdt_windowed_underflow_callback(void *arg)\n{\n    (void)arg;\n\n    /* Set window flag to allow feeding */\n    wdt_ctx.window_open_flag = true;\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 59,
+    "line_end": 65,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_deinit",
+    "body": "void wdt_deinit(void)\n{\n    wdt_hal_write_protect_disable(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_disable(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_write_protect_enable(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_deinit(&wdt_ctx.wdt_hal_ctx);\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 67,
+    "line_end": 73,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_init",
+    "body": "int wdt_init(uint32_t timeout_us)\n{\n    if (timeout_us < MWDT_DEFAULT_TICKS_PER_US) {\n        ESP_LOGE(TAG, \"Timeout %lu us too small (minimum %lu us)\",\n                 (unsigned long)timeout_us, (unsigned long)MWDT_DEFAULT_TICKS_PER_US);\n        return -1;\n    }\n\n    uint32_t stage_timeout_ticks = timeout_us / MWDT_DEFAULT_TICKS_PER_US;\n\n    ESP_LOGI(TAG, \"Enabling WDT(%lu us)\", (unsigned long)timeout_us);\n    ESP_LOGI(TAG, \"WDT prescaler: %u\", MWDT_LL_DEFAULT_CLK_PRESCALER);\n    ESP_LOGI(TAG, \"Stage timeout ticks: %u\", stage_timeout_ticks);\n\n    periph_ll_enable_clk_clear_rst(PERIPH_TIMG0_MODULE);\n\n    esp_cpu_intr_disable(1 << ETS_INT_WDT_INUM);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_TG0_WDT_LEVEL_INTR_SOURCE, ETS_INT_WDT_INUM);\n\n    esp_cpu_intr_set_type(ETS_INT_WDT_INUM, 0);\n    esp_cpu_intr_set_priority(ETS_INT_WDT_INUM, SOC_INTERRUPT_LEVEL_MEDIUM);\n    esp_cpu_intr_set_handler(ETS_INT_WDT_INUM, mwdt_default_callback, NULL);\n    esp_cpu_intr_enable(1 << ETS_INT_WDT_INUM);\n\n    wdt_hal_init(&wdt_ctx.wdt_hal_ctx, WDT_MWDT0, MWDT_LL_DEFAULT_CLK_PRESCALER, true);\n    wdt_hal_write_protect_disable(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_config_stage(&wdt_ctx.wdt_hal_ctx, WDT_STAGE0, stage_timeout_ticks, WDT_STAGE_ACTION_INT);\n    wdt_hal_config_stage(&wdt_ctx.wdt_hal_ctx, WDT_STAGE1, stage_timeout_ticks * 2, WDT_STAGE_ACTION_RESET_SYSTEM);\n    wdt_hal_enable(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_write_protect_enable(&wdt_ctx.wdt_hal_ctx);\n\n    return 0;\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 75,
+    "line_end": 107,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_feed",
+    "body": "void wdt_feed(void)\n{\n    if (wdt_ctx.stop_feed) {\n        return;\n    }\n\n    if(wdt_ctx.is_windowed && !wdt_ctx.window_open_flag) {\n        ESP_LOGE(TAG, \"WDT underflow detected: feeding is not allowed (min required = %u us)\",\n                 wdt_ctx.underflow_timeout);\n        wdt_ctx.stop_feed = true;\n        return;\n    }\n\n    wdt_hal_write_protect_disable(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_feed(&wdt_ctx.wdt_hal_ctx);\n    wdt_hal_write_protect_enable(&wdt_ctx.wdt_hal_ctx);\n\n    if (wdt_ctx.is_windowed) {\n        wdt_ctx.window_open_flag = false;\n        /* Stop timer if running, then start fresh */\n        esp_timer_stop(periodic_timer);  /* Ignore error if not running */\n        esp_err_t ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);\n        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {\n            ESP_LOGE(TAG, \"Failed to start windowed timer: %d\", ret);\n        }\n    }\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 109,
+    "line_end": 135,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_windowed_deinit",
+    "body": "void wdt_windowed_deinit(void)\n{\n    if (wdt_ctx.is_windowed && periodic_timer != NULL) {\n        esp_timer_stop(periodic_timer);\n        esp_timer_delete(periodic_timer);\n        periodic_timer = NULL;\n    }\n\n    wdt_ctx.is_windowed = false;\n    wdt_ctx.underflow_timeout = 0;\n    wdt_ctx.window_open_flag = false;\n    wdt_ctx.stop_feed = false;\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 157,
+    "line_end": 169,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_is_underflow_detected",
+    "body": "bool wdt_is_underflow_detected(void)\n{\n    return wdt_ctx.stop_feed;\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 171,
+    "line_end": 174,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "wdt_init_windowed",
+    "body": "int wdt_init_windowed(uint32_t underflow_timeout_us)\n{\n    if(underflow_timeout_us == 0) {\n        ESP_LOGE(TAG, \"Underflow timeout cannot be 0\");\n        return -1;\n    }\n\n    wdt_ctx.is_windowed = true;\n    wdt_ctx.underflow_timeout = underflow_timeout_us;\n\n    /* Initialize esp_timer library first (idempotent - safe to call multiple times) */\n    esp_err_t ret = esp_timer_init();\n    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {\n        ESP_LOGE(TAG, \"Failed to initialize esp_timer: %d\", ret);\n        return -1;\n    }\n\n    /* Create timer with proper arguments */\n    const esp_timer_create_args_t periodic_timer_args = {\n        .callback = wdt_windowed_underflow_callback,\n        .arg = NULL,\n        .dispatch_method = ESP_TIMER_ISR,\n        .name = \"wdt_windowed\",\n        .skip_unhandled_events = false,\n    };\n    ret = esp_timer_create(&periodic_timer_args, &periodic_timer);\n    if (ret != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to create periodic timer: %d\", ret);\n        return -1;\n    }\n\n    ESP_LOGI(TAG, \"WDT windowed mode initialized\");\n\n    /* Initialize window as open to allow first feed */\n    wdt_ctx.window_open_flag = true;\n\n    /* Start the timer */\n    ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);\n    if (ret != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to start windowed timer: %d\", ret);\n        return -1;\n    }\n\n    return 0;\n}",
+    "file": "src/bist/drivers/wdt.c",
+    "line_start": 176,
+    "line_end": 220,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_xt_wdt_init",
+    "body": "esp_err_t esp_xt_wdt_init(const esp_xt_wdt_config_t *cfg)\n{\n    xt_wdt_hal_config_t hal_config = {\n        .timeout = cfg->timeout,\n    };\n\n    xt_wdt_hal_init(&s_hal_ctx, &hal_config);\n\n    if (cfg->auto_backup_clk_enable) {\n        /* Estimate frequency of internal RTC oscillator */\n        uint32_t rtc_clk_frequency_khz = rtc_clk_freq_cal(rtc_clk_cal(CLK_CAL_RC_SLOW, RTC_CLK_CAL_CYCLES)) / 1000;\n        ESP_LOGD(TAG, \"Calibrating backup clock from rtc clock with frequency %\" PRIu32, rtc_clk_frequency_khz);\n\n        xt_wdt_hal_enable_backup_clk(&s_hal_ctx, rtc_clk_frequency_khz);\n    }\n\n    esp_cpu_intr_disable(1 << ETS_RTC_CORE_INTR_SOURCE);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_RTC_CORE_INTR_SOURCE, ETS_RTC_CORE_INTR_SOURCE);\n\n    esp_cpu_intr_set_type(ETS_RTC_CORE_INTR_SOURCE, 0);\n    esp_cpu_intr_set_priority(ETS_RTC_CORE_INTR_SOURCE, SOC_INTERRUPT_LEVEL_MEDIUM);\n    esp_cpu_intr_set_handler(ETS_RTC_CORE_INTR_SOURCE, rtc_xt_wdt_default_isr_handler, NULL);\n    esp_cpu_intr_enable(1 << ETS_RTC_CORE_INTR_SOURCE);\n\n    xt_wdt_hal_enable(&s_hal_ctx, 1);\n\n    return ESP_OK;\n}",
+    "file": "src/bist/drivers/xt_wdt.c",
+    "line_start": 54,
+    "line_end": 81,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_xt_wdt_restore_clk",
+    "body": "void esp_xt_wdt_restore_clk(void)\n{\n    xt_wdt_hal_enable(&s_hal_ctx, false);\n\n    REG_CLR_BIT(RTC_CNTL_EXT_XTL_CONF_REG, RTC_CNTL_XPD_XTAL_32K);\n    REG_SET_BIT(RTC_CNTL_EXT_XTL_CONF_REG, RTC_CNTL_XPD_XTAL_32K);\n\n    /* Needs some time after switching to 32khz XTAL before turning on WDT again */\n    esp_rom_delay_us(300);\n\n    xt_wdt_hal_enable(&s_hal_ctx, true);\n}",
+    "file": "src/bist/drivers/xt_wdt.c",
+    "line_start": 83,
+    "line_end": 94,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
+    "function_name": "esp_xt_wdt_register_callback",
+    "body": "void esp_xt_wdt_register_callback(esp_xt_callback_t func, void *arg)\n{\n    s_callback_func = func;\n    s_callback_arg = arg;\n}",
+    "file": "src/bist/drivers/xt_wdt.c",
+    "line_start": 96,
+    "line_end": 100,
+    "module": "drivers",
+    "content_type": "source"
+  }
+]

@@ -1,0 +1,4 @@
+{
+  "_note": "Optional. The platform auto-detects server.py. Only add this file if your entry point has a different name or needs extra flags.",
+  "start": "python /var/task/server.py"
+}

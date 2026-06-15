@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "ESP-BIST": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/mcp-server/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/mcp-server/server.py"
+      ],
+      "cwd": "${workspaceFolder}/mcp-server",
+      "dev": {
+        "watch": "mcp-server/**/*.{py,json}"
+      }
+    }
+  }
+}
