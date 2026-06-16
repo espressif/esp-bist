@@ -48,9 +48,9 @@
     "csr_count": 37,
     "cmake_file": "cmake/esp32c6.cmake",
     "linker_scripts": [
-      "src/soc/esp32c6/ld/bist_lpcore.ld",
       "src/soc/esp32c6/ld/idf.ld",
-      "src/soc/esp32c6/ld/linker.ld"
+      "src/soc/esp32c6/ld/linker.ld",
+      "src/soc/esp32c6/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32c6",
     "specific_notes": "CMake config at cmake/esp32c6.cmake (98 lines)"
