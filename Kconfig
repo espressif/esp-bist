@@ -1,0 +1,5 @@
+menu "ESP-BIST"
+
+rsource "./src/bist/Kconfig"
+
+endmenu

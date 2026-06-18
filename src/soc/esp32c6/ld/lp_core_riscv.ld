@@ -26,9 +26,9 @@ _pc_test_1_addr = ULP_MEM_START_ADDRESS + 0x3F24; /* 0x50003F24 */
 _pc_test_length = 0x38;
 _text_length = _pc_test_0_addr - ULP_MEM_START_ADDRESS + 0x80; /* 0x2058 */
 _bist_addr = _pc_test_0_addr + _pc_test_length; /* 0x50002110 */
-_bist_length = 0x1000;
-_data_addr = _bist_addr + 0x1000; /* 0x50003110 */
-_data_length = _pc_test_1_addr - _data_addr; /*0xE14*/
+_bist_length = 0x1400;
+_data_addr = _bist_addr + _bist_length;
+_data_length = _pc_test_1_addr - _data_addr;
 _shared_mem_addr = _pc_test_1_addr + _pc_test_length; /* 0x50003F5C */
 
 ENTRY(reset_vector)
