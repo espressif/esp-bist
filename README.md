@@ -92,14 +92,6 @@ ninja -C build
 
 Replace `<SOC_TARGET>` with the target SoC.
 
-### FPU Support
-
-To enable FPU for floating point operations, `-DUSE_FPU=1` parameter needs to be added in cmake command. If device does not have FPU support, option will be discarded.
-
-```sh
-cmake -DSOC_TARGET=<SOC_TARGET> -DUSE_FPU=1 -B build -GNinja
-```
-
 ## Project Configuration
 
 The project uses Kconfig to configure the BIST library. Application developers can open a terminal-based project configuration menu using the following command:

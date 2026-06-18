@@ -74,7 +74,10 @@ Linker Tool
 **Linker Flags** (from ``cmake/toolchain.cmake``):
 
 - ``-nostartfiles``: Custom startup code
-- ``-march=rv32imc_zicsr_zifencei``: RISC-V ISA specification
+- ``-march``: RISC-V ISA specification, selected by ``ESP_BIST_USE_FPU``:
+
+  - Without FPU (default): ``-march=rv32imc_zicsr_zifencei``
+  - With FPU (``ESP_BIST_USE_FPU`` defined): ``-march=rv32imafcb_zicsr_zifencei -mabi=ilp32f``
 - ``--specs=nosys.specs``: Minimal system library
 
 **Evidence Location**:

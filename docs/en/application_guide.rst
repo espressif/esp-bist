@@ -162,14 +162,14 @@ Runtime Tests
 1. **CPU Register Test** (``bist_cpu_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU Registers)
-   - **Purpose**: Verifies all 32 general-purpose registers maintain integrity
+   - **Purpose**: Verifies all 32 general-purpose registers maintain integrity; on FPU supported devices, also verifies all 32 single-precision FPU registers (f0–f31)
    - **Rationale**: Register corruption can cause incorrect computation or control flow errors
    - **Execution Frequency**: Called in main loop (every iteration)
 
 2. **CPU CSR Test** (``bist_cpu_csr_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU CSRs)
-   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6/H2/C5, and MEXSTATUS/MHINT on C5 only
+   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6/H2/C5/H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices.
    - **Rationale**: CSR corruption can cause exception handling failures or memory protection violations
    - **Execution Frequency**: Called in main loop (every iteration)
 

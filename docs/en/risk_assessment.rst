@@ -35,13 +35,13 @@ The following table maps identified hazards to safety functions, risk levels, an
      - CPU register corruption leading to incorrect computation or control flow
      - High
      - 1.1 (CPU Registers)
-     - ``bist_cpu_regs_test()`` verifies all general-purpose registers can store and retrieve 0/1 patterns, detecting stuck-at faults and data path errors
+     - ``bist_cpu_regs_test()`` verifies all general-purpose registers can store and retrieve 0/1 patterns, detecting stuck-at faults and data path errors; on FPU supported devices, also tests all 32 single-precision FPU registers
 
    * - H2
      - CPU CSR corruption causing incorrect exception handling or memory protection failures
      - High
      - 1.1 (CPU CSRs)
-     - ``bist_cpu_csr_regs_test()`` validates critical CSRs (MTVEC, MEPC, MCAUSE, PMPADDR, PMPCFG, and on PMA-capable SoCs: PMA address, MEXSTATUS, MHINT) maintain integrity
+     - ``bist_cpu_csr_regs_test()`` validates critical CSRs (MTVEC, MEPC, MCAUSE, PMPADDR, PMPCFG, and on PMA-capable SoCs: PMA address, MEXSTATUS, MHINT; on FPU supported devices: ``fflags``, ``frm``, ``fcsr``) maintain integrity
 
    * - H3
      - Program counter corruption causing execution outside intended code regions
