@@ -78,6 +78,8 @@ ninja -C build
 
 Replace `<SOC_TARGET>` with the target SoC.
 
+For more information about MCUBoot bootloader, please refer to [documentation](https://docs.mcuboot.com/readme-espressif.html)
+
 ## Build
 
 Inside any of the tests or samples directories:
@@ -123,10 +125,37 @@ riscv32-esp-elf-gdb build/<app_name>.elf -ex "target remote :1234" -ex "tb main"
 
 ## Flash to Device
 
-By default, the flashing process assumes the board is connected to /dev/ttyUSB0. The port can be set with `-DESP_PORT`.
+By default, the flashing process assumes the board is connected to `/dev/ttyUSB0`.
 
 ```sh
-ninja -C build flash -DESP_PORT=/dev/ttyUSBx
+ninja -C build flash
+```
+
+If the board does not have MCUboot, use this command to flash the bootloader:
+
+```sh
+ninja -C build flash_boot
+```
+
+### Changing Serial Port
+
+The serial port is taken from the `ESPPORT` environment variable during the configuration stage.
+If `ESPPORT` is unset during configuration, the default is `/dev/ttyUSB0`.
+
+To use a different port, set `ESPPORT` during configuration, or re-run the `cmake` command with
+`ESPPORT` set.
+
+Example:
+
+```sh
+export ESPPORT=<DEVICE_PATH>
+cmake -DSOC_TARGET=<SOC_TARGET> -B build -GNinja
+```
+
+Alternatively:
+
+```sh
+ESPPORT=<DEVICE_PATH> cmake -DSOC_TARGET=<SOC_TARGET> -B build -GNinja
 ```
 
 ## Monitor
@@ -136,6 +165,9 @@ To monitor the device output, execute the following command:
 ```sh
 ninja -C build monitor
 ```
+
+The `monitor` target uses the same serial port as `flash`: the value of `ESPPORT` from the last
+`cmake` run.
 
 To close the monitor, press `Ctrl+]`.
 

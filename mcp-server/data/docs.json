@@ -1987,7 +1987,7 @@
     "id": "doc:README.md:bootloader",
     "title": "Bootloader",
     "section": "bootloader",
-    "body": "The Critical Firmware is designed to run on top of the MCUboot bootloader.\n\nThe current supported version of MCUboot is 2.2.0.\n\nMCUboot is located at opt/mcuboot.\n\n```sh\ncd /opt/mcuboot/boot/espressif\ncmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-<SOC_TARGET>.cmake -DMCUBOOT_TARGET=<SOC_TARGET> -DESP_HAL_PATH=$IDF_PATH -B build -GNinja\nninja -C build\n```\n\nReplace `<SOC_TARGET>` with the target SoC.",
+    "body": "The Critical Firmware is designed to run on top of the MCUboot bootloader.\n\nThe current supported version of MCUboot is 2.2.0.\n\nMCUboot is located at opt/mcuboot.\n\n```sh\ncd /opt/mcuboot/boot/espressif\ncmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-<SOC_TARGET>.cmake -DMCUBOOT_TARGET=<SOC_TARGET> -DESP_HAL_PATH=$IDF_PATH -B build -GNinja\nninja -C build\n```\n\nReplace `<SOC_TARGET>` with the target SoC.\n\nFor more information about MCUBoot bootloader, please refer to [documentation](https://docs.mcuboot.com/readme-espressif.html)",
     "source_file": "README.md",
     "content_type": "doc"
   },
@@ -2027,7 +2027,15 @@
     "id": "doc:README.md:flash_to_device",
     "title": "Flash to Device",
     "section": "flash_to_device",
-    "body": "By default, the flashing process assumes the board is connected to /dev/ttyUSB0. The port can be set with `-DESP_PORT`.\n\n```sh\nninja -C build flash -DESP_PORT=/dev/ttyUSBx\n```",
+    "body": "By default, the flashing process assumes the board is connected to `/dev/ttyUSB0`.\n\n```sh\nninja -C build flash\n```\n\nIf the board does not have MCUboot, use this command to flash the bootloader:\n\n```sh\nninja -C build flash_boot\n```",
+    "source_file": "README.md",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:README.md:changing_serial_port",
+    "title": "Changing Serial Port",
+    "section": "changing_serial_port",
+    "body": "The serial port is taken from the `ESPPORT` environment variable during the configuration stage.\nIf `ESPPORT` is unset during configuration, the default is `/dev/ttyUSB0`.\n\nTo use a different port, set `ESPPORT` during configuration, or re-run the `cmake` command with\n`ESPPORT` set.\n\nExample:\n\n```sh\nexport ESPPORT=<DEVICE_PATH>\ncmake -DSOC_TARGET=<SOC_TARGET> -B build -GNinja\n```\n\nAlternatively:\n\n```sh\nESPPORT=<DEVICE_PATH> cmake -DSOC_TARGET=<SOC_TARGET> -B build -GNinja\n```",
     "source_file": "README.md",
     "content_type": "doc"
   },
@@ -2035,7 +2043,7 @@
     "id": "doc:README.md:monitor",
     "title": "Monitor",
     "section": "monitor",
-    "body": "To monitor the device output, execute the following command:\n\n```sh\nninja -C build monitor\n```\n\nTo close the monitor, press `Ctrl+]`.",
+    "body": "To monitor the device output, execute the following command:\n\n```sh\nninja -C build monitor\n```\n\nThe `monitor` target uses the same serial port as `flash`: the value of `ESPPORT` from the last\n`cmake` run.\n\nTo close the monitor, press `Ctrl+]`.",
     "source_file": "README.md",
     "content_type": "doc"
   },
