@@ -353,7 +353,7 @@
     "function": "bist_log",
     "signature": "",
     "module": "drivers",
-    "description": "Logging macros for BIST library",
+    "description": "BIST logging macros for HP and LP core builds",
     "params": [],
     "returns": "",
     "note": "",
@@ -858,6 +858,44 @@
     "returns": "*     - ESP_OK Success - ESP_ERR_INVALID_ARG Parameter error",
     "note": "",
     "header_file": "src/bist/drivers/include/gpio.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "lp_wdt_init",
+    "signature": "void lp_wdt_init(uint32_t timeout_us)",
+    "module": "drivers",
+    "description": "LP Core watchdog timer driver for safety-critical systems",
+    "params": [
+      {
+        "name": "timeout_us",
+        "description": "Timeout in microseconds before system reset"
+      }
+    ],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/lp_wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "lp_wdt_feed",
+    "signature": "void lp_wdt_feed(void)",
+    "module": "drivers",
+    "description": "Feed (kick) the LP WDT",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/lp_wdt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "lp_wdt_disable",
+    "signature": "void lp_wdt_disable(void)",
+    "module": "drivers",
+    "description": "Disable the LP WDT",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/drivers/include/lp_wdt.h",
     "kconfig_guards": []
   },
   {
