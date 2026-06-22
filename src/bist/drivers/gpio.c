@@ -296,6 +296,17 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
     return ESP_OK;
 }
 
+esp_err_t gpio_config_as_analog(gpio_num_t gpio_num)
+{
+    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
+    gpio_input_disable(gpio_num);
+    gpio_output_disable(gpio_num);
+    gpio_pullup_dis(gpio_num);
+    gpio_pulldown_dis(gpio_num);
+    gpio_hal_func_sel(gpio_context.gpio_hal, gpio_num, PIN_FUNC_GPIO);
+    return ESP_OK;
+}
+
 esp_err_t gpio_reset_pin(gpio_num_t gpio_num)
 {
     assert(GPIO_IS_VALID_GPIO(gpio_num));

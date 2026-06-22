@@ -107,6 +107,63 @@ static inline void periph_ll_reset(shared_periph_module_t periph)
     CLEAR_PERI_REG_MASK(periph_ll_get_rst_en_reg(periph), periph_ll_get_rst_en_mask(periph, false));
 }
 
+/**
+ * Enable or disable the clock gate for ref_48m.
+ */
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_12m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_12m_clk_en = enable;
+}
+#define clk_gate_ll_ref_12m_clk_en(...) _clk_gate_ll_ref_12m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_20m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_20m_clk_en = enable;
+}
+#define clk_gate_ll_ref_20m_clk_en(...) _clk_gate_ll_ref_20m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_40m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_40m_clk_en = enable;
+}
+#define clk_gate_ll_ref_40m_clk_en(...) _clk_gate_ll_ref_40m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_48m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_48m_clk_en = enable;
+}
+#define clk_gate_ll_ref_48m_clk_en(...) _clk_gate_ll_ref_48m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_60m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_60m_clk_en = enable;
+}
+#define clk_gate_ll_ref_60m_clk_en(...) _clk_gate_ll_ref_60m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_80m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_80m_clk_en = enable;
+}
+#define clk_gate_ll_ref_80m_clk_en(...) _clk_gate_ll_ref_80m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_120m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_120m_clk_en = enable;
+}
+#define clk_gate_ll_ref_120m_clk_en(...) _clk_gate_ll_ref_120m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_160m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_160m_clk_en = enable;
+}
+#define clk_gate_ll_ref_160m_clk_en(...) _clk_gate_ll_ref_160m_clk_en(__VA_ARGS__)
+
+FORCE_INLINE_ATTR void _clk_gate_ll_ref_240m_clk_en(bool enable)
+{
+    PCR.pll_div_clk_en.pll_240m_clk_en = enable;
+}
+#define clk_gate_ll_ref_240m_clk_en(...) _clk_gate_ll_ref_240m_clk_en(__VA_ARGS__)
+
 static inline bool IRAM_ATTR periph_ll_periph_enabled(shared_periph_module_t periph)
 {
     return REG_GET_BIT(periph_ll_get_rst_en_reg(periph), periph_ll_get_rst_en_mask(periph, false)) == 0 &&
