@@ -197,7 +197,7 @@ Available test applications (each in `tests/<name>/`):
 We use Pytest in conjunction with Unity, GDB scripting and QEMU to run the test suite. The tests are meant to verify the correct execution of the BIST library and to introduce faults deliberately to verify that the system can detect and recover from such situations, either by restoring the correct data from backup or entering a safe state. To run the tests, execute the following command:
 
 ```sh
-pytest pytest_qemu_* --executable=<app_name> --soc-target=<SOC_TARGET> --junitxml=build/tests/report.xml
+pytest pytest_qemu_* --executable=<app_name> --target=<SOC_TARGET> --junitxml=build/tests/report.xml
 ```
 
 The test will output a report in the `build/tests` directory.
