@@ -108,6 +108,42 @@
             // "svdFile": "${workspaceFolder}/src/soc/esp32c5/esp32c5.svd",
         },
         {
+            "name": "Debug ESP32-C61 (OpenOCD)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/${input:appPath}/build/${input:appName}.elf",
+            "servertype": "openocd",
+            "device": "ESP32-C61",
+            "interface": "jtag",
+            "configFiles": [
+                "board/esp32c61-builtin.cfg"
+            ],
+            "openOCDPreConfigLaunchCommands":[
+                "set ESP_RTOS none",
+            ],
+            "openOCDLaunchCommands": [
+                "init; halt; esp appimage_offset 0x1000",
+            ],
+            "toolchainPrefix": "riscv32-esp-elf",
+            "overrideAttachCommands": [
+                "set pagination off",
+                "mon reset halt"
+            ],
+            "postAttachCommands": [
+                "thb __start",
+                "continue"
+            ],
+            "overrideResetCommands": [
+                "set pagination off",
+                "mon reset halt",
+                "thb __start",
+                "continue"
+            ],
+            // TODO: Add SVD file for ESP32-C61
+            // "svdFile": "${workspaceFolder}/src/soc/esp32c61/esp32c61.svd",
+        },
+        {
             "name": "Debug ESP32-H2 (OpenOCD)",
             "type": "cortex-debug",
             "request": "attach",

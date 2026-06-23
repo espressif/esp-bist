@@ -1,0 +1,98 @@
+set(include_soc
+    ${BIST_ROOT_DIR}/src/soc/include
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/include
+    )
+
+set(include_hal
+    ${IDF_PATH}/components/newlib/platform_include
+    ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_timg/include
+    ${IDF_PATH}/components/esp_hal_wdt/include
+    ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_usb/include
+    ${IDF_PATH}/components/esp_hal_usb/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_uart/include
+    ${IDF_PATH}/components/esp_hal_uart/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_gpio/include
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_rtc_timer/include
+    ${IDF_PATH}/components/esp_hal_rtc_timer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/include
+    ${IDF_PATH}/components/esp_hal_ana_conv/include
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_stdio/include
+    ${IDF_PATH}/components/hal/platform_port/include
+    ${BIST_ROOT_DIR}/components/esp_common/include
+    ${IDF_PATH}/components/esp_common/include
+    ${IDF_PATH}/components/soc/include
+    ${IDF_PATH}/components/soc/${SOC_TARGET}/include
+    ${IDF_PATH}/components/soc/${SOC_TARGET}/register
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_rom/include
+    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
+    ${IDF_PATH}/components/riscv/include
+    ${IDF_PATH}/components/esp_system/include
+    ${IDF_PATH}/components/esp_system/port/include
+    ${IDF_PATH}/components/esp_hw_support/include
+    ${IDF_PATH}/components/esp_hw_support/port/include
+    ${IDF_PATH}/components/esp_hw_support/include/soc
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/private_include
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
+    ${IDF_PATH}/components/spi_flash/include
+    ${IDF_PATH}/components/log/include
+    )
+
+set(soc_srcs
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/clock_init.c
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/bare_metal_stubs.c
+    ${BIST_ROOT_DIR}/src/soc/common/loader.c
+    ${BIST_ROOT_DIR}/src/soc/common/newlib_stubs.c
+    ${BIST_ROOT_DIR}/src/soc/common/panic_handler.c
+    )
+
+set(idf_ow_srcs
+    ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
+    )
+
+set(idf_srcs
+    ${IDF_PATH}/components/hal/cache_hal.c
+    ${IDF_PATH}/components/hal/mmu_hal.c
+    ${IDF_PATH}/components/hal/efuse_hal.c
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/efuse_hal.c
+    ${IDF_PATH}/components/esp_hal_wdt/wdt_hal_iram.c
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/modem_clock_hal.c
+    ${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c
+    ${IDF_PATH}/components/esp_rom/patches/esp_rom_regi2c_${SOC_TARGET}.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk_init.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_time.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_init.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_param.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/ocode_init.c
+    ${IDF_PATH}/components/esp_system/panic.c
+    ${IDF_PATH}/components/log/src/log.c
+    ${IDF_PATH}/components/log/src/noos/log_timestamp.c
+    ${IDF_PATH}/components/riscv/interrupt.c
+    ${IDF_PATH}/components/riscv/interrupt_clic.c
+    ${IDF_PATH}/components/riscv/rv_utils.c
+    ${IDF_PATH}/components/esp_stdio/stdio_simple.c
+    )
+
+set(rom_ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.api.ld
+    -T${IDF_PATH}/components/riscv/ld/rom.api.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib.ld
+    -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libgcc.ld
+    )

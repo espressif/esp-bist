@@ -25,6 +25,10 @@ else()
         set(ESP_MIN_REVISION 0)
         set(BOOTLOADER_ADDR 0x2000)
         set(APP_ADDR 0x20000)
+    elseif ("${SOC_TARGET}" STREQUAL "esp32c61")
+        set(ESP_MIN_REVISION 0)
+        set(BOOTLOADER_ADDR 0x0)
+        set(APP_ADDR 0x20000)
     else()
         message(FATAL_ERROR "Unsupported target ${SOC_TARGET}")
     endif()
@@ -155,6 +159,16 @@ set_source_files_properties(
     ${IDF_PATH}/components/esp_system/panic.c
     PROPERTIES COMPILE_OPTIONS "-Wno-shadow"
     )
+
+# IDF v6.0's esp32c61/ocode_init.c is missing an explicit
+# `#include "esp_attr.h"` and uses NOINLINE_ATTR / IRAM_ATTR.  Force-include
+# the header for that single file until upstream IDF is fixed.
+if ("${SOC_TARGET}" STREQUAL "esp32c61")
+    set_source_files_properties(
+        ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/ocode_init.c
+        PROPERTIES COMPILE_OPTIONS "-include;esp_attr.h"
+        )
+endif()
 
 set(include_unity
     ${IDF_PATH}/components/unity/include

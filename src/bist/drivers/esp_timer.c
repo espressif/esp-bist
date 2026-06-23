@@ -28,7 +28,7 @@
 #include "hal/systimer_hal.h"
 
 #include "soc/periph_defs.h"
-#include "hal/clk_gate_ll.h"
+#include "esp_private/periph_ctrl.h"
 
 #define ETS_INTERNAL_TIMER0_INTR_NO 6
 
@@ -375,7 +375,11 @@ static void IRAM_ATTR timer_alarm_isr(void *arg)
 
 esp_err_t esp_timer_init(void)
 {
-    periph_ll_enable_clk_clear_rst(PERIPH_SYSTIMER_MODULE);
+    /* Guard avoids -Wdeprecated-declarations on SoCs where IDF retired
+     * the legacy API (C5/C61/...); SYSTIMER is on by reset default there. */
+#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API
+    periph_module_enable(PERIPH_SYSTIMER_MODULE);
+#endif
     systimer_hal_tick_rate_ops_t ops = {
         .ticks_to_us = systimer_ticks_to_us,
         .us_to_ticks = systimer_us_to_ticks,

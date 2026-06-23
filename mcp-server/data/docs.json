@@ -1947,7 +1947,7 @@
     "id": "doc:README.md:supported_socs",
     "title": "Supported SoCs",
     "section": "supported_socs",
-    "body": "- ESP32-C3\n- ESP32-C5\n- ESP32-C6\n- ESP32-H2",
+    "body": "- ESP32-C3\n- ESP32-C5\n- ESP32-C6\n- ESP32-C61\n- ESP32-H2",
     "source_file": "README.md",
     "content_type": "doc"
   },
