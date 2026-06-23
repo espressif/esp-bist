@@ -27,6 +27,8 @@ static const char *TAG = "BIST_ADC";
 #define BIST_ADC_HIGH_VAL        3375
 #elif defined(SOC_TARGET_ESP32C61)
 #define BIST_ADC_HIGH_VAL        3329
+#elif defined(SOC_TARGET_ESP32P4)
+#define BIST_ADC_HIGH_VAL        3360
 #else
 #define BIST_ADC_HIGH_VAL        BIST_ADC_MAX_RAW
 #endif
