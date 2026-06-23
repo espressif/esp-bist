@@ -40,12 +40,13 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
     uint32_t app_drom_start_aligned = app_drom_start & MMU_FLASH_MASK;
     uint32_t app_drom_vaddr_aligned = app_drom_vaddr & MMU_FLASH_MASK;
 
-    uint32_t actual_mapped_len = 0;
+    uint32_t drom_mapped_len = 0;
+    uint32_t irom_mapped_len = 0;
 
-    ESP_EARLY_LOGI(TAG, "DROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_drom_start, app_drom_vaddr,
-        app_drom_size);
-    ESP_EARLY_LOGI(TAG, "IROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_irom_start, app_irom_vaddr,
-        app_irom_size);
+    ESP_EARLY_LOGI(TAG, "DROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X",
+                   app_drom_start, app_drom_vaddr, app_drom_size);
+    ESP_EARLY_LOGI(TAG, "IROM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X",
+                   app_irom_start, app_irom_vaddr, app_irom_size);
 
     cache_hal_disable(CACHE_LEVEL, CACHE_TYPE_ALL);
 
@@ -54,11 +55,11 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
      */
     mmu_hal_unmap_all();
 
-    mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_drom_vaddr_aligned, app_drom_start_aligned, app_drom_size,
-        &actual_mapped_len);
+    mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_drom_vaddr_aligned,
+                       app_drom_start_aligned, app_drom_size, &drom_mapped_len);
 
-    mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_irom_vaddr_aligned, app_irom_start_aligned, app_irom_size,
-        &actual_mapped_len);
+    mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_irom_vaddr_aligned,
+                       app_irom_start_aligned, app_irom_size, &irom_mapped_len);
 
     /* ----------------------Enable corresponding buses---------------- */
     cache_bus_mask_t bus_mask = cache_ll_l1_get_bus(0, app_drom_vaddr_aligned, app_drom_size);
@@ -76,6 +77,14 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
 
     /* ----------------------Enable Cache---------------- */
     cache_hal_enable(CACHE_LEVEL, CACHE_TYPE_ALL);
+
+    /* On a cold reset the cache tag/data RAM comes up undefined and some lines
+     * may be tagged valid with garbage. Invalidate the freshly mapped flash
+     * ranges so early reads (e.g. pmu_init) miss and fetch correct data from
+     * flash instead of stale lines. (A warm/WDT reset retains coherent lines,
+     * which is why only the first boot after flashing was affected.) */
+    cache_hal_invalidate_addr(app_drom_vaddr_aligned, drom_mapped_len);
+    cache_hal_invalidate_addr(app_irom_vaddr_aligned, irom_mapped_len);
 }
 
 void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t app_rtc_size)
@@ -109,6 +118,44 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
 
     memcpy((void *)app_rtc_vaddr, data, app_rtc_size);
 }
+
+#if SOC_MEM_TCM_SUPPORTED
+void map_tcm_segment(uint32_t app_tcm_start, uint32_t app_tcm_vaddr, uint32_t app_tcm_size)
+{
+    if (app_tcm_size == 0) {
+        return;
+    }
+
+    uint32_t app_tcm_start_aligned = app_tcm_start & MMU_FLASH_MASK;
+    uint32_t app_tcm_vaddr_aligned = app_tcm_vaddr & MMU_FLASH_MASK;
+    uint32_t size_after_paddr_aligned = (app_tcm_start - app_tcm_start_aligned) + app_tcm_size;
+    uint32_t actual_mapped_len = 0;
+
+    ESP_EARLY_LOGI(TAG, "TCM segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X",
+                   app_tcm_start, app_tcm_vaddr, app_tcm_size);
+
+    cache_hal_disable(CACHE_LEVEL, CACHE_TYPE_ALL);
+
+    /**
+     * To load TCM content to its virtual address (0x30100000) we need to:
+     *
+     * 1. Map TCM content to DCache (SOC_DROM_LOW = 0x3c000000) to access it
+     * 2. Copy TCM content to its virtual address (0x30100000)
+     * 3. This mapping will be reverted in map_rom_segments()
+     */
+
+    mmu_hal_map_region(0, MMU_TARGET_FLASH0, SOC_DROM_LOW, app_tcm_start_aligned,
+                       size_after_paddr_aligned, &actual_mapped_len);
+
+    cache_bus_mask_t bus_mask = cache_ll_l1_get_bus(0, app_tcm_vaddr_aligned, app_tcm_size);
+    cache_ll_l1_enable_bus(0, bus_mask);
+    cache_hal_enable(CACHE_LEVEL, CACHE_TYPE_ALL);
+
+    void *data = (void *)(SOC_DROM_LOW + (app_tcm_start - app_tcm_start_aligned));
+
+    memcpy((void *)app_tcm_vaddr, data, app_tcm_size);
+}
+#endif
 
 void core_intr_matrix_clear(void)
 {
