@@ -107,7 +107,7 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
 
     void *data = (void *)(SOC_DROM_LOW + (app_rtc_start - app_rtc_start_aligned));
 
-    memcpy((void *)app_rtc_vaddr_aligned, data, app_rtc_size);
+    memcpy((void *)app_rtc_vaddr, data, app_rtc_size);
 }
 
 void core_intr_matrix_clear(void)
