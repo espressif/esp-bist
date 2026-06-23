@@ -62,6 +62,13 @@ config ESP_BIST_GPIO_TEST
     help
       Enable tests for the GPIO pins.
 
+config ESP_BIST_ADC_TEST
+    bool "ADC Test"
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
+    help
+      Enable tests for the ADC pins.
+
 config ESP_BIST_WATCHDOG_TEST
     bool "Watchdog Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
@@ -96,6 +103,15 @@ config ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
     default 1
     help
       Specify the acceptable percentage of frequency drift for the clock test.
+
+config ESP_BIST_ADC_PERCENT_DEVIATION
+    int "ADC Reading Deviation Percentage"
+    depends on ESP_BIST_ADC_TEST
+    range 0 100
+    default 6
+    help
+      Specify the acceptable percentage deviation of ADC readings from
+      the expected low or high reference values for the ADC plausibility tests.
 
 config ESP_BIST_FLASH_SIZE
     hex "Flash Size"
