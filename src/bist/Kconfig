@@ -37,7 +37,8 @@ config ESP_BIST_STACK_TEST
 
 config ESP_BIST_PROGRAM_COUNTER_TEST
     bool "Program Counter Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
     help
       Enable tests for the program counter.
 
