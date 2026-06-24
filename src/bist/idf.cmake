@@ -141,8 +141,8 @@ set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
 # extra_post_build_commands global property pattern.
 #
 # The function injects CRC32 checksums into the ELF:
-#   .bist.text  -> .crc_section_text  (code integrity)
-#   .rodata     -> .crc_section_data  (read-only data integrity)
+#   .text    -> .crc_section_text  (code integrity)
+#   .rodata  -> .crc_section_data  (read-only data integrity)
 set(BIST_CRC_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../../scripts/calculate_crc32.py" CACHE INTERNAL "")
 
 function(bist_add_crc_postbuild target)
@@ -150,8 +150,8 @@ function(bist_add_crc_postbuild target)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
             ${PYTHON} ${BIST_CRC_SCRIPT}
-            $<TARGET_FILE:${target}> .bist.text .crc_section_text
-            COMMENT "Calculating CRC32 for LP .bist.text section"
+            $<TARGET_FILE:${target}> .text .crc_section_text
+            COMMENT "Calculating CRC32 for LP .text section"
         )
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
