@@ -47,5 +47,5 @@ if(CONFIG_ESP_BIST)
 
         zephyr_compile_options(-Os)
 
-        set(SOC_LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../soc/${CONFIG_SOC}/ld/bist_lpcore.ld" CACHE INTERNAL "Custom linker script for BIST")
+        set(SOC_LINKER_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../soc/${CONFIG_SOC}/ld/zephyr.ld" CACHE INTERNAL "Custom linker script for BIST")
 endif()

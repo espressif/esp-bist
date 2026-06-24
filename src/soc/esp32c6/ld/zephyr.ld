@@ -50,9 +50,9 @@ SECTIONS
 
     .text ALIGN(4):
     {
-        *(.text.vectors) /* Default reset vector must link to offset 0x80 */
-        __text_region_start = ABSOLUTE(.);
         _flash_text_start = ABSOLUTE(.);
+        __text_region_start = ABSOLUTE(.);
+        *(.text.vectors) /* Default reset vector must link to offset 0x80 */
         *(.text)
         *(.text*)
         *(.iram1)
