@@ -38,6 +38,9 @@ endif()
 if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST)
     list(APPEND bist_src core/cpu/bist_pc.c)
 endif()
+if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
+    list(APPEND bist_src core/memory/bist_flash.c)
+endif()
 
 # --- Library ---
 add_library(bist_esp ${bist_src})
@@ -124,3 +127,37 @@ target_include_directories(bist_esp
 target_link_libraries(bist_esp PUBLIC c)
 
 set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
+
+# --- Post-build CRC injection (flash integrity test) ---
+#
+# CMake's add_custom_command(TARGET ... POST_BUILD) requires the target to be
+# defined in the SAME directory scope. Since idf.cmake is processed inside a
+# subdirectory (via add_subdirectory), it cannot attach POST_BUILD commands to
+# the ULP executable directly.
+#
+# The workaround is to expose bist_add_crc_postbuild() as a globally-visible
+# function. The parent CMakeLists.txt (which owns the ULP target) calls it
+# after linking. This is the IDF equivalent of Zephyr's
+# extra_post_build_commands global property pattern.
+#
+# The function injects CRC32 checksums into the ELF:
+#   .bist.text  -> .crc_section_text  (code integrity)
+#   .rodata     -> .crc_section_data  (read-only data integrity)
+set(BIST_CRC_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../../scripts/calculate_crc32.py" CACHE INTERNAL "")
+
+function(bist_add_crc_postbuild target)
+    if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
+            ${PYTHON} ${BIST_CRC_SCRIPT}
+            $<TARGET_FILE:${target}> .bist.text .crc_section_text
+            COMMENT "Calculating CRC32 for LP .bist.text section"
+        )
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}
+            ${PYTHON} ${BIST_CRC_SCRIPT}
+            $<TARGET_FILE:${target}> .rodata .crc_section_data
+            COMMENT "Calculating CRC32 for LP rodata section"
+        )
+    endif()
+endfunction()

@@ -26,7 +26,7 @@ _pc_test_1_addr = ULP_MEM_START_ADDRESS + 0x3F24; /* 0x50003F24 */
 _pc_test_length = 0x38;
 _text_length = _pc_test_0_addr - ULP_MEM_START_ADDRESS + 0x80; /* 0x2058 */
 _bist_addr = _pc_test_0_addr + _pc_test_length; /* 0x50002110 */
-_bist_length = 0x1400;
+_bist_length = 0x1000;
 _data_addr = _bist_addr + _bist_length;
 _data_length = _pc_test_1_addr - _data_addr;
 _shared_mem_addr = _pc_test_1_addr + _pc_test_length; /* 0x50003F5C */
@@ -81,21 +81,41 @@ SECTIONS
 
     .bist.text ALIGN(4):
     {
+        _flash_text_start = ABSOLUTE(.);
         _text_bist_start = ABSOLUTE(.);
         *libbist_esp.a:*(.text .text.*)
         _text_bist_end = ABSOLUTE(.);
+        _flash_text_end = ABSOLUTE(.);
     } > bist
 
     . = ORIGIN(data);
     .rodata ALIGN(4):
     {
-        _bist_ram_test_start = .;
+        _flash_rodata_start = ABSOLUTE(.);
         *(.rodata)
         *(.rodata*)
+        _flash_rodata_end = ABSOLUTE(.);
+    } > data
+
+    .crc_section_text ALIGN(4):
+    {
+        _crc_section_text_start = ABSOLUTE(.);
+        LONG(0x00000000)
+        KEEP(*(.crc_section_text))
+        _crc_section_text_end = ABSOLUTE(.);
+    } > data
+
+    .crc_section_data ALIGN(4):
+    {
+        _crc_section_data_start = ABSOLUTE(.);
+        LONG(0x00000000)
+        KEEP(*(.crc_section_data))
+        _crc_section_data_end = ABSOLUTE(.);
     } > data
 
     .data ALIGN(4):
     {
+        _bist_ram_test_start = .;
         *(.data)
         *(.data*)
         *(.sdata)

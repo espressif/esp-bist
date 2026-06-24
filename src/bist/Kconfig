@@ -43,8 +43,7 @@ config ESP_BIST_PROGRAM_COUNTER_TEST
 
 config ESP_BIST_MEMORY_FLASH_TEST
     bool "Memory Flash Test"
-    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for the Flash memory integrity.
 
