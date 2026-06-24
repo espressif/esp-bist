@@ -16,9 +16,11 @@ The Espressif's Built-in Self Test library performs the following tests:
 ## Supported SoCs
 
 - ESP32-C3
-- ESP32-C6
-- ESP32-H2
 - ESP32-C5
+- ESP32-C6
+- ESP32-C61
+- ESP32-H2
+- ESP32-P4
 
 ## License
 
@@ -91,11 +93,12 @@ The following CSR groups are tested:
 |-------|------|------|------|-------|
 | Machine Trap Setup | mtvec | All | 0xFFFFFF00 | |
 | Machine Trap Handling | mscratch, mepc, mcause, mtval | All | register-specific | |
-| PMP Address | pmpaddr0-15 | All | C3/C6/H2: 0xFFFFFFFF, C5: 0x3FFFFFE0 | C5 has 128-byte granularity (25 writable bits) |
-| PMP Configuration | pmpcfg0-3 | All | C3/C6/H2: 0x1D1D1D1D, C5: 0x0D0D0D0D | Excludes Lock, reserved, and W bit (R=0,W=1 is reserved RISC-V encoding); C5 also excludes A[1] (NA4 not selectable at G=5) |
-| PMA Address | pma_addr0-11 (0xBD0-0xBDB) | C6, H2, C5 | 0x3FFFFFE0 | 25 writable bits; guarded by `SOC_CPU_HAS_PMA` |
+| PMP Address | pmpaddr0-15 | All | C3/C6/H2: 0xFFFFFFFF, C5/C61/P4: 0x3FFFFFE0 | C5/C61/P4 have 128-byte granularity (25 writable bits) |
+| PMP Configuration | pmpcfg0-3 | All | C3/C6/H2: 0x1D1D1D1D, C5/C61/P4: 0x0D0D0D0D | Excludes Lock, reserved, and W bit (R=0,W=1 is reserved RISC-V encoding); C5/C61/P4 also exclude A[1] (NA4 not selectable at G=5) |
+| PMA Address | pma_addr0-11 (0xBD0-0xBDB) | C6, H2, C5, P4 | 0x3FFFFFE0 | 25 writable bits; guarded by `SOC_CPU_HAS_PMA` |
 | Machine Extension | mexstatus (0x7E1) | C5 only | 0x00102C00 | PBEXE, PPBEXE, NMFT, CLIC_INHV (C6/H2 only have SOFT_RST — unsafe to test) |
 | Machine Hint | mhint (0x7C5) | C5 only | 0x00100000 | SBE bit only (does not exist on C6/H2) |
+| FPU CSRs | fflags, frm, fcsr | P4 | 0x1F / 0x07 / 0xFF | Guarded by `ESP_BIST_USE_FPU` |
 
 > **Note — PMA entries 12-15 skipped:** The ROM bootloader may configure these as active NAPOT/TOR regions. In active modes the hardware forces address low-order bits to match the region encoding, causing the stacked write/verify pattern to fail.
 

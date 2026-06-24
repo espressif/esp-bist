@@ -1,0 +1,129 @@
+set(include_soc
+    ${BIST_ROOT_DIR}/src/soc/include
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/include
+    )
+
+set(include_hal
+    ${BIST_ROOT_DIR}/components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/newlib/platform_include
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_timg/include
+    ${IDF_PATH}/components/esp_hal_wdt/include
+    ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_usb/include
+    ${IDF_PATH}/components/esp_hal_usb/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_uart/include
+    ${IDF_PATH}/components/esp_hal_uart/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_gpio/include
+    ${IDF_PATH}/components/esp_hal_clock/include
+    ${IDF_PATH}/components/esp_hal_dma/include
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_rtc_timer/include
+    ${IDF_PATH}/components/esp_hal_rtc_timer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/include
+    ${IDF_PATH}/components/esp_hal_ana_conv/include
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_adc/include
+    ${IDF_PATH}/components/esp_adc
+    ${IDF_PATH}/components/esp_adc/interface
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/include
+    ${IDF_PATH}/components/efuse/include
+    ${IDF_PATH}/components/efuse/private_include
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/private_include
+    ${IDF_PATH}/components/heap/include
+    ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_stdio/include
+    ${IDF_PATH}/components/hal/platform_port/include
+    ${BIST_ROOT_DIR}/components/esp_common/include
+    ${BIST_ROOT_DIR}/src/bist/drivers/include
+    ${IDF_PATH}/components/esp_common/include
+    ${IDF_PATH}/components/soc/include
+    ${IDF_PATH}/components/soc/${SOC_TARGET}/include
+    ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_rom/include
+    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
+    ${IDF_PATH}/components/riscv/include
+    ${IDF_PATH}/components/esp_system/include
+    ${IDF_PATH}/components/esp_system/port/include
+    ${IDF_PATH}/components/esp_hw_support/include
+    ${IDF_PATH}/components/esp_hw_support/port/include
+    ${IDF_PATH}/components/esp_hw_support/include/soc
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/private_include
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
+    ${IDF_PATH}/components/spi_flash/include
+    ${IDF_PATH}/components/log/include
+    )
+
+set(soc_srcs
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/clock_init.c
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/bare_metal_stubs.c
+    ${BIST_ROOT_DIR}/src/soc/common/loader.c
+    ${BIST_ROOT_DIR}/src/soc/common/newlib_stubs.c
+    ${BIST_ROOT_DIR}/src/soc/common/panic_handler.c
+    )
+
+set(idf_ow_srcs
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali_curve_fitting.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_common.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_share_hw_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
+    )
+
+set(idf_srcs
+    ${IDF_PATH}/components/hal/cache_hal.c
+    ${IDF_PATH}/components/hal/mmu_hal.c
+    ${IDF_PATH}/components/hal/efuse_hal.c
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/efuse_hal.c
+    ${IDF_PATH}/components/esp_hal_wdt/wdt_hal_iram.c
+    ${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c
+    ${IDF_PATH}/components/esp_rom/patches/esp_rom_regi2c_esp32p4.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk_init.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_time.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_init.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_param.c
+    ${IDF_PATH}/components/esp_system/panic.c
+    ${IDF_PATH}/components/esp_system/esp_err.c
+    ${IDF_PATH}/components/log/src/log.c
+    ${IDF_PATH}/components/log/src/noos/log_timestamp.c
+    ${IDF_PATH}/components/riscv/interrupt.c
+    ${IDF_PATH}/components/riscv/interrupt_clic.c
+    ${IDF_PATH}/components/riscv/rv_utils.c
+    ${IDF_PATH}/components/esp_stdio/stdio_simple.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_oneshot_hal.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_hal_common.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/adc_periph.c
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/clk_tree_hal.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/esp_clk_tree.c
+    ${IDF_PATH}/components/esp_hw_support/port/esp_clk_tree_common.c
+    ${IDF_PATH}/components/esp_adc/${SOC_TARGET}/curve_fitting_coefficients.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_rtc_calib.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_table_v3.0.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_utility.c
+    ${IDF_PATH}/components/efuse/src/esp_efuse_api.c
+    ${IDF_PATH}/components/efuse/src/esp_efuse_utility.c
+    )
+
+# P4 requires eco5.rvfp instead of eco5.libgcc for dealing with floating point operations
+set(rom_ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.api.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.libc.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libc-suboptimal_for_misaligned_mem.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.newlib.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.rvfp.ld
+    -T${IDF_PATH}/components/riscv/ld/rom.api.ld
+    -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
+    )
