@@ -90,7 +90,6 @@ set(APP_EXECUTABLE ${APP_NAME}.elf)
 add_executable(${APP_EXECUTABLE} ${APP_SOURCES})
 
 add_subdirectory(${BIST_ROOT_DIR}/src/bist ${CMAKE_BINARY_DIR}/bist)
-target_link_libraries(${APP_EXECUTABLE} PUBLIC bist_esp)
 
 # **************************************************************************************************
 set(CFLAGS
@@ -129,11 +128,11 @@ set(LDFLAGS
     "-fno-lto"
     "-Wl,--gc-sections"
     "-Wl,--undefined=uxTopUsedPriority"
-    "-lm"
-    "-lgcc"
-    "-lgcov"
     "-Wl,--no-warn-rwx-segments"
     )
+
+target_link_libraries(${APP_EXECUTABLE} PUBLIC bist_esp)
+target_link_libraries(${APP_EXECUTABLE} PRIVATE m gcc gcov)
 
 set(LINKER_SCRIPT ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/ld/linker.ld)
 set_property(TARGET ${APP_EXECUTABLE} PROPERTY LINK_DEPENDS ${LINKER_SCRIPT})
