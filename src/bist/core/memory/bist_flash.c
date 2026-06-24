@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include "bist_flash.h"
 #include "bist_conf.h"
-#include "esp_log.h"
+#include "bist_log.h"
 
 // Pointer to CRC32 value
 extern uint32_t _crc_section_text_start, _crc_section_data_start;
@@ -99,35 +99,33 @@ bist_esp_err_t bist_flash_test(void)
     uint32_t crc_data, crc_text = 0;
     volatile size_t crc_section_len = 0;
 
-    ESP_EARLY_LOGD(TAG, "Flash text CRC addr: %p", &_crc_section_text_start);
-    ESP_EARLY_LOGD(TAG, "flash.text CRC: 0x%lx", _crc_section_text_start);
-    ESP_EARLY_LOGD(TAG, "Flash data CRC addr: %p", &_crc_section_data_start);
-    ESP_EARLY_LOGD(TAG, "flash.rodata CRC: 0x%lx", _crc_section_data_start);
+    ESP_LOGD(TAG, "Flash text CRC addr: %p", &_crc_section_text_start);
+    ESP_LOGD(TAG, "flash.text CRC: 0x%lx", _crc_section_text_start);
+    ESP_LOGD(TAG, "Flash data CRC addr: %p", &_crc_section_data_start);
+    ESP_LOGD(TAG, "flash.rodata CRC: 0x%lx", _crc_section_data_start);
 
-    ESP_EARLY_LOGD(TAG, "Calculating CRC for flash.rodata section from %p to %p (%d B)", &_flash_rodata_start,
+    ESP_LOGD(TAG, "Calculating CRC for flash.rodata section from %p to %p (%d B)", &_flash_rodata_start,
         &_flash_rodata_end, (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4);
 
-    // Calculate the CRC for the flash.rodata section
     crc_section_len = (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4;
     BIST_ADD_LABEL("bist_flash_test_data");
     crc_data = calculate_crc32((uint8_t *)&_flash_rodata_start, crc_section_len);
 
-    ESP_EARLY_LOGD(TAG, "Calculated CRC for flash.rodata section: 0x%lx", crc_data);
+    ESP_LOGD(TAG, "Calculated CRC for flash.rodata section: 0x%lx", crc_data);
     if (crc_data != _crc_section_data_start) {
-        ESP_EARLY_LOGE(TAG, "CRC for flash.rodata section does not match the expected value");
+        ESP_LOGE(TAG, "CRC for flash.rodata section does not match the expected value");
         return BIST_ESP_FLASH_TEST_ERR;
     }
 
-    ESP_EARLY_LOGD(TAG, "Calculating CRC for flash.text section from %p to %p (%d B)", &_flash_text_start,
+    ESP_LOGD(TAG, "Calculating CRC for flash.text section from %p to %p (%d B)", &_flash_text_start,
         &_flash_text_end, (size_t)(&_flash_text_end - &_flash_text_start) * 4);
 
-    // Calculate the CRC for the flash.text section
     crc_section_len = (size_t)(&_flash_text_end - &_flash_text_start) * 4;
     BIST_ADD_LABEL("bist_flash_test_text");
     crc_text = calculate_crc32((uint8_t *)&_flash_text_start, crc_section_len);
-    ESP_EARLY_LOGD(TAG, "Calculated CRC for flash.text section: 0x%lx", crc_text);
+    ESP_LOGD(TAG, "Calculated CRC for flash.text section: 0x%lx", crc_text);
     if (crc_text != _crc_section_text_start) {
-        ESP_EARLY_LOGE(TAG, "CRC for flash.text section does not match the expected value");
+        ESP_LOGE(TAG, "CRC for flash.text section does not match the expected value");
         return BIST_ESP_FLASH_TEST_ERR;
     }
 
