@@ -29,6 +29,7 @@ stages:
   - esp32c6
   - esp32c61
   - esp32h2
+  - esp32p4
 
 .qemu_upstream_socs: &qemu_upstream_socs
   - esp32c3
@@ -38,6 +39,7 @@ stages:
   - esp32c6
   - esp32c61
   - esp32h2
+  - esp32p4
 
 .qemu_test_apps: &qemu_test_apps
   - cpu_reg_test
@@ -329,7 +331,7 @@ test_idf_device:
   stage: Test Qemu
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
-    QEMU_BRANCH: 'feature/esp32c61'
+    QEMU_BRANCH: 'feature/esp32p4'
   before_script:
     - . $IDF_PATH/export.sh
     - apt-get update && apt-get install -y -q --no-install-recommends openssh-client
@@ -537,7 +539,7 @@ build_docs_html:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 --skip-reqs-check -l en
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 --skip-reqs-check -l en
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/html/index.html"
 
 build_docs_pdf:
@@ -553,7 +555,7 @@ build_docs_pdf:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 --skip-reqs-check -l en -bs latex
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 --skip-reqs-check -l en -bs latex
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf"
 
 deploy_preview_docs:
