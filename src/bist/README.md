@@ -293,7 +293,7 @@ The low level test (`bist_adc_low_level_test`) checks if an ADC channel reads ne
 1. The ADC unit and channel are configured with 12 dB attenuation.
 2. Internal pull-down is enabled on the mapped GPIO.
 3. After a 10 ms settling delay, the raw ADC value is read.
-4. If the reading exceeds the configured tolerance, the test fails with `BIST_ESP_IO_TEST_ERR`.
+4. If the reading exceeds the configured tolerance, the test fails with `BIST_ESP_ADC_TEST_ERR`.
 
 #### High Level Test
 
@@ -303,7 +303,7 @@ The high level test (`bist_adc_high_level_test`) checks if an ADC channel reads 
 2. Internal pull-up is enabled on the mapped GPIO.
 3. After a 10 ms settling delay, the raw ADC value is read.
 4. The reading is compared against a SoC-specific high reference minus tolerance.
-5. If the reading is too low, the test fails with `BIST_ESP_IO_TEST_ERR`.
+5. If the reading is too low, the test fails with `BIST_ESP_ADC_TEST_ERR`.
 
 #### Reference Test (ESP32-C3 only)
 
@@ -313,7 +313,7 @@ The reference test (`bist_adc_reference_test`) checks mid-scale ADC behavior usi
 2. Internal VREF output is enabled to bias the pin near mid-scale.
 3. After a 10 ms settling delay, the raw ADC value is read.
 4. The reading must be within tolerance of the reference level.
-5. If the reading is stuck at low or high, the test fails with `BIST_ESP_IO_TEST_ERR`.
+5. If the reading is stuck at low or high, the test fails with `BIST_ESP_ADC_TEST_ERR`.
 
 ## Watchdog
 
