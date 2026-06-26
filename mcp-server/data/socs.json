@@ -15,7 +15,7 @@
       "src/soc/esp32c3/ld/linker.ld"
     ],
     "soc_dir": "src/soc/esp32c3",
-    "specific_notes": "CMake config at cmake/esp32c3.cmake (96 lines)"
+    "specific_notes": "CMake config at cmake/esp32c3.cmake (126 lines)"
   },
   {
     "soc": "esp32c5",
@@ -35,7 +35,7 @@
       "src/soc/esp32c5/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32c5",
-    "specific_notes": "CMake config at cmake/esp32c5.cmake (99 lines)"
+    "specific_notes": "CMake config at cmake/esp32c5.cmake (130 lines)"
   },
   {
     "soc": "esp32c6",
@@ -55,7 +55,7 @@
       "src/soc/esp32c6/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32c6",
-    "specific_notes": "CMake config at cmake/esp32c6.cmake (98 lines)"
+    "specific_notes": "CMake config at cmake/esp32c6.cmake (130 lines)"
   },
   {
     "soc": "esp32h2",
@@ -73,6 +73,6 @@
       "src/soc/esp32h2/ld/linker.ld"
     ],
     "soc_dir": "src/soc/esp32h2",
-    "specific_notes": "CMake config at cmake/esp32h2.cmake (98 lines)"
+    "specific_notes": "CMake config at cmake/esp32h2.cmake (130 lines)"
   }
 ]
