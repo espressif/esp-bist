@@ -28,7 +28,7 @@ Modules Architecture
 - **Memory tests** (``core/memory/``): RAM March A/X; flash CRC validation
 - **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); 40MHz crystal drift measurement
 - **WDT tests** (``core/wdt/``): watchdog init and stack overflow handler registration
-- **IO tests** (``core/io/``): GPIO output/input plausibility checks
+- **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks
 - **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, GPIO, timer wrappers
 - **Performance Metrics** (``include/bist_metrics.h``): Macro-based Performance Counter CSR interface for measuring CPU cycles, instruction counts, and microarchitectural events during BIST test execution
 - **SoC support** (``soc/{IDF_TARGET_PATH_NAME}/``): startup, vectors, linker script, newlib stubs
@@ -95,6 +95,7 @@ Hardware/Software Interfaces
 - Clock control via XT WDT (where supported) and ESP timer
 - Flash CRC injection/readback via ``scripts/calculate_crc32.py`` and runtime CRC in ``bist_flash_test``
 - GPIO configuration and I/O via driver wrappers
+- ADC oneshot configuration and raw reading via driver wrappers
 - Watchdog APIs for MWDT/windowed and XT WDT callbacks
 - Interrupt controller use limited to watchdog-related handlers
 

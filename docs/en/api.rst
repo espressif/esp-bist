@@ -41,6 +41,11 @@ GPIO Tests
 
 .. include-build-file:: inc/bist_gpio.inc
 
+ADC Tests
+---------
+
+.. include-build-file:: inc/bist_adc.inc
+
 Utilities & Metrics
 -------------------
 
@@ -51,5 +56,6 @@ Driver Interfaces
 
 .. include-build-file:: inc/wdt.inc
 .. include-build-file:: inc/gpio.inc
+.. include-build-file:: inc/adc_oneshot.inc
 .. include-build-file:: inc/esp_timer.inc
 .. include-build-file:: inc/bist_log.inc

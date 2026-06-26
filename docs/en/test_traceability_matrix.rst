@@ -268,11 +268,36 @@ GPIO Test (IEC 60730 ID: 7.1)
 
 **Coverage**: 3 test cases
 
+ADC Test (IEC 60730 ID: 7.2)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Requirement**: ADC configuration and plausibility checks
+
+**Design**:
+
+- Module: ``src/bist/core/io/bist_adc.c``
+- Functions: ``bist_adc_low_level_test()``, ``bist_adc_high_level_test()``, ``bist_adc_reference_test()`` (ESP32-C3 only)
+- Design Doc: :doc:`module_design_and_coding` (ADC Plausibility Test section)
+
+**Test Implementation**:
+
+- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py``
+  - Invalid ADC unit/channel test
+  - ADC low level test (internal pull-down)
+  - ADC high level test (internal pull-up)
+  - ADC reference test (ESP32-C3 only, internal VREF)
+
+**Test Results**:
+
+- Hardware: ``tests/analog_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+
+**Coverage**: 3 test cases (4 on ESP32-C3)
+
 Traceability Summary
 --------------------
 
-- **Total IEC 60730 Components**: 7 (1.1, 1.3, 3, 4.1, 4.2, 6.3, 7.1)
-- **Total Test Modules**: 10
+- **Total IEC 60730 Components**: 8 (1.1, 1.3, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
+- **Total Test Modules**: 11
 - **Total Test Cases**: 100+
 - **Test Environments**: QEMU (emulation) + Hardware (real-world)
 - **Coverage**: 100% of safety-relevant functions tested

@@ -58,6 +58,12 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
      - Peripheral misconfiguration, stuck-at faults, IO line failures, unexpected HW state
      - :ref:`gpio-plausibility-test`
 
+   * - 7.2
+     - Analog I/O
+     - Verifies ADC configuration and plausibility of analog readings
+     - ADC misconfiguration, stuck-at faults, conversion path failures, unexpected analog HW state
+     - :ref:`adc-plausibility-test`
+
 This table provides direct traceability between each implemented safety function, IEC 60730 standard component identifiers, and the classes of faults each test is intended to control, supporting certification and safety case documentation.
 
 Software Units Based on Class R1
@@ -107,6 +113,7 @@ The BIST library interfaces with hardware through a HAL layer; low-level access 
 - **Clock control and RTC** (``components/esp_hw_support/esp_clk.c``, ``soc/rtc.h``): CPU frequency, APB frequency, XTAL frequency queries, and RTC clock calibration for clock tests (32kHz external crystal and 40MHz main crystal monitoring)
 - **Flash memory mapping and CRC regions** (``src/bist/core/memory/bist_flash.c``, ``scripts/calculate_crc32.py``): Post-build CRC32 injection into reserved flash sections and runtime readback/validation of ``.flash.text`` and ``.flash.rodata`` sections
 - **GPIO and peripheral registers** (``src/bist/drivers/gpio.c``, ``hal/gpio_hal.h``): GPIO configuration, level setting/reading, pull-up/pull-down control for digital I/O plausibility tests
+- **ADC oneshot driver** (``src/bist/drivers/adc_oneshot.c``, ``src/bist/core/io/bist_adc.c``): ADC unit configuration, channel setup, raw reading, and GPIO pull control for analog I/O plausibility tests
 - **Watchdog APIs**:
 
   - Main System Watchdog Timer (MWDT) (``src/bist/drivers/wdt.c``, ``hal/wdt_hal.h``): Hardware watchdog for system monitoring and reset capability

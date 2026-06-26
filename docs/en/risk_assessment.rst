@@ -79,6 +79,12 @@ The following table maps identified hazards to safety functions, risk levels, an
      - 7.1 (Digital I/O)
      - ``bist_gpio_test()`` verifies GPIO configuration and validates output/input levels are readable and controllable
 
+   * - H9
+     - ADC misconfiguration or stuck analog input lines causing incorrect sensor readings
+     - Medium
+     - 7.2 (Analog I/O)
+     - ``bist_adc_low_level_test()`` and ``bist_adc_high_level_test()`` verify ADC configuration using internal pull resistors; on ESP32-C3, ``bist_adc_reference_test()`` adds mid-scale VREF validation
+
 Risk Level Definitions
 ----------------------
 
