@@ -1,16 +1,15 @@
-# Copyright (c) 2025 Espressif Systems (Shanghai) Co., Ltd.
 # SPDX-License-Identifier: Apache-2.0
-
-if("${SB_CONFIG_REMOTE_BOARD}" STREQUAL "")
-	message(FATAL_ERROR
-	"Target ${BOARD}/${BOARD_QUALIFIERS} not supported for this sample. "
-	"There is no remote board selected in Kconfig.sysbuild")
-endif()
-
-set(REMOTE_APP remote)
+#
+# Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
 
 ExternalZephyrProject_Add(
-	APPLICATION ${REMOTE_APP}
-	SOURCE_DIR  ${APP_DIR}/${REMOTE_APP}
-	BOARD       ${SB_CONFIG_REMOTE_BOARD}
-)
+    APPLICATION zephyr_bist_remote
+    SOURCE_DIR ${APP_DIR}/remote
+    BOARD ${SB_CONFIG_ULP_REMOTE_BOARD}
+  )
+
+sysbuild_add_dependencies(FLASH zephyr_bist_remote ${DEFAULT_IMAGE})
+
+if(SB_CONFIG_BOOTLOADER_MCUBOOT)
+  sysbuild_add_dependencies(FLASH ${DEFAULT_IMAGE} mcuboot)
+endif()

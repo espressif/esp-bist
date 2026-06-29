@@ -1,130 +1,167 @@
 /*
- * Copyright (c) 2025 Espressif Systems (Shanghai) Co., Ltd.
+ * Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
  *
  * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * LP-core side of the ESP-BIST Zephyr sample.
+ *
+ * Waits for a BIST_MSG_READY handshake from the HP core, then runs
+ * BIST post-boot tests once, followed by periodic runtime tests.
+ * Results are sent to the HP core over the mailbox as a bitmask.
+ *
+ * Post-boot: CPU reg, RAM March-X, Flash CRC
+ * Runtime:   CPU reg, RAM March-A
+ *
+ * Bitmask layout (bit set = passed):
+ *   bit 0  – CPU register test
+ *   bit 1  – CPU CSR register test
+ *   bit 2  – RAM March-A test       (runtime only)
+ *   bit 3  – RAM March-X test       (post-boot only)
+ *   bit 4  – Flash CRC test         (post-boot only)
+ *   bit 30 – runtime flag (set when this is a runtime round)
+ *   bit 31 – "all tests done" sentinel
  */
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/mbox.h>
 #include <bist_esp.h>
-#include <ulp_lp_core_interrupts.h>
+#include <string.h>
 
-static void callback(const struct device *dev, mbox_channel_id_t channel_id,
-		     void *user_data, struct mbox_msg *data)
+#define BIST_BIT_CPU_REG    BIT(0)
+#define BIST_BIT_CPU_CSR    BIT(1)
+#define BIST_BIT_RAM_A      BIT(2)
+#define BIST_BIT_RAM_X      BIT(3)
+#define BIST_BIT_FLASH      BIT(4)
+#define BIST_BIT_RUNTIME    BIT(30)
+#define BIST_BIT_DONE       BIT(31)
+
+#define BIST_MSG_READY      0xCAFECAFE
+#define RUNTIME_INTERVAL_MS 500
+
+static volatile bool hp_ready;
+
+static void rx_cb(const struct device *dev, mbox_channel_id_t channel_id,
+		  void *user_data, struct mbox_msg *data)
 {
-	printf("Pong (on channel %d)\n", channel_id);
+	uint32_t value = 0;
+
+	memcpy(&value, data->data, MIN(data->size, sizeof(value)));
+
+	if (value == BIST_MSG_READY) {
+		hp_ready = true;
+	}
 }
 
-static void fail_safe_exit(void)
+static uint32_t run_postboot_tests(void)
 {
-	printf("Fail safe exit\n");
-	while (1)
-	;
+	uint32_t mask = 0;
+	bist_esp_err_t err;
+
+#if IS_ENABLED(CONFIG_ESP_BIST_CPU_REG_TEST)
+	printk("[LP BIST] CPU reg test... ");
+	err = bist_cpu_regs_test();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_CPU_REG;
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
+	printk("[LP BIST] CPU CSR test... ");
+	err = bist_cpu_csr_regs_test();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_CPU_CSR;
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
+	printk("[LP BIST] RAM March-X test... ");
+	err = bist_ram_test_march_x();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_RAM_X;
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
+	printk("[LP BIST] Flash CRC test... ");
+	err = bist_flash_test();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_FLASH;
+	}
+#endif
+
+	return mask;
 }
 
-static void runPOST(void)
+static uint32_t run_runtime_tests(void)
 {
-	bist_esp_err_t test_err = BIST_ESP_OK;
+	uint32_t mask = 0;
+	bist_esp_err_t err;
 
-	// Disable interupts
-	ulp_lp_core_intr_disable();
-
-	test_err = bist_cpu_regs_test();
-	if (test_err == BIST_ESP_CPU_TEST_ERR) {
-		printf("CPU register test failed\n");
-		fail_safe_exit();
+#if IS_ENABLED(CONFIG_ESP_BIST_CPU_REG_TEST)
+	printk("[LP BIST] CPU reg test... ");
+	err = bist_cpu_regs_test();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_CPU_REG;
 	}
+#endif
 
-	test_err = bist_cpu_csr_regs_test();
-	if (test_err == BIST_ESP_CPU_CSR_TEST_ERR) {
-		printf("CPU CSR register test failed\n");
-		fail_safe_exit();
+#if IS_ENABLED(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
+	printk("[LP BIST] RAM March-A test... ");
+	err = bist_ram_test_march_a();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_RAM_A;
 	}
+#endif
 
-	test_err = bist_ram_test_march_x();
-	if (test_err == BIST_ESP_RAM_TEST_ERR) {
-		printf("RAM test failed\n");
-		fail_safe_exit();
-	}
-
-	// test_err = bist_flash_test();
-	// if (test_err == BIST_ESP_FLASH_TEST_ERR) {
-	// 	printf("LP flash test failed\n");
-	// 	fail_safe_exit();
-	// }
-
-	// Enable interrupts
-	ulp_lp_core_intr_enable();
-
-	printf("All POST tests passed!\n");
+	return mask;
 }
 
-static void runtime_tests(void)
+static void send_result(const struct mbox_dt_spec *tx, uint32_t result)
 {
-	bist_esp_err_t test_err = BIST_ESP_OK;
+	struct mbox_msg msg = {
+		.data = &result,
+		.size = sizeof(result),
+	};
 
-	// Disable interupts
-	ulp_lp_core_intr_disable();
-
-	test_err = bist_cpu_regs_test();
-	if (test_err == BIST_ESP_CPU_TEST_ERR) {
-		printf("CPU register test failed\n");
-		fail_safe_exit();
-	}
-
-	test_err = bist_cpu_csr_regs_test();
-	if (test_err == BIST_ESP_CPU_CSR_TEST_ERR) {
-		printf("CPU CSR register test failed\n");
-		fail_safe_exit();
-	}
-
-	// Enable interrupts
-	ulp_lp_core_intr_enable();
-
-	printf("All RUNTIME tests passed!\n");
-
+	mbox_send_dt(tx, &msg);
 }
 
 int main(void)
 {
-	int ret;
-	printf("Hello from REMOTE - %s\n", CONFIG_BOARD_TARGET);
+	const struct mbox_dt_spec tx_channel =
+		MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), tx);
+	const struct mbox_dt_spec rx_channel =
+		MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), rx);
+	uint32_t result;
 
-	runPOST();
+	mbox_register_callback_dt(&rx_channel, rx_cb, NULL);
+	mbox_set_enabled_dt(&rx_channel, 1);
 
-	const struct mbox_dt_spec rx_channel = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), rx);
-
-	printf("Maximum RX channels: %d\n", mbox_max_channels_get_dt(&rx_channel));
-
-	ret = mbox_register_callback_dt(&rx_channel, callback, NULL);
-	if (ret < 0) {
-		printf("Could not register callback (%d)\n", ret);
-		return 0;
+	printk("[LP BIST] Waiting for HP core ready signal...\n");
+	while (!hp_ready) {
+		k_msleep(10);
 	}
+	printk("[LP BIST] HP core ready, starting tests\n");
 
-	ret = mbox_set_enabled_dt(&rx_channel, true);
-	if (ret < 0) {
-		printf("Could not enable RX channel %d (%d)\n", rx_channel.channel_id, ret);
-		return 0;
-	}
+	printk("[LP BIST] === Post-boot tests ===\n");
+	result = run_postboot_tests() | BIST_BIT_DONE;
+	printk("[LP BIST] Post-boot result: 0x%08x\n", result);
+	send_result(&tx_channel, result);
 
-	const struct mbox_dt_spec tx_channel = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), tx);
-
-	printf("Maximum bytes of data in the TX message: %d\n", mbox_mtu_get_dt(&tx_channel));
-	printf("Maximum TX channels: %d\n", mbox_max_channels_get_dt(&tx_channel));
-
+	printk("[LP BIST] === Runtime tests (periodic) ===\n");
 	while (1) {
-
-		k_busy_wait(3000000);
-
-		printf("Ping (on channel %d)\n", tx_channel.channel_id);
-
-		ret = mbox_send_dt(&tx_channel, NULL);
-		if (ret < 0) {
-			printf("Could not send (%d)\n", ret);
-			return 0;
-		}
-		runtime_tests();
+		k_msleep(RUNTIME_INTERVAL_MS);
+		result = run_runtime_tests() | BIST_BIT_RUNTIME | BIST_BIT_DONE;
+		send_result(&tx_channel, result);
 	}
+
 	return 0;
 }
