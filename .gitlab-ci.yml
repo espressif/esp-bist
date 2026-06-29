@@ -40,6 +40,7 @@ stages:
   - pc_test
   - wdt_test
   - digital_io_test
+  - analog_io_test
   - windowed_wdt_test
 
 default:
