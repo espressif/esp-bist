@@ -95,6 +95,10 @@ target_compile_definitions(bist_esp
     "SOC_TARGET_${SOC_TARGET_UPPER}"
 )
 
+if(DEFINED ESP_BIST_USE_FPU)
+    target_compile_definitions(bist_esp PRIVATE ESP_BIST_USE_FPU)
+endif()
+
 # Some HAL paths include soc/*.h before ext_mem_defs.h; define locally for bist_esp only.
 # Do not use PUBLIC — app TUs get SOC_MMU_PAGE_SIZE from IDF soc/ext_mem_defs.h only.
 target_compile_definitions(bist_esp

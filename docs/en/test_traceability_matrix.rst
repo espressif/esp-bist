@@ -22,7 +22,7 @@ Detailed Test Traceability
 CPU Register Test (IEC 60730 ID: 1.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Verify integrity of CPU general-purpose registers (X1-X31)
+**Requirement**: Verify integrity of CPU general-purpose registers (X1-X31); on FPU supported devices, also single-precision FPU registers (f0–f31)
 
 **Design**:
 
@@ -33,22 +33,22 @@ CPU Register Test (IEC 60730 ID: 1.1)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
-  - Success test: All 32 registers pass pattern test
-  - Failure test: GDB fault injection per register (32 test cases)
+  - Success test: All integer registers pass pattern test; on FPU supported devices, all FPU registers pass
+  - Failure test: GDB fault injection per register (32 integer test cases; +32 FPU on FPU supported devices via ``test_freg_error``)
 - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
-  - All 32 registers validated on real hardware
+  - All integer registers validated on real hardware; FPU registers on FPU supported devices
 
 **Test Results**:
 
 - QEMU: ``tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 32 registers × 2 test cases (pass + fail) = 64 test cases total
+**Coverage**: 32 integer registers × 2 test cases (pass + fail) = 64 test cases; on FPU supported devices, +32 FPU registers × 2 = 128 total
 
 CPU CSR Test (IEC 60730 ID: 1.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Verify integrity of CPU Control and Status Registers
+**Requirement**: Verify integrity of CPU Control and Status Registers; on FPU supported devices, includes FPU CSRs (``fflags``, ``frm``, ``fcsr``)
 
 **Design**:
 
@@ -60,7 +60,7 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 
 - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
   - Success test: All CSRs pass pattern test
-  - Failure test: GDB fault injection per CSR
+  - Failure test: GDB fault injection per CSR; on FPU supported devices, +3 FPU CSRs via ``test_freg_csr_error`` (``fflags``, ``frm``, ``fcsr``)
 - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
 
 **Test Results**:
@@ -68,7 +68,7 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 - QEMU: ``tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: CSR count varies by SoC — 25 on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint). Each CSR has 2 test cases (pass + fail).
+**Coverage**: CSR count varies by SoC — 25 on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint), 40 on ESP32-H4 (adds ``fflags``, ``frm``, ``fcsr``). Each CSR has 2 test cases (pass + fail).
 
 Program Counter Test (IEC 60730 ID: 1.3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

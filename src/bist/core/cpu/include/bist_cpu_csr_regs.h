@@ -48,6 +48,11 @@
  *   C6/H2 mexstatus only exposes SOFT_RST bits (unsafe to test);
  *   mhint (0x7C5) does not exist on C6/H2 (illegal instruction).
  *
+ * FPU CSRs on SOCs with FPU (guarded by SOC_CPU_HAS_FPU):
+ *   - fflags (mask 0x1F): accrued exception flags
+ *   - frm (mask 0x07): dynamic rounding mode
+ *   - fcsr (mask 0xFF): combined fflags and frm
+ *
  * Note: PMA cfg registers are not tested because the PMA_L (Lock) bit
  * is write-once; any test pattern that sets bit 29 permanently locks
  * the entry until the next power-on reset.
@@ -72,6 +77,7 @@
  *   - ESP32-C3: 25 CSRs (5 trap + 16 pmpaddr + 4 pmpcfg)
  *   - ESP32-C6/H2: 37 CSRs (25 common + 12 pma_addr)
  *   - ESP32-C5: 39 CSRs (25 common + 12 pma_addr + mexstatus + mhint)
+ *   - ESP32-H4: 40 CSRs (25 common + 12 pma_addr + fflags + frm + fcsr)
  *
  * @return BIST_ESP_OK if all CSRs pass
  * @return BIST_ESP_CPU_CSR_TEST_ERR if any CSR fails

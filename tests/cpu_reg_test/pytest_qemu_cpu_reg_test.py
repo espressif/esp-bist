@@ -94,6 +94,28 @@ def cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name, script=None)
 def test_reg_error(qemu_debug_instance, gdb_instance, reg_name, target):
     cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name)
 
+@pytest.mark.parametrize("freg_name", [
+    "ft0", "ft1", "ft2", "ft3", "ft4", "ft5", "ft6", "ft7", "ft8", "ft9", "ft10", "ft11",
+    "fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", "fs8", "fs9", "fs10", "fs11",
+    "fa0", "fa1", "fa2", "fa3", "fa4", "fa5", "fa6", "fa7"
+])
+def test_freg_error(qemu_debug_instance, gdb_instance, freg_name, target):
+    if target != "esp32h4":
+        pytest.skip("Test is only available for FPU supported boards")
+    script = '''
+#connect to remote server
+target remote :1234
+
+# Set a breakpoint at the specific address
+tb testRegA_{}
+commands
+    set $t0=0x55555555
+    continue
+end
+continue
+'''.format(freg_name)
+    cpu_reg_error_test(qemu_debug_instance, gdb_instance, freg_name, script)
+
 @pytest.mark.parametrize("csr_name", COMMON_CSRS + PMA_ADDR_CSRS + C5_ONLY_CSRS)
 def test_reg_csr_error(qemu_debug_instance, gdb_instance, csr_name, target):
     if csr_name in PMA_ADDR_CSRS and target not in PMA_TARGETS:
@@ -113,3 +135,21 @@ end
 continue
 '''.format(csr_name)
     cpu_reg_error_test(qemu_debug_instance, gdb_instance, csr_name, script)
+
+@pytest.mark.parametrize("fcsr_name", ["fflags", "frm", "fcsr"])
+def test_freg_csr_error(qemu_debug_instance, gdb_instance, fcsr_name, target):
+    if target != "esp32h4":
+        pytest.skip("Test is only available for FPU supported boards")
+    script = '''
+#connect to remote server
+target remote :1234
+
+# Set a breakpoint at the specific address
+tb testRegA_{}
+commands
+    set $t0=0x55555555
+    continue
+end
+continue
+'''.format(fcsr_name)
+    cpu_reg_error_test(qemu_debug_instance, gdb_instance, fcsr_name, script)

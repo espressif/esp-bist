@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "soc/soc_caps.h"
 #include "riscv/rvruntime-frames.h"
 #include "bist_log.h"
 
@@ -39,7 +40,19 @@ static const char *bist_exc_cause_table[] = {
 
 #define NUM_EXC_CAUSE (sizeof(bist_exc_cause_table) / sizeof(bist_exc_cause_table[0]))
 
+#if SOC_CPU_COPROC_NUM > 0
+/* EXT_ILL CSR (0x7F0) illegal-instruction coprocessor reason bits. */
+#define EXT_ILL_RSN_FPU  (1 << 0)
+#define EXT_ILL_RSN_HWLP (1 << 1)
+#define EXT_ILL_RSN_PIE  (1 << 2)
+#define EXT_ILL_RSN_DSP  (1 << 3)
+#endif
+
+#if SOC_CPU_COPROC_NUM > 0
+void __attribute__((noreturn)) panic_handler_c(RvExcFrame *frame, uint32_t ext_ill)
+#else
 void __attribute__((noreturn)) panic_handler_c(RvExcFrame *frame)
+#endif
 {
     uint32_t mcause = frame->mcause;
     uint32_t exc_code = mcause & 0x1F;
@@ -54,6 +67,40 @@ void __attribute__((noreturn)) panic_handler_c(RvExcFrame *frame)
         }
         ESP_LOGE(TAG, "Guru Meditation Error: %s (mcause=0x%08x, mtval=0x%08x)",
                  reason, (unsigned)mcause, (unsigned)frame->mtval);
+
+#if SOC_CPU_COPROC_NUM > 0
+        if (exc_code == 2 && ext_ill != 0) {
+#if SOC_CPU_HAS_FPU
+            if (ext_ill & EXT_ILL_RSN_FPU) {
+                if (((frame->mstatus >> 13) & 3) == 0) {
+                    ESP_LOGE(TAG, "Illegal instruction: FPU disabled (EXT_ILL=0x%x)",
+                             (unsigned)ext_ill);
+                } else {
+                    ESP_LOGE(TAG, "Illegal instruction: FPU coprocessor (EXT_ILL=0x%x)",
+                             (unsigned)ext_ill);
+                }
+            }
+#endif
+#if SOC_CPU_HAS_HWLOOP
+            if (ext_ill & EXT_ILL_RSN_HWLP) {
+                ESP_LOGE(TAG, "Illegal instruction: Hardware loop (EXT_ILL=0x%x)",
+                         (unsigned)ext_ill);
+            }
+#endif
+#if SOC_CPU_HAS_PIE
+            if (ext_ill & EXT_ILL_RSN_PIE) {
+                ESP_LOGE(TAG, "Illegal instruction: PIE coprocessor (EXT_ILL=0x%x)",
+                         (unsigned)ext_ill);
+            }
+#endif
+#if SOC_CPU_HAS_DSP
+            if (ext_ill & EXT_ILL_RSN_DSP) {
+                ESP_LOGE(TAG, "Illegal instruction: DSP coprocessor (EXT_ILL=0x%x)",
+                         (unsigned)ext_ill);
+            }
+#endif
+        }
+#endif
     }
 
     ESP_LOGE(TAG, "Core %d register dump:", (int)frame->mhartid);
