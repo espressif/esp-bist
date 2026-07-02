@@ -12,9 +12,10 @@ if(CONFIG_ESP_BIST)
         message(STATUS "Espressif's Built-In Self Test (BIST) Library for Zephyr")
 
         string(TOUPPER "${CONFIG_SOC}" SOC_TARGET_UPPER)
-        zephyr_compile_definitions(SOC_TARGET_${SOC_TARGET_UPPER})
+        zephyr_compile_definitions(SOC_TARGET_${SOC_TARGET_UPPER} IS_ULP_COCPU)
 
         zephyr_include_directories(
+                ulp_include
                 include
                 core/include
                 core/cpu/include
@@ -27,14 +28,14 @@ if(CONFIG_ESP_BIST)
 
         zephyr_library()
 
-        zephyr_library_sources(
-                core/cpu/bist_cpu_regs.c
-                core/cpu/bist_cpu_csr_regs.c
-                core/memory/bist_ram.c
-        )
+        zephyr_library_sources(drivers/lp_wdt.c)
+        zephyr_library_sources_ifdef(CONFIG_ESP_BIST_CPU_REG_TEST core/cpu/bist_cpu_regs.c)
+        zephyr_library_sources_ifdef(CONFIG_ESP_BIST_CPU_CSR_REG_TEST core/cpu/bist_cpu_csr_regs.c)
+        zephyr_library_sources_ifdef(CONFIG_ESP_BIST_STACK_TEST core/cpu/bist_cpu_stack.c)
+        zephyr_library_sources_ifdef(CONFIG_ESP_BIST_MEMORY_RAM_TEST core/memory/bist_ram.c)
+        zephyr_library_sources_ifdef(CONFIG_ESP_BIST_MEMORY_FLASH_TEST core/memory/bist_flash.c)
 
         if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
-                zephyr_library_sources(core/memory/bist_flash.c)
                 set(BIST_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
                 set_property(GLOBAL APPEND PROPERTY post_build_patch_elf_commands
                         COMMAND ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}

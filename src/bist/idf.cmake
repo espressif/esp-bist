@@ -84,7 +84,7 @@ target_compile_options(bist_esp
 
 target_include_directories(bist_esp
     PUBLIC
-    ulp_idf_include
+    ulp_include
     ${_sdkconfig_dir}
     include
     core/include
