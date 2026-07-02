@@ -62,32 +62,32 @@
 #define CSR_GPIO_IN_USER  0x804
 #define CSR_GPIO_OUT_USER 0x805
 
-#define BIST_TEST_CSR_REG_NOT_STACKED(reg, mask, j_error)                                                              \
-    do {                                                                                                               \
-        ASM(" li  t0, 0xAAAAAAAA");                                                                                    \
-        ASM(" li  t3, " #mask);                                                                                        \
-        ASM(" and  t0, t0, t3");                                                                                       \
-        ASM(" csrw " #reg ", t0");                                                                                     \
-        ASM(" csrr t1, " #reg);                                                                                        \
-        ASM(" and  t1, t1, t3");                                                                                       \
-        ASM("testRegA_" #reg ": bne t1, t0, " #j_error);                                                               \
-        ASM(" li  t0, 0x55555555");                                                                                    \
-        ASM(" and  t0, t0, t3");                                                                                       \
-        ASM(" csrw " #reg ", t0");                                                                                     \
-        ASM(" csrr t1, " #reg);                                                                                        \
-        ASM(" and  t1, t1, t3");                                                                                       \
-        ASM("testReg5_" #reg ":  bne t1, t0, " #j_error);                                                              \
-    }                                                                                                                  \
+#define BIST_TEST_CSR_REG_NOT_STACKED(reg, mask, j_error)   \
+    do {                                                    \
+        ASM(" li  t0, 0xAAAAAAAA");                         \
+        ASM(" li  t3, " #mask);                             \
+        ASM(" and  t0, t0, t3");                            \
+        ASM(" csrw " #reg ", t0");                          \
+        ASM(" csrr t1, " #reg);                             \
+        ASM(" and  t1, t1, t3");                            \
+        ASM("testRegA_" #reg ": bne t1, t0, " #j_error);    \
+        ASM(" li  t0, 0x55555555");                         \
+        ASM(" and  t0, t0, t3");                            \
+        ASM(" csrw " #reg ", t0");                          \
+        ASM(" csrr t1, " #reg);                             \
+        ASM(" and  t1, t1, t3");                            \
+        ASM("testReg5_" #reg ":  bne t1, t0, " #j_error);   \
+    }                                                       \
     while (0)
 
-#define BIST_TEST_CSR_REG_STACKED(reg, mask, j_error)                                                                  \
-    do {                                                                                                               \
-        ASM(" csrr t2," #reg);                                                                                         \
-        ASM(" sw t2, 4(sp)");                                                                                          \
-        BIST_TEST_CSR_REG_NOT_STACKED(reg, mask, j_error);                                                             \
-        ASM(" lw t2, 4(sp)");                                                                                          \
-        ASM(" csrw " #reg ", t2");                                                                                     \
-    }                                                                                                                  \
+#define BIST_TEST_CSR_REG_STACKED(reg, mask, j_error)       \
+    do {                                                    \
+        ASM(" csrr t2," #reg);                              \
+        ASM(" sw t2, 4(sp)");                               \
+        BIST_TEST_CSR_REG_NOT_STACKED(reg, mask, j_error);  \
+        ASM(" lw t2, 4(sp)");                               \
+        ASM(" csrw " #reg ", t2");                          \
+    }                                                       \
     while (0)
 
 #if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
@@ -105,7 +105,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(mcause, CSR_MCAUSE_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(mtval, MASK_32BIT, errorCSR);
 
-#if !defined(__ZEPHYR__)
+#if !defined(IS_ULP_COCPU)
     // Physical Memory Protection (PMP) address CSRs
     BIST_TEST_CSR_REG_STACKED(pmpaddr0, CSR_PMPADDR_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(pmpaddr1, CSR_PMPADDR_MASK, errorCSR);
@@ -131,7 +131,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(pmpcfg3, CSR_PMPCFG_MASK, errorCSR);
 #endif
 
-#if SOC_CPU_HAS_PMA
+#if SOC_CPU_HAS_PMA && !defined(IS_ULP_COCPU)
     // PMA address CSRs (entries 0-11 only; 12-15 may be active NAPOT regions)
     BIST_TEST_CSR_REG_STACKED(0xBD0, CSR_PMAADDR_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(0xBD1, CSR_PMAADDR_MASK, errorCSR);

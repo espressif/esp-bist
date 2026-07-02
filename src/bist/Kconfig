@@ -29,68 +29,84 @@ config ESP_BIST_MEMORY_RAM_TEST
     help
         Enable tests for the RAM memory integrity (March A and March X).
 
-config ESP_BIST_MEMORY_FLASH_TEST
-    bool "Memory Flash Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
-    help
-      Enable tests for the Flash memory integrity.
-
-config BIST_FLASH_TEST_CHUNK_SIZE
-    hex "Flash Test Chunk Size"
-    depends on ESP_BIST_MEMORY_FLASH_TEST
-    default 0x1000
-    help
-      Specify the chunk size in bytes for flash memory testing.
-
 config ESP_BIST_STACK_TEST
     bool "Stack Test"
     default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for the stack integrity.
 
+config ESP_BIST_PROGRAM_COUNTER_TEST
+    bool "Program Counter Test"
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
+    help
+      Enable tests for the program counter.
+
+config ESP_BIST_MEMORY_FLASH_TEST
+    bool "Memory Flash Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE
+    help
+      Enable tests for the Flash memory integrity.
+
 config ESP_BIST_CLOCK_TEST
     bool "Clock Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
     help
       Enable tests for the main crystal clock.
 
+config ESP_BIST_GPIO_TEST
+    bool "GPIO Test"
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
+    help
+      Enable tests for the GPIO pins.
+
+config ESP_BIST_WATCHDOG_TEST
+    bool "Watchdog Test"
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
+    help
+      Enable tests for the HP main watchdog timer (MWDT).
+
+endmenu
+
+config ESP_BIST_WDT_TIMEOUT_US
+    int "WDT Timeout (us)"
+    depends on ESP_BIST
+    default 50000
+    help
+      Maximum time between watchdog feeds in microseconds.
+
+      On the LP core (ESP-IDF ULP integration), this configures the LP WDT
+      timeout via lp_wdt_init(). On HP core / standalone builds, this configures
+      the main watchdog timer (MWDT).
+
+config BIST_FLASH_TEST_CHUNK_SIZE
+    hex "Flash Test Chunk Size"
+    depends on ESP_BIST && ESP_BIST_MEMORY_FLASH_TEST
+    default 0x1000
+    help
+      Specify the chunk size in bytes for flash memory testing.
+
 config ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
     int "Clock Frequency Drift Percentage"
-    depends on ESP_BIST_CLOCK_TEST
+    depends on ESP_BIST && ESP_BIST_CLOCK_TEST
     range 0 100
     default 1
     help
       Specify the acceptable percentage of frequency drift for the clock test.
 
-config ESP_BIST_GPIO_TEST
-    bool "GPIO Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
-    help
-      Enable tests for the GPIO pins.
-
-config ESP_BIST_PROGRAM_COUNTER_TEST
-    bool "Program Counter Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
-    help
-      Enable tests for the program counter.
-
-config ESP_BIST_WATCHDOG_TEST
-    bool "Watchdog Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
-    help
-      Enable tests for the watchdog timer.
-
-endmenu
-
-# Standalone build system configs (not available when building with Zephyr)
 config ESP_BIST_FLASH_SIZE
     hex "Flash Size"
+    depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
     default 0x400000
     help
       Specify the size of the flash memory in bytes.
 
 config ESP_BIST_HEAP_SIZE
     hex "Heap Size"
+    depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
     default 0x1000
     help
       Specify the size of the heap in bytes. This is used for dynamic memory allocation
@@ -98,21 +114,16 @@ config ESP_BIST_HEAP_SIZE
 
 config ESP_BIST_STACK_PROTECTION_BLOCK_SIZE
     hex "Stack Protection Block Size"
+    depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
     default 0x100
     help
       Specify the size of the stack protection block in bytes. This is used to protect
       the stack from overflow and underflow conditions. A value of 0 means no protection
       block is allocated.
 
-config ESP_BIST_WDT_TIMEOUT_US
-    int "WDT Timeout (us)"
-    default 50000
-    help
-      Specify the watchdog timer (WDT) timeout in microseconds. This is the maximum time
-      allowed for the application operations to complete before the watchdog timer triggers a reset.
-
 config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
     int "WDT Windowed Underflow Timeout (us)"
+    depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
     default 10
     help
       Specify the timeout for the windowed underflow condition in microseconds.
@@ -121,7 +132,8 @@ config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
 
 config ESP_BIST_METRICS
     bool "BIST Metrics Collection"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default y
     help
       Enable the collection of performance metrics during BIST operations, such as
       execution time, CPU cycles, and instruction counts.

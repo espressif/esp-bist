@@ -1,0 +1,13 @@
+menu "ESP-BIST"
+
+# Set when ESP-BIST is integrated with ESP-IDF and the LP coprocessor is enabled.
+
+config IDF_ESP_BIST_COMPONENT
+    bool
+    default y if ULP_COPROC_ENABLED && ULP_COPROC_TYPE_LP_CORE
+    help
+      Internal symbol. Indicates BIST is a component of ESP-IDF.
+
+rsource "./src/bist/Kconfig"
+
+endmenu
