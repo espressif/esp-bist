@@ -1,0 +1,46 @@
+diff --git a/components/ulp/cmake/IDFULPProject.cmake b/components/ulp/cmake/IDFULPProject.cmake
+index fbab4d69928..66e6155f4f3 100644
+--- a/components/ulp/cmake/IDFULPProject.cmake
++++ b/components/ulp/cmake/IDFULPProject.cmake
+@@ -24,6 +24,15 @@ function(ulp_apply_default_options ulp_app_name)
+     endif()
+ endfunction()
+ 
++# Apply a custom linker script to the ULP app
++function(ulp_apply_custom_linker_script ulp_app_name script)
++    if(NOT script)
++        message(FATAL_ERROR "No custom linker script provided")
++    endif()
++    message(STATUS "Applying custom linker script to ULP app ${ulp_app_name}: ${script}")
++    set(ULP_CUSTOM_LD_SCRIPT ${script} PARENT_SCOPE)
++endfunction()
++
+ function(ulp_apply_default_sources ulp_app_name)
+ 
+     function(create_arg_file arguments output_file)
+@@ -52,14 +61,20 @@ function(ulp_apply_default_sources ulp_app_name)
+     target_include_directories(${ulp_app_name} PRIVATE ${COMPONENT_INCLUDES})
+ 
+     # Pre-process the linker script
+-    if(CONFIG_ULP_COPROC_TYPE_RISCV)
+-        set(ULP_LD_TEMPLATE ${IDF_PATH}/components/ulp/ld/ulp_riscv.ld)
+-    elseif(CONFIG_ULP_COPROC_TYPE_LP_CORE)
+-        set(ULP_LD_TEMPLATE ${IDF_PATH}/components/ulp/ld/lp_core_riscv.ld)
++    if(ULP_CUSTOM_LD_SCRIPT)
++        set(ULP_LD_TEMPLATE ${ULP_CUSTOM_LD_SCRIPT})
++
+     else()
+-        set(ULP_LD_TEMPLATE ${IDF_PATH}/components/ulp/ld/ulp_fsm.ld)
++        if(CONFIG_ULP_COPROC_TYPE_RISCV)
++            set(ULP_LD_TEMPLATE ${IDF_PATH}/components/ulp/ld/ulp_riscv.ld)
++        elseif(CONFIG_ULP_COPROC_TYPE_LP_CORE)
++            set(ULP_LD_TEMPLATE ${IDF_PATH}/components/ulp/ld/lp_core_riscv.ld)
++        else()
++            set(ULP_LD_TEMPLATE ${IDF_PATH}/components/ulp/ld/ulp_fsm.ld)
++        endif()
+     endif()
+ 
++
+     get_filename_component(ULP_LD_SCRIPT ${ULP_LD_TEMPLATE} NAME)
+ 
+     # Put all arguments to the list
