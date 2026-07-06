@@ -21,8 +21,8 @@
     "function_name": "bist_cpu_stack_overflow_init",
     "body": "bist_esp_err_t bist_cpu_stack_overflow_init(void)\n{\n    /*\n     * Fill the entire protection region with the sentinel pattern.\n     * A single-word sentinel can fall in an unwritten gap between\n     * stack frames (saved regs + padding occupy ~32 bytes per 160-byte\n     * frame), making single-point detection unreliable. Filling the\n     * full region guarantees at least one word lands in a zeroed buffer.\n     */\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p <= end; p++) {\n        *p = STACK_PROTECTION_PATTERN;\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/cpu/bist_cpu_stack.c",
-    "line_start": 43,
-    "line_end": 59,
+    "line_start": 42,
+    "line_end": 58,
     "module": "cpu",
     "content_type": "source"
   },
@@ -30,8 +30,8 @@
     "function_name": "bist_cpu_stack_overflow_check",
     "body": "bist_esp_err_t bist_cpu_stack_overflow_check(void)\n{\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p <= end; p++) {\n        if (*p != STACK_PROTECTION_PATTERN) {\n            handle_stack_overflow();\n            return BIST_ESP_STACK_TEST_OVERFLOW;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/cpu/bist_cpu_stack.c",
-    "line_start": 61,
-    "line_end": 73,
+    "line_start": 60,
+    "line_end": 72,
     "module": "cpu",
     "content_type": "source"
   },
@@ -39,8 +39,8 @@
     "function_name": "bist_cpu_stack_overflow_test",
     "body": "bist_esp_err_t bist_cpu_stack_overflow_test(void)\n{\n    volatile int count_max = 20000;\n\n    bist_cpu_stack_overflow_init();\n\n    BIST_ADD_LABEL(\"bist_cpu_stack_overflow_data\");\n    for (int k = 0; k < count_max; k++) {\n        /* intentionally cause a stack overflow */\n        bist_cpu_stack_recursive(k);\n\n        if (bist_cpu_stack_overflow_check() == BIST_ESP_STACK_TEST_OVERFLOW) {\n            return BIST_ESP_OK;\n        }\n    }\n\n    return BIST_ESP_STACK_TEST_ERR;\n}",
     "file": "src/bist/core/cpu/bist_cpu_stack.c",
-    "line_start": 75,
-    "line_end": 92,
+    "line_start": 74,
+    "line_end": 91,
     "module": "cpu",
     "content_type": "source"
   },
@@ -48,8 +48,8 @@
     "function_name": "bist_get_stack_high_watermark",
     "body": "uint32_t bist_get_stack_high_watermark(void)\n{\n    uint32_t *stack_top = (uint32_t *)&_stack_top;\n    uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_start;\n    uint32_t high_watermark = 0;\n\n    /* We should check after the overflow protection region */\n    stack_bottom++;\n\n    for (uint32_t *p = stack_bottom; p < stack_top; p++) {\n        if (*p == STACK_FILL_PATTERN) {\n            high_watermark++;\n        } else {\n            break;\n        }\n    }\n\n    return high_watermark * sizeof(uint32_t);\n}",
     "file": "src/bist/core/cpu/bist_cpu_stack.c",
-    "line_start": 94,
-    "line_end": 112,
+    "line_start": 93,
+    "line_end": 111,
     "module": "cpu",
     "content_type": "source"
   },
