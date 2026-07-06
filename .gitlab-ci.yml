@@ -166,6 +166,8 @@ build_mcuboot:
 
 .zephyr_boards_matrix: &zephyr_boards_matrix
   matrix:
+    - ZEPHYR_BOARD: esp32c5_devkitc/esp32c5/hpcore
+      SOC_TAG: esp32c5
     - ZEPHYR_BOARD: esp32c6_devkitc/esp32c6/hpcore
       SOC_TAG: esp32c6
 
