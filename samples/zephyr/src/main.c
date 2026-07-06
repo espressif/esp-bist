@@ -31,6 +31,7 @@
 #define BIST_BIT_RAM_A    BIT(2)
 #define BIST_BIT_RAM_X    BIT(3)
 #define BIST_BIT_FLASH    BIT(4)
+#define BIST_BIT_STACK    BIT(5)
 #define BIST_BIT_RUNTIME  BIT(30)
 #define BIST_BIT_DONE     BIT(31)
 
@@ -118,6 +119,12 @@ ZTEST(bist_lp, test_runtime_ram_march_a)
 {
 	zassert_true(runtime_result & BIST_BIT_RAM_A,
 		     "LP runtime: RAM March-A test failed");
+}
+
+ZTEST(bist_lp, test_runtime_stack_check)
+{
+	zassert_true(runtime_result & BIST_BIT_STACK,
+		     "LP runtime: Stack overflow check failed");
 }
 
 ZTEST_SUITE(bist_lp, NULL, bist_suite_setup, NULL, NULL, NULL);

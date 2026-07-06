@@ -34,11 +34,11 @@
 #define BIST_BIT_RAM_A      BIT(2)
 #define BIST_BIT_RAM_X      BIT(3)
 #define BIST_BIT_FLASH      BIT(4)
+#define BIST_BIT_STACK      BIT(5)
 #define BIST_BIT_RUNTIME    BIT(30)
 #define BIST_BIT_DONE       BIT(31)
 
 #define BIST_MSG_READY      0xCAFECAFE
-#define RUNTIME_INTERVAL_MS 500
 
 static volatile bool hp_ready;
 
@@ -121,6 +121,15 @@ static uint32_t run_runtime_tests(void)
 	}
 #endif
 
+#if IS_ENABLED(CONFIG_ESP_BIST_STACK_TEST)
+	printk("[LP BIST] Stack overflow check... ");
+	err = bist_cpu_stack_overflow_check();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_STACK;
+	}
+#endif
+
 	return mask;
 }
 
@@ -145,6 +154,10 @@ int main(void)
 	mbox_register_callback_dt(&rx_channel, rx_cb, NULL);
 	mbox_set_enabled_dt(&rx_channel, 1);
 
+#if IS_ENABLED(CONFIG_ESP_BIST_STACK_TEST)
+	bist_cpu_stack_overflow_init();
+#endif
+
 	printk("[LP BIST] Waiting for HP core ready signal...\n");
 	while (!hp_ready) {
 		k_msleep(10);
@@ -158,7 +171,7 @@ int main(void)
 
 	printk("[LP BIST] === Runtime tests (periodic) ===\n");
 	while (1) {
-		k_msleep(RUNTIME_INTERVAL_MS);
+		k_msleep(CONFIG_ESP_BIST_RUNTIME_TEST_INTERVAL_MS);
 		result = run_runtime_tests() | BIST_BIT_RUNTIME | BIST_BIT_DONE;
 		send_result(&tx_channel, result);
 	}
