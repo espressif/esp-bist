@@ -50,13 +50,16 @@ SECTIONS
 
     .text ALIGN(4):
     {
-        *(.text.vectors) /* Default reset vector must link to offset 0x80 */
+        _flash_text_start = ABSOLUTE(.);
         __text_region_start = ABSOLUTE(.);
+        *(.text.vectors) /* Default reset vector must link to offset 0x80 */
         *(.text)
         *(.text*)
         *(.iram1)
         *(.iram1.*)
+        . = ALIGN(4);
         __text_region_end = ABSOLUTE(.);
+        _flash_text_end = ABSOLUTE(.);
     } >ram
 
   #include <zephyr/linker/rel-sections.ld>
@@ -64,11 +67,30 @@ SECTIONS
     .rodata ALIGN(4):
     {
         __rodata_region_start = ABSOLUTE(.);
+        _flash_rodata_start = ABSOLUTE(.);
         _bist_ram_test_start = .;
         *(.rodata .srodata)
         *(.rodata* .srodata*)
+        . = ALIGN(4);
         __rodata_region_end = .;
+        _flash_rodata_end = ABSOLUTE(.);
 
+    } > ram
+
+    .crc_section_text : ALIGN(4)
+    {
+        _crc_section_text_start = ABSOLUTE(.);
+        LONG(0x00000000)
+        KEEP(*(.crc_section_text))
+        _crc_section_text_end = ABSOLUTE(.);
+    } > ram
+
+    .crc_section_data : ALIGN(4)
+    {
+        _crc_section_data_start = ABSOLUTE(.);
+        LONG(0x00000000)
+        KEEP(*(.crc_section_data))
+        _crc_section_data_end = ABSOLUTE(.);
     } > ram
 
 #include <zephyr/linker/common-rom/common-rom-kernel-devices.ld>

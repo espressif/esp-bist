@@ -22,17 +22,20 @@
  *
  * - **HP core (standalone / IDF application):** maps to `ESP_EARLY_LOGx` so
  *   logging works before the full ESP-IDF log subsystem is initialized.
- * - **LP core (ULP / LP-core build, `IS_ULP_COCPU`):** maps to
- *   `lp_core_printf()` with a `[level][tag]` prefix. Debug and verbose levels
- *   are compiled out to reduce LP firmware size.
+ * - **LP core / Zephyr:** maps to `printk()` with a `[level][tag]` prefix.
+ *   Debug and verbose levels are compiled out to reduce LP firmware size.
+ * - **LP core / IDF (ULP, `IS_ULP_COCPU`):** maps to `lp_core_printf()`
+ *   with a `[level][tag]` prefix.
  *
  * Include this header instead of `esp_log.h` in BIST sources so the same
- * logging calls work on both cores.
+ * logging calls work on both cores and frameworks.
  */
 
 #pragma once
 
-#if defined(IS_ULP_COCPU)
+#if defined(__ZEPHYR__)
+#include <zephyr/sys/printk.h>
+#elif defined(IS_ULP_COCPU)
 #include "ulp_lp_core_print.h"
 #else
 #include "esp_log.h"
@@ -52,7 +55,24 @@
  * @{
  */
 
-#if defined(IS_ULP_COCPU)
+#if defined(__ZEPHYR__)
+
+/** @brief Log an error message on the LP core (Zephyr) */
+#define ESP_LOGE(tag, format, ...) printk("[E][%s] " format "\r\n", tag, ##__VA_ARGS__)
+
+/** @brief Log a warning message on the LP core (Zephyr) */
+#define ESP_LOGW(tag, format, ...) printk("[W][%s] " format "\r\n", tag, ##__VA_ARGS__)
+
+/** @brief Log an info message on the LP core (Zephyr) */
+#define ESP_LOGI(tag, format, ...) printk("[I][%s] " format "\r\n", tag, ##__VA_ARGS__)
+
+/** @brief Debug logging disabled on LP core */
+#define ESP_LOGD(tag, format, ...)
+
+/** @brief Verbose logging disabled on LP core */
+#define ESP_LOGV(tag, format, ...)
+
+#elif defined(IS_ULP_COCPU)
 
 /** @brief Log an error message on the LP core */
 #define ESP_LOGE(tag, format, ...) lp_core_printf("[E][%s] " format "\r\n", tag, ##__VA_ARGS__)

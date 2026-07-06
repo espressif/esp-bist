@@ -2320,58 +2320,90 @@
     "content_type": "doc"
   },
   {
+    "id": "doc:README.md:esp_bist_zephyr_lp_core_self_test_sample",
+    "title": "ESP-BIST Zephyr LP Core Self-Test Sample",
+    "section": "esp_bist_zephyr_lp_core_self_test_sample",
+    "body": "This sample demonstrates running [ESP-BIST](../../README.md) safety tests on the\nESP32 Low-Power (LP) core under Zephyr RTOS, with results validated on the\nHigh-Performance (HP) core using the `ztest` framework.",
+    "source_file": "samples/zephyr/README.md",
+    "content_type": "doc"
+  },
+  {
     "id": "doc:README.md:overview",
     "title": "Overview",
     "section": "overview",
-    "body": "This sample demonstrates how to integrate the Zephyr OS on HP (High-Performance) and LP (Low-Power) cores of the ESP32-C6, along with the ESP-BIST library for built-in self-test functionality.\n\nBefore running this sample, ensure you have the Zephyr environment set up correctly. You can find the setup instructions in the [Zephyr's Getting Started Guide\uf0c1](https://docs.zephyrproject.org/latest/develop/getting_started/index.html).",
+    "body": "The sample is a **sysbuild** multi-image application with two firmware images:\n\n| Image | Core | Role |\n|-------|------|------|\n| `zephyr_bist` (main) | HP core | Receives test results via mailbox, runs `ztest` assertions |\n| `zephyr_bist_remote` | LP core | Executes ESP-BIST tests, reports results via mailbox |",
+    "source_file": "samples/zephyr/README.md",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:README.md:intercore_handshake",
+    "title": "Intercore handshake",
+    "section": "intercore_handshake",
+    "body": "The HP and LP cores synchronise through the hardware mailbox (`mbox`):\n\n1. Both cores boot independently after reset.\n2. The LP core registers its mailbox RX callback and **waits** for a\n   `BIST_MSG_READY` message from the HP core.\n3. The HP core registers its mailbox RX callback and sends `BIST_MSG_READY`.\n4. The LP core receives the ready signal, executes tests, and sends results back.\n\nThis handshake ensures no results are lost regardless of boot timing or\n`CONFIG_BOOT_DELAY` values used by CI tooling.",
+    "source_file": "samples/zephyr/README.md",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:README.md:test_phases",
+    "title": "Test phases",
+    "section": "test_phases",
+    "body": "The LP core runs tests in two phases:\n\n**Post-boot** (runs once after handshake):\n- CPU register test\n- RAM March-X test\n- Flash CRC integrity test\n\n**Runtime** (runs periodically every 500 ms):\n- CPU register test\n- RAM March-A test\n\nResults are encoded as a `uint32_t` bitmask:\n\n| Bit | Meaning |\n|-----|---------|\n| 0 | CPU register test passed |\n| 1 | CPU CSR register test passed |\n| 2 | RAM March-A test passed |\n| 3 | RAM March-X test passed |\n| 4 | Flash CRC test passed |\n| 30 | Runtime flag (distinguishes runtime from post-boot) |\n| 31 | Done sentinel |",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
     "id": "doc:README.md:supported_boards",
-    "title": "Supported Boards",
+    "title": "Supported boards",
     "section": "supported_boards",
-    "body": "- `esp32c6_devkitc`",
+    "body": "- `esp32c5_devkitc/esp32c5/hpcore`\n- `esp32c6_devkitc/esp32c6/hpcore`",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:build",
-    "title": "Build",
-    "section": "build",
-    "body": "You can build and run the sample application using the `west` tool.\n\nThere are two main ways to build the application: using a local repository or adding `ESP-BIST` to the Zephyr manifest.",
+    "id": "doc:README.md:requirements",
+    "title": "Requirements",
+    "section": "requirements",
+    "body": "- Zephyr SDK with the `riscv64-zephyr-elf` toolchain\n- ESP-BIST registered as an extra module:\n\n```bash\nexport ZEPHYR_EXTRA_MODULES=\"/path/to/esp-bist\"\n```",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:local_repository",
-    "title": "Local Repository",
-    "section": "local_repository",
-    "body": "To build the application, run the following command:\n\n```sh\nwest build -p -b esp32c6_devkitc/esp32c6/hpcore <path/to/esp-bist/samples/zephyr> -D ZEPHYR_EXTRA_MODULES=<path/to/esp-bist/> --sysbuild\n```",
+    "id": "doc:README.md:building",
+    "title": "Building",
+    "section": "building",
+    "body": "```bash\nwest build -p -b esp32c6_devkitc/esp32c6/hpcore \\\n    /path/to/esp-bist/samples/zephyr \\\n    --sysbuild \\\n    -D ZEPHYR_EXTRA_MODULES=\"/path/to/esp-bist\"\n```",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:zephyr_manifest",
-    "title": "Zephyr Manifest",
-    "section": "zephyr_manifest",
-    "body": "You can add the `ESP-BIST` library to the Zephyr manifest by modifying the `west.yml` file in your Zephyr workspace. Add the following entry under `remotes`:\n\n```yaml\n- name: espressif\n  url-base: https://github.com/espressif\n```\n\nThen, add the `esp-bist` module under `projects`:\n\n```yaml\n- name: esp-bist\n  remote: espressif\n  revision: main\n  path: modules/lib/esp-bist\n```\n\nThen, run the following command to update the manifest:\n\n```sh\nwest update\n```\nThe ESP-BIST library will be cloned into the `modules/lib/esp-bist` directory of your Zephyr workspace.\n\nAfter updating the manifest, you can build the application using:\n\n```sh\nwest build -p -b esp32c6_devkitc/esp32c6/hpcore modules/lib/esp-bist/samples/zephyr --sysbuild\n```",
+    "id": "doc:README.md:flashing",
+    "title": "Flashing",
+    "section": "flashing",
+    "body": "```bash\nwest flash\n```\n\nThis flashes three images: MCUboot bootloader, the HP core application, and the\nLP core binary.",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:flash_and_monitor",
-    "title": "Flash and Monitor",
-    "section": "flash_and_monitor",
-    "body": "Once you have built the application, run the following command to flash it and monitor the output:\n\n```shell\nwest flash && west espressif monitor\n```",
+    "id": "doc:README.md:running",
+    "title": "Running",
+    "section": "running",
+    "body": "After flashing, the device resets and the test suite runs automatically. Connect\nto the HP core serial port (typically `/dev/ttyUSB0` at 115200 baud) to see the\n`ztest` output:\n\n```\n*** Booting Zephyr OS build v4.4.0 ***\nRunning TESTSUITE bist_lp\n===================================================================\nSTART - test_postboot_cpu_reg\n PASS - test_postboot_cpu_reg in 0.001 seconds\n===================================================================\nSTART - test_postboot_flash_crc\n PASS - test_postboot_flash_crc in 0.001 seconds\n===================================================================\nSTART - test_postboot_ram_march_x\n PASS - test_postboot_ram_march_x in 0.001 seconds\n===================================================================\nSTART - test_runtime_cpu_reg\n PASS - test_runtime_cpu_reg in 0.001 seconds\n===================================================================\nSTART - test_runtime_ram_march_a\n PASS - test_runtime_ram_march_a in 0.001 seconds\n===================================================================\nTESTSUITE bist_lp succeeded\n```\n\nThe LP core serial port (typically `/dev/ttyUSB1`) shows the BIST execution log:\n\n```\n[LP BIST] Waiting for HP core ready signal...\n[LP BIST] HP core ready, starting tests\n[LP BIST] === Post-boot tests ===\n[LP BIST] CPU reg test... PASS (0)\n[LP BIST] RAM March-X test... PASS (0)\n[LP BIST] Flash CRC test... PASS (0)\n[LP BIST] === Runtime tests (periodic) ===\n[LP BIST] CPU reg test... PASS (0)\n[LP BIST] RAM March-A test... PASS (0)\n```",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:lp_core_console",
-    "title": "LP Core Console",
-    "section": "lp_core_console",
-    "body": "Connect an UART to USB adapter to the LP Core's LP UART pins (TX: GPIO 5, RX: GPIO 4, GND: GND) and open a terminal emulator.",
+    "id": "doc:README.md:running_with_twister",
+    "title": "Running with Twister",
+    "section": "running_with_twister",
+    "body": "```bash\nwest twister -p esp32c6_devkitc/esp32c6/hpcore \\\n    -T /path/to/esp-bist/samples/zephyr \\\n    --device-testing --flash-before \\\n    --device-serial /dev/ttyUSB0 --west-flash --west-runner esp32 \\\n```",
+    "source_file": "samples/zephyr/README.md",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:README.md:project_structure",
+    "title": "Project structure",
+    "section": "project_structure",
+    "body": "```\nsamples/zephyr/\n\u251c\u2500\u2500 CMakeLists.txt            # HP core build\n\u251c\u2500\u2500 Kconfig.sysbuild          # Auto-selects LP core board\n\u251c\u2500\u2500 prj.conf                  # HP core config (ztest, mbox, ULP)\n\u251c\u2500\u2500 sysbuild.cmake            # Adds LP core as external project\n\u251c\u2500\u2500 testcase.yaml             # Twister test definition\n\u251c\u2500\u2500 src/\n\u2502   \u2514\u2500\u2500 main.c                # HP core: mbox RX + ztest assertions\n\u251c\u2500\u2500 boards/\n\u2502   \u251c\u2500\u2500 esp32c5_devkitc_esp32c5_hpcore.overlay\n\u2502   \u2514\u2500\u2500 esp32c6_devkitc_esp32c6_hpcore.overlay\n\u2514\u2500\u2500 remote/                   # LP core application\n    \u251c\u2500\u2500 CMakeLists.txt\n    \u251c\u2500\u2500 prj.conf              # LP core config (ESP-BIST tests)\n    \u251c\u2500\u2500 src/\n    \u2502   \u2514\u2500\u2500 main.c            # LP core: handshake + BIST tests\n    \u2514\u2500\u2500 boards/\n        \u251c\u2500\u2500 esp32c5_devkitc_esp32c5_lpcore.overlay\n        \u2514\u2500\u2500 esp32c6_devkitc_esp32c6_lpcore.overlay\n```",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   }

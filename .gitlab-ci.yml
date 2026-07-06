@@ -164,6 +164,11 @@ build_mcuboot:
       - SOC_TARGET: *socs
         TEST_APP_NAME: ["standalone"]
 
+.zephyr_boards_matrix: &zephyr_boards_matrix
+  matrix:
+    - ZEPHYR_BOARD: esp32c6_devkitc/esp32c6/hpcore
+      SOC_TAG: esp32c6
+
 build_tests:
   extends:
     - .build_template
@@ -178,26 +183,35 @@ build_samples:
     ROOT_DIR: 'samples'
   <<: *build_samples_matrix
 
-build_zephyr_esp32c6_sample:
+build_zephyr_samples:
   stage: Build
   image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.28.7.20251127
   before_script: []
   rules:
     - when: always
+  parallel: *zephyr_boards_matrix
   variables:
     ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
+    ZEPHYR_EXTRA_MODULES: "$CI_PROJECT_DIR"
   script:
     - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
     - cd "$ZEPHYR_WORKSPACE"
-    - west update --narrow -o=--depth=1
+    - west update -o=--depth=1 --narrow
+        hal_espressif
+        cmsis
+        picolibc
+        open-amp
+        libmetal
+        mcuboot
+        mbedtls
     - west sdk install -t riscv64-zephyr-elf
     - west zephyr-export
-    - west build -p -b esp32c6_devkitc/esp32c6/hpcore "$CI_PROJECT_DIR/samples/zephyr" --sysbuild -D ZEPHYR_EXTRA_MODULES="$CI_PROJECT_DIR"
+    - west twister --prep-artifacts-for-testing -p $ZEPHYR_BOARD -T "$CI_PROJECT_DIR/samples/zephyr" --outdir "$CI_PROJECT_DIR/twister-out"
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - zephyr-workspace/build/zephyr/zephyr.elf
+      - twister-out/
   tags: [build]
 
 .idf_samples_matrix: &idf_samples_matrix
@@ -404,6 +418,50 @@ test_device:
   extends:
     - .test_device_template
   <<: *test_device_matrix
+
+.test_zephyr_device_template:
+  stage: Test Device
+  image: ${CI_DOCKER_REGISTRY}/zephyr-ci
+  before_script: []
+  timeout: 2h
+  variables:
+    ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
+    ZEPHYR_EXTRA_MODULES: "$CI_PROJECT_DIR"
+  script:
+    - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
+    - cd "$ZEPHYR_WORKSPACE"
+    - west update -o=--depth=1 --narrow
+        hal_espressif
+        cmsis
+        picolibc
+        open-amp
+        libmetal
+        mcuboot
+        mbedtls
+    - pip3 install --break-system-packages --ignore-installed -r "$ZEPHYR_WORKSPACE/zephyr/scripts/requirements.txt"
+    - pip3 install --break-system-packages --ignore-installed -r "$ZEPHYR_WORKSPACE/zephyr/scripts/requirements-actions.txt" --require-hashes
+    - west zephyr-export
+    - west twister -p $ZEPHYR_BOARD --device-testing --flash-before --log-level=DEBUG -T "$CI_PROJECT_DIR/samples/zephyr" --device-serial=$ESPPORT --west-flash --west-runner esp32
+  rules:
+    - when: always
+  retry: 1
+  tags: [generic, $SOC_TAG]
+  needs:
+    - job: build_zephyr_samples
+      parallel: *zephyr_boards_matrix
+      artifacts: true
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - twister-out/twister.xml
+    reports:
+      junit: twister-out/twister.xml
+
+test_zephyr_device:
+  extends:
+    - .test_zephyr_device_template
+  parallel: *zephyr_boards_matrix
 
 # static_analysis:
 #   stage: Static-Analysis
