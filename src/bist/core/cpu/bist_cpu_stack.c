@@ -14,7 +14,6 @@
  */
 
 #include "bist_cpu_stack.h"
-#include "esp_attr.h"
 
 extern uint32_t _stack_top;
 extern uint32_t _stack_overflow_protection_start;
