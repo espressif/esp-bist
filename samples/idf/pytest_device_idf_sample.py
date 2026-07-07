@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 """
@@ -12,8 +12,8 @@ All assertions run against a single boot to avoid unnecessary reflashes.
 import pytest
 
 
-@pytest.mark.parametrize('target', ['esp32c6'])
-def test_bist_idf_sample(dut):
+@pytest.mark.parametrize('target', ['esp32c5', 'esp32c6'], indirect=True)
+def test_bist_idf_sample(dut, target):
     # Post-boot tests
     dut.expect('test_BIST_cpu_reg:PASS', timeout=30)
     dut.expect('test_BIST_cpu_csr:PASS', timeout=10)
