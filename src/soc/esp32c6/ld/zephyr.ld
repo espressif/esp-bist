@@ -151,7 +151,16 @@ SECTIONS
         _safe_ram_end = ABSOLUTE(.);
     } > ram
 
-    __stack_top = ORIGIN(ram) + LENGTH(ram);
+    .dram0.overflow (NOLOAD) :
+    {
+        . = ALIGN(4);
+        _stack_overflow_protection_end = .;
+        . += 0x100;
+        _stack_overflow_protection_start = .;
+    } > ram
+
+    _stack_top = ORIGIN(ram) + LENGTH(ram);
+    __stack_top = _stack_top;
 
 #include <zephyr/linker/debug-sections.ld>
 
