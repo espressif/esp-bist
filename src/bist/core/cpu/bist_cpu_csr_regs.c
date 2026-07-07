@@ -147,7 +147,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(0xBDB, CSR_PMAADDR_MASK, errorCSR);
 #endif
 
-#if defined(SOC_TARGET_ESP32C5)
+#if defined(SOC_TARGET_ESP32C5) && !defined(IS_ULP_COCPU)
     // mexstatus and mhint: C5-only (CLIC-capable core).
     // C6/H2 mexstatus only has SOFT_RST bits (unsafe to test); mhint absent.
     BIST_TEST_CSR_REG_STACKED(0x7E1, CSR_MEXSTATUS_MASK, errorCSR);
