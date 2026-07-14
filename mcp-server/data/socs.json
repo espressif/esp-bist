@@ -30,7 +30,9 @@
     "csr_count": 39,
     "cmake_file": "cmake/esp32c5.cmake",
     "linker_scripts": [
-      "src/soc/esp32c5/ld/linker.ld"
+      "src/soc/esp32c5/ld/idf.ld",
+      "src/soc/esp32c5/ld/linker.ld",
+      "src/soc/esp32c5/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32c5",
     "specific_notes": "CMake config at cmake/esp32c5.cmake (99 lines)"

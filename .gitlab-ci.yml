@@ -219,6 +219,7 @@ build_zephyr_samples:
 .idf_samples_matrix: &idf_samples_matrix
   matrix:
     - IDF_TARGET: esp32c6
+    - IDF_TARGET: esp32c5
 
 .build_idf_sample_template:
   stage: Build
@@ -227,15 +228,15 @@ build_zephyr_samples:
   script:
     - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch
     - cd $CI_PROJECT_DIR/samples/idf
-    - idf.py set-target $IDF_TARGET
-    - idf.py build
+    - idf.py -B build_${IDF_TARGET} set-target $IDF_TARGET
+    - idf.py -B build_${IDF_TARGET} build
   rules:
     - when: always
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - samples/idf/build/
+      - samples/idf/build_${IDF_TARGET}/
   tags: [build]
 
 build_idf_samples:
@@ -245,7 +246,7 @@ build_idf_samples:
 .test_idf_device_template:
   stage: Test Device
   variables:
-    REPORT_PATH: 'samples/idf/build/idf_sample_${IDF_TARGET}_device_report.xml'
+    REPORT_PATH: 'samples/idf/build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
     - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch || true
@@ -264,9 +265,9 @@ build_idf_samples:
     when: always
     expire_in: 1 week
     paths:
-      - samples/idf/build/*_device_report.xml
+      - samples/idf/build_*/*_device_report.xml
     reports:
-      junit: samples/idf/build/*_device_report.xml
+      junit: samples/idf/build_*/*_device_report.xml
 
 test_idf_device:
   extends: .test_idf_device_template

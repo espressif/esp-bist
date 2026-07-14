@@ -4,6 +4,7 @@ This sample demonstrates running ESP-BIST tests on the LP core (ULP coprocessor)
 
 ## Supported SoCs
 
+- ESP32-C5
 - ESP32-C6
 
 ## Prerequisites
@@ -23,7 +24,7 @@ This patch adds `ulp_apply_custom_linker_script()` which allows the ULP sub-proj
 ```sh
 . $IDF_PATH/export.sh
 cd samples/idf
-idf.py set-target esp32c6
+idf.py set-target <target_soc>
 idf.py build
 ```
 
