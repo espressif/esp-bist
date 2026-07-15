@@ -284,6 +284,39 @@
     "kconfig_guards": []
   },
   {
+    "function": "bist_ram_test_abraham",
+    "signature": "bist_esp_err_t bist_ram_test_abraham(void)",
+    "module": "memory",
+    "description": "Test RAM integrity using Abraham algorithm (one time-division period)",
+    "params": [],
+    "returns": "BIST_ESP_OK if RAM passes test; BIST_ESP_RAM_TEST_ERR if mismatch detected",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_ram.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_ram_test_abraham_reset",
+    "signature": "void bist_ram_test_abraham_reset(void)",
+    "module": "memory",
+    "description": "Reset Abraham time-division pair schedule to the first pair",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_ram.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_ram_test_abraham_full",
+    "signature": "bist_esp_err_t bist_ram_test_abraham_full(void)",
+    "module": "memory",
+    "description": "Run Abraham algorithm over all partition pairs (full coverage)",
+    "params": [],
+    "returns": "BIST_ESP_OK if all pairs pass; BIST_ESP_RAM_TEST_ERR if any pair fails",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_ram.h",
+    "kconfig_guards": []
+  },
+  {
     "function": "bist_ext_crystal_fail_test",
     "signature": "bist_esp_err_t bist_ext_crystal_fail_test(void)",
     "module": "clock",
