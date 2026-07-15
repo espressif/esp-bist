@@ -2,7 +2,8 @@ from tests.idf_targets import pytestmark  # noqa: F401
 
 
 def test_ram_success(dut, target):
-    tests_names = ["test_BIST_ram_march_a", "test_BIST_ram_march_x"]
+    tests_names = ["test_BIST_ram_march_a", "test_BIST_ram_march_x",
+                   "test_BIST_ram_abraham", "test_BIST_ram_abraham_full"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
 
     # expect from what esptool.py printed to sys.stdout
