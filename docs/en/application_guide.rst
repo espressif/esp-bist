@@ -82,12 +82,13 @@ Post-Boot Self-Tests
    - **Rationale**: Main clock accuracy is essential for all timing-critical operations
    - **Implementation**: Measures frequency ratio against 32 kHz reference; fails if drift exceeds ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default: ±1%)
 
-4. **RAM Test** (``bist_ram_test_march_x()``)
+4. **RAM Test** (``bist_ram_test_march_x()`` / ``bist_ram_test_abraham_full()``)
 
    - **IEC 60730 Component**: 4.2 (Variable Memory)
-   - **Purpose**: Detects RAM coupling faults and data path errors using March X algorithm
+   - **Purpose**: Detects RAM stuck-at, coupling, transition, and address decoder faults
    - **Rationale**: RAM integrity is critical; corruption can lead to unpredictable behavior
-   - **Implementation**: Writes/reads patterns (0x00000000, 0xFFFFFFFF) in ascending and descending order
+   - **Implementation**: March X for Class B coverage; Abraham (H.2.19.1) with time-division
+     partition pairs for Class C–level coupling fault detection across the full RAM region
 
 5. **Flash CRC Test** (``bist_flash_test()``)
 

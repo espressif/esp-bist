@@ -184,7 +184,7 @@ Available test applications (each in `tests/<name>/`):
 |---------------------|-------------|
 | `cpu_reg_test`      | CPU register integrity |
 | `cpu_stack_test`    | CPU stack overflow detection |
-| `ram_test`          | Volatile memory (March A / March X) |
+| `ram_test`          | Volatile memory (March A / March X / Abraham) |
 | `clock_test`        | Clock sources (32 kHz and 40 MHz oscillators) |
 | `flash_test`        | Non-volatile memory (CRC32) |
 | `pc_test`           | Program counter and indirect time-slot monitoring |
