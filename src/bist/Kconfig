@@ -33,6 +33,7 @@ config ESP_BIST_MEMORY_RAM_TEST
 config ESP_BIST_RAM_PARTITION_SIZE
     int "RAM test partition size (words)"
     depends on ESP_BIST_MEMORY_RAM_TEST
+    default 256 if IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE
     default 512
     help
         Size of each RAM test partition in 32-bit words. March A/X test one
@@ -42,8 +43,8 @@ config ESP_BIST_RAM_PARTITION_SIZE
         backup buffer (2 x partition_size x 4 bytes).
 
         Common values:
-          256  = 1 KiB partitions, 2 KiB backup buffer
-          512  = 2 KiB partitions, 4 KiB backup buffer (default)
+          256  = 1 KiB partitions, 2 KiB backup buffer (LP core default)
+          512  = 2 KiB partitions, 4 KiB backup buffer (standalone default)
           1024 = 4 KiB partitions, 8 KiB backup buffer
 
 config ESP_BIST_STACK_TEST

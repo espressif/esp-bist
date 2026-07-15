@@ -88,6 +88,7 @@ static void print_postboot_results(uint32_t result)
     printf("test_BIST_cpu_reg:%s\n",     (result & BIST_BIT_CPU_REG) ? "PASS" : "FAIL");
     printf("test_BIST_cpu_csr:%s\n",     (result & BIST_BIT_CPU_CSR) ? "PASS" : "FAIL");
     printf("test_BIST_ram_march_x:%s\n", (result & BIST_BIT_RAM_X)  ? "PASS" : "FAIL");
+    printf("test_BIST_ram_abraham:%s\n", (result & BIST_BIT_ABRAHAM) ? "PASS" : "FAIL");
     printf("test_BIST_flash_crc:%s\n",   (result & BIST_BIT_FLASH)  ? "PASS" : "FAIL");
 }
 
@@ -97,6 +98,7 @@ static void print_runtime_results(uint32_t result)
     printf("test_BIST_runtime_cpu_reg:%s\n",      (result & BIST_BIT_CPU_REG) ? "PASS" : "FAIL");
     printf("test_BIST_runtime_cpu_csr:%s\n",      (result & BIST_BIT_CPU_CSR) ? "PASS" : "FAIL");
     printf("test_BIST_runtime_ram_march_a:%s\n",  (result & BIST_BIT_RAM_A)   ? "PASS" : "FAIL");
+    printf("test_BIST_runtime_ram_abraham:%s\n",  (result & BIST_BIT_ABRAHAM) ? "PASS" : "FAIL");
     printf("test_BIST_runtime_stack_check:%s\n",  (result & BIST_BIT_STACK)   ? "PASS" : "FAIL");
 }
 

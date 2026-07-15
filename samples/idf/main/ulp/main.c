@@ -65,6 +65,13 @@ static uint32_t run_postboot_tests(void)
     if (err == BIST_ESP_OK) {
         mask |= BIST_BIT_RAM_X;
     }
+
+    ESP_LOGI(TAG, "RAM Abraham full test... ");
+    err = bist_ram_test_abraham_full();
+    ESP_LOGI(TAG, "%s (%d)\r\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+    if (err == BIST_ESP_OK) {
+        mask |= BIST_BIT_ABRAHAM;
+    }
 #endif
 
 #ifdef CONFIG_ESP_BIST_MEMORY_FLASH_TEST
@@ -91,6 +98,7 @@ static uint32_t run_runtime_tests(void)
     if (err == BIST_ESP_OK) {
         mask |= BIST_BIT_CPU_REG;
     }
+    lp_wdt_feed();
 #endif
 
 #ifdef CONFIG_ESP_BIST_CPU_CSR_REG_TEST
@@ -100,6 +108,7 @@ static uint32_t run_runtime_tests(void)
     if (err == BIST_ESP_OK) {
         mask |= BIST_BIT_CPU_CSR;
     }
+    lp_wdt_feed();
 #endif
 
 #ifdef CONFIG_ESP_BIST_MEMORY_RAM_TEST
@@ -109,6 +118,15 @@ static uint32_t run_runtime_tests(void)
     if (err == BIST_ESP_OK) {
         mask |= BIST_BIT_RAM_A;
     }
+    lp_wdt_feed();
+
+    ESP_LOGI(TAG, "RAM Abraham test... ");
+    err = bist_ram_test_abraham();
+    ESP_LOGI(TAG, "%s (%d)\r\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+    if (err == BIST_ESP_OK) {
+        mask |= BIST_BIT_ABRAHAM;
+    }
+    lp_wdt_feed();
 #endif
 
 #ifdef CONFIG_ESP_BIST_STACK_TEST
@@ -146,8 +164,8 @@ int main(void)
 
     ESP_LOGI(TAG, "=== Runtime tests (periodic) ===\r\n");
     while (1) {
-        lp_wdt_feed();
         ulp_lp_core_delay_us(RUNTIME_INTERVAL_US);
+        lp_wdt_feed();
         result = run_runtime_tests() | BIST_BIT_RUNTIME;
         runtime_result = result;
         runtime_count++;
