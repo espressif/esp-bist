@@ -107,7 +107,7 @@ If a CSR does not correctly retain the written value, the test jumps to an error
 
 ## Volatile Memory Test
 
-The volatile memory test is designed to verify the integrity and proper operation of the volatile memory (RAM) in the MCU. It leverages March A and March X algorithms to exhaustively test the integrity of the device's RAM. The test is non-destructive and does not modify the memory's contents.
+The volatile memory test is designed to verify the integrity and proper operation of the volatile memory (RAM) in the MCU. It leverages March A, March X, and Abraham algorithms to exhaustively test the integrity of the device's RAM. The test is non-destructive and does not modify the memory's contents.
 
 1. Testing Method
 
@@ -120,6 +120,10 @@ The BIST routines work by temporarily backing up a chunk of the heap before perf
 - March X:
 
 `bist_ram_test_march_x` is a more comprehensive test that includes several phases of writing and reading in both ascending and descending orders, intended to uncover a wider range of potential memory faults.
+
+- Abraham:
+
+`bist_ram_test_abraham` implements the 10-element Abraham algorithm (30 operations per cell) for Class C–level variable-memory coverage. It detects stuck-at, transition, coupling, and address decoder faults. The test uses time-division over partition pairs: each call tests one pair of partitions (sized by `CONFIG_ESP_BIST_RAM_PARTITION_SIZE`) from the RAM region, and `bist_ram_test_abraham_full` runs the complete pair schedule for full coupling coverage across the entire region.
 
 ## Non-volatile memory Test
 

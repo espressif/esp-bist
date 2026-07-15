@@ -18,15 +18,23 @@
 
 #if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
 
-#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 256 // 1024 bytes
+#ifdef CONFIG_ESP_BIST_RAM_PARTITION_SIZE
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE CONFIG_ESP_BIST_RAM_PARTITION_SIZE
+#else
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 512
+#endif
 
 #define MARCH_STACK_SIZE 256
 
 extern uint32_t _bist_ram_test_start;
 extern uint32_t _bist_ram_test_size;
 
-// Buffer to backup and restore 1024 bytes at a time
-volatile uint32_t __attribute__((section(".dram0.safe_ram"))) backup_chunk[BIST_ESP_RAM_BACKUP_CHUNK_SIZE];
+// Buffer to backup and restore two partitions (2 x 1024 bytes) for Abraham
+volatile uint32_t __attribute__((section(".dram0.safe_ram"))) backup_chunk[2 * BIST_ESP_RAM_BACKUP_CHUNK_SIZE];
+
+// Abraham time-division pair state (validated on each use; NOLOAD-safe)
+static volatile size_t __attribute__((section(".dram0.safe_ram"))) abraham_pair_i;
+static volatile size_t __attribute__((section(".dram0.safe_ram"))) abraham_pair_j;
 
 // Stack for the RAM test
 static uint8_t __attribute__((section(".dram0.safe_ram"), aligned(16)))
@@ -200,6 +208,306 @@ bist_esp_err_t bist_ram_test_march_a(void)
 bist_esp_err_t bist_ram_test_march_x(void)
 {
     return run_on_safe_stack(march_x_impl);
+}
+
+/*
+ * Abraham algorithm (IEC 60730-1 Annex H H.2.19.1) — WOM variant.
+ *
+ * Operates on the logical concatenation of two partitions (part_a ∪ part_b).
+ * Ascending traversal: part_a[0..size_a), then part_b[0..size_b).
+ * Descending traversal: part_b[size_b-1..0], then part_a[size_a-1..0].
+ *
+ * Sequence (10 elements, 30 ops/cell):
+ *   ↕(w0)
+ *   ↓(r0,w1) ↑(r1)       — Seq 1
+ *   ↓(r1,w0) ↑(r0)       — Seq 2
+ *   ↑(r0,w1) ↓(r1)       — Seq 3
+ *   ↑(r1,w0) ↓(r0)       — Seq 4
+ *   ↓(r0,w1,w0) ↑(r0)    — Seq 5
+ *   ↑(r0,w1,w0) ↑(r0)    — Seq 6
+ *   ↕(w1)
+ *   ↑(r1,w0,w1) ↑(r1)    — Seq 7
+ *   ↓(r1,w0,w1) ↑(r1)    — Seq 8
+ */
+static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
+{
+    bool test_passed = true;
+    volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+
+    size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
+                            / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+
+    // Determine partition pointers and sizes
+    volatile uint32_t *part_a;
+    volatile uint32_t *part_b;
+    size_t size_a, size_b;
+
+    if (num_partitions <= 1) {
+        part_a = start_addr;
+        size_a = dram_test_size;
+        part_b = start_addr; // unused
+        size_b = 0;
+    } else {
+        // Validate pair state against NOLOAD garbage
+        if (abraham_pair_i >= num_partitions - 1 ||
+            abraham_pair_j >= num_partitions ||
+            abraham_pair_j <= abraham_pair_i) {
+            abraham_pair_i = 0;
+            abraham_pair_j = 1;
+        }
+
+        size_t off_a = abraham_pair_i * BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+        size_t off_b = abraham_pair_j * BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+
+        size_a = ((off_a + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
+                     ? (dram_test_size - off_a)
+                     : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+        size_b = ((off_b + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
+                     ? (dram_test_size - off_b)
+                     : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+
+        part_a = &start_addr[off_a];
+        part_b = &start_addr[off_b];
+    }
+
+    // Backup partition A
+    for (size_t i = 0; i < size_a; i++) {
+        backup_chunk[i] = part_a[i];
+    }
+    // Backup partition B
+    for (size_t i = 0; i < size_b; i++) {
+        backup_chunk[BIST_ESP_RAM_BACKUP_CHUNK_SIZE + i] = part_b[i];
+    }
+
+    // --- ↕(w0): Initialize all cells to 0 ---
+    for (size_t i = 0; i < size_a; i++) part_a[i] = 0;
+    for (size_t i = 0; i < size_b; i++) part_b[i] = 0;
+
+    // --- Seq 1: ↓(r0,w1) ↑(r1) ---
+    ASM("bist_ram_test_abraham_seq1:");
+    // ↓(r0,w1)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        part_b[i - 1] = 0xFFFFFFFF;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        part_a[i - 1] = 0xFFFFFFFF;
+    }
+    // ↑(r1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- Seq 2: ↓(r1,w0) ↑(r0) ---
+    // ↓(r1,w0)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_b[i - 1] = 0;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_a[i - 1] = 0;
+    }
+    // ↑(r0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- Seq 3: ↑(r0,w1) ↓(r1) ---
+    // ↑(r0,w1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        part_a[i] = 0xFFFFFFFF;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        part_b[i] = 0xFFFFFFFF;
+    }
+    // ↓(r1)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- Seq 4: ↑(r1,w0) ↓(r0) ---
+    // ↑(r1,w0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_a[i] = 0;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_b[i] = 0;
+    }
+    // ↓(r0)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- Seq 5: ↓(r0,w1,w0) ↑(r0) ---
+    // ↓(r0,w1,w0)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        part_b[i - 1] = 0xFFFFFFFF;
+        part_b[i - 1] = 0;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        part_a[i - 1] = 0xFFFFFFFF;
+        part_a[i - 1] = 0;
+    }
+    // ↑(r0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- Seq 6: ↑(r0,w1,w0) ↑(r0) ---
+    // ↑(r0,w1,w0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        part_a[i] = 0xFFFFFFFF;
+        part_a[i] = 0;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        part_b[i] = 0xFFFFFFFF;
+        part_b[i] = 0;
+    }
+    // ↑(r0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- ↕(w1): Reset all cells to 1 ---
+    for (size_t i = 0; i < size_a; i++) part_a[i] = 0xFFFFFFFF;
+    for (size_t i = 0; i < size_b; i++) part_b[i] = 0xFFFFFFFF;
+
+    // --- Seq 7: ↑(r1,w0,w1) ↑(r1) ---
+    // ↑(r1,w0,w1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_a[i] = 0;
+        part_a[i] = 0xFFFFFFFF;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_b[i] = 0;
+        part_b[i] = 0xFFFFFFFF;
+    }
+    // ↑(r1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+
+    // --- Seq 8: ↓(r1,w0,w1) ↑(r1) ---
+    // ↓(r1,w0,w1)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_b[i - 1] = 0;
+        part_b[i - 1] = 0xFFFFFFFF;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        part_a[i - 1] = 0;
+        part_a[i - 1] = 0xFFFFFFFF;
+    }
+    // ↑(r1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+    }
+
+restore_abraham:
+    // Restore partition A
+    for (size_t i = 0; i < size_a; i++) {
+        part_a[i] = backup_chunk[i];
+    }
+    // Restore partition B
+    for (size_t i = 0; i < size_b; i++) {
+        part_b[i] = backup_chunk[BIST_ESP_RAM_BACKUP_CHUNK_SIZE + i];
+    }
+
+    if (!test_passed) {
+        return BIST_ESP_RAM_TEST_ERR;
+    }
+    return BIST_ESP_OK;
+}
+
+static void abraham_advance_pair(size_t num_partitions)
+{
+    if (num_partitions <= 1) {
+        return;
+    }
+    abraham_pair_j++;
+    if (abraham_pair_j >= num_partitions) {
+        abraham_pair_i++;
+        abraham_pair_j = abraham_pair_i + 1;
+    }
+    if (abraham_pair_i >= num_partitions - 1) {
+        abraham_pair_i = 0;
+        abraham_pair_j = 1;
+    }
+}
+
+bist_esp_err_t bist_ram_test_abraham(void)
+{
+    bist_esp_err_t result = run_on_safe_stack(abraham_impl);
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
+                            / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+    abraham_advance_pair(num_partitions);
+    return result;
+}
+
+void bist_ram_test_abraham_reset(void)
+{
+    abraham_pair_i = 0;
+    abraham_pair_j = 1;
+}
+
+bist_esp_err_t bist_ram_test_abraham_full(void)
+{
+    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
+                            / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+    size_t total_pairs = (num_partitions <= 1)
+                             ? 1
+                             : (num_partitions * (num_partitions - 1)) / 2;
+
+    bist_ram_test_abraham_reset();
+
+    for (size_t p = 0; p < total_pairs; p++) {
+        bist_esp_err_t err = run_on_safe_stack(abraham_impl);
+        if (err != BIST_ESP_OK) {
+            return err;
+        }
+        abraham_advance_pair(num_partitions);
+    }
+    return BIST_ESP_OK;
 }
 
 #endif // CONFIG_ESP_BIST_MEMORY_RAM_TEST
