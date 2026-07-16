@@ -54,6 +54,11 @@ default:
     - . $IDF_PATH/export.sh
     - mkdir -p $MCUBOOT_PATH/boot/espressif/build
     - cp mcuboot_build/mcuboot_${SOC_TARGET}.bin $MCUBOOT_PATH/boot/espressif/build/
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
 
 mcp_data_drift:
   stage: Lint
@@ -151,7 +156,6 @@ build_mcuboot:
     - ninja -C build
   rules:
     - when: always
-  retry: 1
   tags: [build]
   cache:
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
@@ -202,7 +206,7 @@ build_zephyr_samples:
     ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
     ZEPHYR_EXTRA_MODULES: "$CI_PROJECT_DIR"
   script:
-    - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
+    - west init -m https://github.com/zephyrproject-rtos/zephyr.git -o=--depth=1 "$ZEPHYR_WORKSPACE" || true
     - cd "$ZEPHYR_WORKSPACE"
     - west update -o=--depth=1 --narrow
         hal_espressif
@@ -261,7 +265,6 @@ build_idf_samples:
     - pytest pytest_device* --target=$IDF_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
     - when: always
-  retry: 1
   tags: [generic, $IDF_TARGET]
   needs:
     - job: build_idf_samples
@@ -291,7 +294,6 @@ test_idf_device:
     - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
     - when: always
-  retry: 1
   tags: [build]
   needs:
     - job: build_tests
@@ -340,7 +342,6 @@ test_idf_device:
     - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
     - when: always
-  retry: 1
   tags: [build]
   needs:
     - job: build_tests
@@ -395,7 +396,6 @@ test_qemu_remote:
     - pytest pytest_device* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
     - when: always
-  retry: 1
   tags: [generic, $SOC_TARGET]
   needs:
     - job: build_mcuboot
@@ -435,30 +435,30 @@ test_device:
   timeout: 2h
   variables:
     ZEPHYR_WORKSPACE: "$CI_PROJECT_DIR/zephyr-workspace"
-    ZEPHYR_EXTRA_MODULES: "$CI_PROJECT_DIR"
   script:
-    - west init -m https://github.com/zephyrproject-rtos/zephyr.git "$ZEPHYR_WORKSPACE" || true
+    - west init -m https://github.com/zephyrproject-rtos/zephyr.git -o=--depth=1 "$ZEPHYR_WORKSPACE" || true
     - cd "$ZEPHYR_WORKSPACE"
-    - west update -o=--depth=1 --narrow
-        hal_espressif
-        cmsis
-        picolibc
-        open-amp
-        libmetal
-        mcuboot
-        mbedtls
     - pip3 install --break-system-packages --ignore-installed -r "$ZEPHYR_WORKSPACE/zephyr/scripts/requirements.txt"
     - pip3 install --break-system-packages --ignore-installed -r "$ZEPHYR_WORKSPACE/zephyr/scripts/requirements-actions.txt" --require-hashes
     - west zephyr-export
-    - west twister -p $ZEPHYR_BOARD --device-testing --flash-before --log-level=DEBUG -T "$CI_PROJECT_DIR/samples/zephyr" --device-serial=$ESPPORT --west-flash --west-runner esp32
+    - west twister -p $ZEPHYR_BOARD
+        --test-only --no-clean
+        --device-testing --flash-before --log-level=DEBUG
+        -T "$CI_PROJECT_DIR/samples/zephyr"
+        --outdir "$CI_PROJECT_DIR/twister-out"
+        --device-serial=$ESPPORT
+        --west-flash=--skip-rebuild
+        --west-runner esp32
   rules:
     - when: always
-  retry: 1
   tags: [generic, $SOC_TAG]
   needs:
     - job: build_zephyr_samples
-      parallel: *zephyr_boards_matrix
       artifacts: true
+      parallel:
+        matrix:
+          - ZEPHYR_BOARD: ['$[[ matrix.ZEPHYR_BOARD ]]']
+            SOC_TAG: ['$[[ matrix.SOC_TAG ]]']
   artifacts:
     when: always
     expire_in: 1 week
