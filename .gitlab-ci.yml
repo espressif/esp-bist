@@ -337,6 +337,8 @@ build_qemu_remote:
       SOC_TAG: esp32c5
     - ZEPHYR_BOARD: esp32c6_devkitc/esp32c6/hpcore
       SOC_TAG: esp32c6
+    - ZEPHYR_BOARD: esp32p4x_function_ev_board/esp32p4/hpcore
+      SOC_TAG: esp32p4
 
 .nuttx_boards_matrix: &nuttx_boards_matrix
   matrix:
