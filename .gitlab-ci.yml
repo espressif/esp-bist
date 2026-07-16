@@ -1,3 +1,9 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
 stages:
   - Lint
   - Build
@@ -561,10 +567,7 @@ deploy_preview_docs:
     - build_docs_html
     - build_docs_pdf
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-      when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
 
 deploy_prod_docs:
   stage: Deploy Docs
