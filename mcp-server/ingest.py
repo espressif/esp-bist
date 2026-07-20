@@ -501,6 +501,17 @@ def build_socs_data(repo_root: Path) -> list[dict]:
             "has_xt_wdt": False,
             "csr_count": 37,
         },
+        "esp32p4": {
+            "name": "ESP32-P4",
+            "cpu": "Dual-core RISC-V + LP RISC-V",
+            "max_freq_mhz": 400,
+            "sram_kb": "768 KB HP L2MEM + 32 KB LP + 8 KB TCM",
+            "psram": True,
+            "gpio_count": "55",
+            "has_pma": True,
+            "has_xt_wdt": False,
+            "csr_count": 40,
+        },
     }
 
     for soc_key, info in soc_info.items():
