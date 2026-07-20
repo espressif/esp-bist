@@ -220,7 +220,7 @@ Each test replaces ``<csr_name>`` with the specific CSR name or number.
 4. Mismatch detected, test fails
 5. Returns ``BIST_ESP_CPU_CSR_TEST_ERR``
 
-**Test Coverage:** 25 test cases on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint)
+**Test Coverage:** 25 test cases on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2/C61 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint), 40 on ESP32-H4/P4 (adds 12 pma_addr + ``fflags``, ``frm``, ``fcsr``)
 
 **Expected Output per CSR:**
 
@@ -237,7 +237,7 @@ Hardware Validation
 
 - Device running with standard CSR configuration
 - Machine mode privilege level (typical for bare-metal)
-- PMP registers available for testing; PMA address registers available on C6/H2/C5; mexstatus/mhint on C5 only
+- PMP registers available for testing; PMA address registers available on C6/H2/C5/P4; mexstatus/mhint on C5 only; FPU CSRs on H4/P4
 
 **Execution:**
 
@@ -248,7 +248,7 @@ Hardware Validation
 
 **Expected Behavior:**
 
-- All CSRs pass integrity checks on real hardware (25 on C3, 37 on C6/H2, 39 on C5)
+- All CSRs pass integrity checks on real hardware (25 on C3, 37 on C6/H2/C61, 39 on C5, 40 on H4/P4)
 - No stuck-at faults or CSR corruption detected
 
 CI Test Results
@@ -782,6 +782,9 @@ QEMU/Emulation Validation
 3. Verify reset reason is ``RESET_REASON_CORE_MWDT0`` (MWDT0 reset)
 4. Returns ``BIST_ESP_OK`` (watchdog working correctly)
 
+.. note::
+   ESP32-P4 reset reason is ``RESET_REASON_CORE_MWDT`` instead of ``RESET_REASON_CORE_MWDT0``.
+
 **Expected Output:**
 
 .. code-block::
@@ -844,7 +847,7 @@ Hardware Validation
 **Expected Behavior:**
 
 - First boot: Watchdog timeout detected, system resets
-- Second boot: Reset reason correctly identified as ``RESET_REASON_CORE_MWDT0``
+- Second boot: Reset reason correctly identified as ``RESET_REASON_CORE_MWDT0`` (ESP32-P4: ``RESET_REASON_CORE_MWDT``)
 - Test returns PASS on real hardware
 - Two-boot sequence completes within test timeout window
 
@@ -987,8 +990,10 @@ Hardware Validation
 
    **Execution:**
 
-   - Configure GPIO9 as input (GPIO_MODE_INPUT)
-   - GPIO9 is tied to GND (expected level = 0)
+   - Configure GPIO as input (GPIO_MODE_INPUT)
+      - GPIO8 is used for C6, C5, C61 and P4
+      - GPIO9 is used for C3 and H2
+   - GPIO is tied to GND (expected level = 0)
    - Read GPIO level and verify it matches expected value
    - Reset GPIO to default state
    - Returns ``BIST_ESP_OK`` if level matches expected
@@ -1011,7 +1016,7 @@ Hardware Validation
 
 - Invalid GPIO numbers properly rejected
 - GPIO2 output drive/read functionality confirmed
-- GPIO9 input reads correct level (tied to GND)
+- GPIO input reads correct level (tied to GND)
 - All GPIO configurations properly reset after test
 - No GPIO configuration errors or stuck pins detected
 

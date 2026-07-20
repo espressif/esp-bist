@@ -128,14 +128,14 @@ This diagram shows the generic logic for all tested CSRs: save original value, w
 The CSR groups tested vary by SoC capability:
 
 - **All SoCs**: Machine Trap CSRs — ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
-- **All SoCs**: PMP — ``pmpaddr0``–``pmpaddr15`` (mask: ``0xFFFFFFFF`` on C3/C6/H2, ``0x3FFFFFE0`` on C5 due to 128-byte granularity), ``pmpcfg0``–``pmpcfg3`` (mask: ``0x1D1D1D1D`` on C3/C6/H2, ``0x0D0D0D0D`` on C5). The W bit (bit 1) is excluded because the ``0xAA`` test pattern sets R=0,W=1, a reserved RISC-V encoding that hardware WARL-clears. C5 additionally excludes A[1] (A=NA4 not selectable at G≥1).
-- **SoCs with PMA** (C6, H2, C5; guarded by ``SOC_CPU_HAS_PMA``): PMA address — ``pma_addr0``–``pma_addr11`` (CSRs ``0xBD0``–``0xBDB``, mask: ``0x3FFFFFE0``)
+- **All SoCs**: PMP — ``pmpaddr0``–``pmpaddr15`` (mask: ``0xFFFFFFFF`` on C3/C6/H2, ``0x3FFFFFE0`` on C5/C61/P4 due to 128-byte granularity), ``pmpcfg0``–``pmpcfg3`` (mask: ``0x1D1D1D1D`` on C3/C6/H2, ``0x0D0D0D0D`` on C5/C61/P4). The W bit (bit 1) is excluded because the ``0xAA`` test pattern sets R=0,W=1, a reserved RISC-V encoding that hardware WARL-clears. C5/C61/P4 additionally exclude A[1] (A=NA4 not selectable at G≥1).
+- **SoCs with PMA** (C6, H2, C5, P4; guarded by ``SOC_CPU_HAS_PMA``): PMA address — ``pma_addr0``–``pma_addr11`` (CSRs ``0xBD0``–``0xBDB``, mask: ``0x3FFFFFE0``)
 - **C5 only** (guarded by ``SOC_TARGET_ESP32C5``): ``mexstatus`` (CSR ``0x7E1``, mask: ``0x00102C00``), ``mhint`` (CSR ``0x7C5``, mask: ``0x00100000``). On C6/H2, ``mexstatus`` only exposes SOFT_RST bits (unsafe to test) and ``mhint`` does not exist.
-- **FPU-capable SoCs** (guarded by ``SOC_TARGET_ESP32H4``): ``fflags`` (mask ``0x1F``), ``frm`` (mask ``0xE0``), ``fcsr`` (mask ``0xFF``)
+- **FPU-capable SoCs** (H4, P4; guarded by ``ESP_BIST_USE_FPU``): ``fflags`` (mask ``0x1F``), ``frm`` (mask ``0x07``), ``fcsr`` (mask ``0xFF``)
 
 PMA address entries 12–15 are skipped because the ROM bootloader may configure them as active regions whose NAPOT/TOR encoding forces the low-order address bits. PMA configuration registers (``pma_cfg``) are not tested because the ``PMA_L`` (Lock) bit is write-once.
 
-Total CSRs tested: 25 on ESP32-C3, 37 on ESP32-C6/H2, 39 on ESP32-C5, 40 on ESP32-H4 (adds ``fflags``, ``frm``, ``fcsr``).
+Total CSRs tested: 25 on ESP32-C3, 37 on ESP32-C6/H2/C61, 39 on ESP32-C5, 40 on ESP32-H4/P4 (adds 12 ``pma_addr`` + ``fflags``, ``frm``, ``fcsr`` on FPU-capable SoCs).
 
 Module API
 ^^^^^^^^^^

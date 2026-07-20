@@ -190,7 +190,7 @@ Runtime Tests
 2. **CPU CSR Test** (``bist_cpu_csr_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU CSRs)
-   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6/H2/C5/H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices.
+   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6/H2/C5/P4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4).
    - **Rationale**: CSR corruption can cause exception handling failures or memory protection violations
    - **Execution Frequency**: Called in main loop (every iteration)
 
