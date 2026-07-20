@@ -1023,9 +1023,126 @@ CI Test Results
 .. xml-junit-test-results:: tests/digital_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: GPIO Device Test Results
 
+ADC Plausibility Test
+---------------------
+
+**Purpose:** Verify that ADC channels can be configured and that analog readings respond plausibly to internal pull-up, pull-down, and (on ESP32-C3) VREF biasing.
+
+QEMU/Emulation Validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Note:** ADC tests are hardware-only.
+
+Hardware Validation
+^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/analog_io_test/pytest_device_analog_io_test.py``
+
+**Test Cases:**
+
+1. **Invalid ADC Test: ``test_BIST_ANALOG_IO_INVALID_ADC``**
+
+   **Execution:**
+
+   - Attempt to run ADC tests with invalid unit and channel numbers (outside valid range)
+   - Verify API validation catches invalid parameters
+   - Returns ``BIST_ESP_ADC_TEST_ERR`` for invalid unit/channel
+   - On ESP32-C3, also validates ``bist_adc_reference_test`` with invalid parameters
+
+   **Expected Output:**
+
+   .. code-block::
+
+       test_BIST_ANALOG_IO_INVALID_ADC:PASS
+
+2. **ADC Low Level Test: ``test_BIST_ANALOG_IO_LOW_LEVEL``**
+
+   **Execution:**
+
+   - Configure ADC1 channel 2 with 12 dB attenuation
+   - Enable internal pull-down on the mapped GPIO
+   - Read raw ADC value after 10 ms settling time
+   - Verify raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` of zero
+   - Reset GPIO and delete ADC unit
+   - Returns ``BIST_ESP_OK`` if reading is within tolerance
+
+   **Expected Output:**
+
+   .. code-block::
+
+       test_BIST_ANALOG_IO_LOW_LEVEL:PASS
+
+3. **ADC High Level Test: ``test_BIST_ANALOG_IO_HIGH_LEVEL``**
+
+   **Execution:**
+
+   - Configure ADC1 channel 2 with 12 dB attenuation
+   - Enable internal pull-up on the mapped GPIO
+   - Read raw ADC value after 10 ms settling time
+   - Verify raw value is within tolerance of the SoC-specific high reference
+   - Reset GPIO and delete ADC unit
+   - Returns ``BIST_ESP_OK`` if reading is within tolerance
+
+   **Expected Output:**
+
+   .. code-block::
+
+       test_BIST_ANALOG_IO_HIGH_LEVEL:PASS
+
+4. **ADC Reference Test: ``test_BIST_ANALOG_IO_REFERENCE``** (ESP32-C3 only)
+
+   **Execution:**
+
+   - Configure ADC1 channel 2 with 12 dB attenuation
+   - Enable internal VREF output to bias the pin near mid-scale
+   - Read raw ADC value after 10 ms settling time
+   - Verify raw value is within tolerance of the reference level
+   - Reset GPIO and delete ADC unit
+   - Returns ``BIST_ESP_OK`` if reading is within tolerance
+
+   **Expected Output:**
+
+   .. code-block::
+
+       test_BIST_ANALOG_IO_REFERENCE:PASS
+
+**Complete Test Output (ESP32-C3):**
+
+.. code-block::
+
+    test_BIST_ANALOG_IO_INVALID_ADC:PASS
+    test_BIST_ANALOG_IO_LOW_LEVEL:PASS
+    test_BIST_ANALOG_IO_HIGH_LEVEL:PASS
+    test_BIST_ANALOG_IO_REFERENCE:PASS
+
+**Complete Test Output (other supported SoCs):**
+
+.. code-block::
+
+    test_BIST_ANALOG_IO_INVALID_ADC:PASS
+    test_BIST_ANALOG_IO_LOW_LEVEL:PASS
+    test_BIST_ANALOG_IO_HIGH_LEVEL:PASS
+
+**Expected Behavior:**
+
+- Invalid ADC unit/channel numbers properly rejected
+- ADC channel reads near zero with internal pull-down
+- ADC channel reads near high reference with internal pull-up
+- On ESP32-C3, VREF-biased reading is within mid-scale reference range
+- All ADC and GPIO configurations properly reset after test
+- No stuck-at faults or configuration errors detected
+
+CI Test Results
+^^^^^^^^^^^^^^^
+
+**Device Test:**
+
+.. xml-junit-test-results:: tests/analog_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+    :title: ADC Device Test Results
+
 Validation Summary
 ------------------
 
 - QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
-- Hardware covers all modules; clock and GPIO are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
+- Hardware covers all modules; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
 - Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.

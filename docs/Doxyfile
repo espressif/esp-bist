@@ -31,12 +31,14 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_stack.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_pc.h \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_gpio.h \
+    $(PROJECT_PATH)/src/bist/core/io/include/bist_adc.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_ram.h \
     $(PROJECT_PATH)/src/bist/core/wdt/include/bist_wdt.h \
     $(PROJECT_PATH)/src/bist/drivers/include/bist_log.h \
     $(PROJECT_PATH)/src/bist/drivers/include/esp_timer.h \
     $(PROJECT_PATH)/src/bist/drivers/include/gpio.h \
+    $(PROJECT_PATH)/src/bist/drivers/include/adc_oneshot.h \
     $(PROJECT_PATH)/src/bist/drivers/include/wdt.h \
     $(PROJECT_PATH)/src/soc/esp32c3/ld/soc_memory.h
 

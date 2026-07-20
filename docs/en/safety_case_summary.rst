@@ -39,7 +39,7 @@ Claim 1: All IEC 60730 Table H.1 Components Are Tested
 
 **Evidence**:
 
-- **Requirements Documentation**: :doc:`software_safety_requirements` maps each component ID (1.1, 1.3, 3, 4.1, 4.2, 6.3, 7.1) to safety functions
+- **Requirements Documentation**: :doc:`software_safety_requirements` maps each component ID (1.1, 1.3, 3, 4.1, 4.2, 6.3, 7.1, 7.2) to safety functions
 - **Implementation**: All components are implemented as documented in :doc:`module_design_and_coding`
 - **Validation**: All components are tested as documented in :doc:`software_validation`
 

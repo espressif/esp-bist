@@ -252,11 +252,14 @@ The signature for the stack overflow handler is `void handle_stack_overflow(void
 
 ## IO Tests
 
-The IO (GPIO) test routines verify the correct operation of the digital Input/Output pins.
+The IO (GPIO) test routines verify the correct operation of the digital Input/Output pins and analog ADC channels.
+### Digital I/O
+
+The digital I/O (GPIO) test routines verify the correct operation of the digital Input/Output pins.
 
 These tests are supposed to be run before the application configures the GPIO pins, as they will configure the pins to a known state and perform read/write operations to ensure the pins are functioning correctly.
 
-### Output Test
+#### Output Test
 
 The output test (`bist_gpio_output_test`) checks if a GPIO pin can be reliably set to logic low and high:
 
@@ -267,7 +270,7 @@ The output test (`bist_gpio_output_test`) checks if a GPIO pin can be reliably s
 
 This ensures the pin can be controlled as expected by the application.
 
-### Input Test
+#### Input Test
 
 The input test (`bist_gpio_input_test`) checks if a GPIO pin can correctly read an external logic level:
 
@@ -276,6 +279,41 @@ The input test (`bist_gpio_input_test`) checks if a GPIO pin can correctly read 
 3. If the read value does not match the expected value, the test fails with error code `BIST_ESP_IO_TEST_ERR`.
 
 This ensures the pin can reliably read external signals.
+
+### Analog I/O
+
+The analog I/O (ADC) test routines verify the correct operation of ADC input channels. 
+
+Tolerance is controlled by `CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION` (default: 1%).
+
+#### Low Level Test
+
+The low level test (`bist_adc_low_level_test`) checks if an ADC channel reads near zero with internal pull-down:
+
+1. The ADC unit and channel are configured with 12 dB attenuation.
+2. Internal pull-down is enabled on the mapped GPIO.
+3. After a 10 ms settling delay, the raw ADC value is read.
+4. If the reading exceeds the configured tolerance, the test fails with `BIST_ESP_ADC_TEST_ERR`.
+
+#### High Level Test
+
+The high level test (`bist_adc_high_level_test`) checks if an ADC channel reads near full scale with internal pull-up:
+
+1. The ADC unit and channel are configured with 12 dB attenuation.
+2. Internal pull-up is enabled on the mapped GPIO.
+3. After a 10 ms settling delay, the raw ADC value is read.
+4. The reading is compared against a SoC-specific high reference minus tolerance.
+5. If the reading is too low, the test fails with `BIST_ESP_ADC_TEST_ERR`.
+
+#### Reference Test (ESP32-C3 only)
+
+The reference test (`bist_adc_reference_test`) checks mid-scale ADC behavior using internal VREF output:
+
+1. The ADC unit and channel are configured with 12 dB attenuation.
+2. Internal VREF output is enabled to bias the pin near mid-scale.
+3. After a 10 ms settling delay, the raw ADC value is read.
+4. The reading must be within tolerance of the reference level.
+5. If the reading is stuck at low or high, the test fails with `BIST_ESP_ADC_TEST_ERR`.
 
 ## Watchdog
 

@@ -5,6 +5,7 @@ set(include_soc
 
 set(include_hal
     ${IDF_PATH}/components/newlib/platform_include
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/include
     ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_wdt/include
@@ -15,6 +16,8 @@ set(include_hal
     ${IDF_PATH}/components/esp_hal_uart/include
     ${IDF_PATH}/components/esp_hal_uart/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
+    ${IDF_PATH}/components/esp_hal_clock/include
+    ${IDF_PATH}/components/esp_hal_dma/include
     ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_rtc_timer/include
@@ -22,10 +25,19 @@ set(include_hal
     ${IDF_PATH}/components/esp_hal_pmu/include
     ${IDF_PATH}/components/esp_hal_ana_conv/include
     ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_adc/include
+    ${IDF_PATH}/components/esp_adc
+    ${IDF_PATH}/components/esp_adc/interface
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/include
+    ${IDF_PATH}/components/efuse/include
+    ${IDF_PATH}/components/efuse/private_include
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/private_include
+    ${IDF_PATH}/components/heap/include
     ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_stdio/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${BIST_ROOT_DIR}/components/esp_common/include
+    ${BIST_ROOT_DIR}/src/bist/drivers/include
     ${IDF_PATH}/components/esp_common/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
@@ -58,6 +70,11 @@ set(soc_srcs
     )
 
 set(idf_ow_srcs
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali_curve_fitting.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_common.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_share_hw_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
@@ -79,12 +96,26 @@ set(idf_srcs
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_init.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_param.c
     ${IDF_PATH}/components/esp_system/panic.c
+    ${IDF_PATH}/components/esp_system/esp_err.c
     ${IDF_PATH}/components/esp_system/port/soc/${SOC_TARGET}/clk.c
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/log/src/noos/log_timestamp.c
     ${IDF_PATH}/components/riscv/interrupt.c
     ${IDF_PATH}/components/riscv/rv_utils.c
     ${IDF_PATH}/components/esp_stdio/stdio_simple.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_oneshot_hal.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_hal_common.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/adc_periph.c
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/clk_tree_hal.c
+    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/esp_clk_tree.c
+    ${IDF_PATH}/components/esp_hw_support/port/esp_clk_tree_common.c
+    ${IDF_PATH}/components/esp_adc/${SOC_TARGET}/curve_fitting_coefficients.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_rtc_calib.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_table.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_fields.c
+    ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_utility.c
+    ${IDF_PATH}/components/efuse/src/esp_efuse_api.c
+    ${IDF_PATH}/components/efuse/src/esp_efuse_utility.c
     )
 
 set(rom_ld
@@ -92,6 +123,7 @@ set(rom_ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.api.ld
     -T${IDF_PATH}/components/riscv/ld/rom.api.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.spiflash.ld
     -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib-nano.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libgcc.ld

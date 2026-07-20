@@ -8,8 +8,10 @@
 #include "esp_attr.h"
 #include "soc/soc_caps.h"
 
-#define LED_GPIO 7
-#define BTN_GPIO 9
+#define LED_GPIO    7
+#define BTN_GPIO    9
+#define ADC_UNIT    0
+#define ADC_CHANNEL 2
 
 static const char *TAG = "sample";
 
@@ -123,6 +125,26 @@ static void post_boot_tests(void)
         ESP_LOGE(TAG, "GPIO input test failed for Button GPIO");
         fail_safe_exit();
     }
+
+    test_err = bist_adc_low_level_test(ADC_UNIT, ADC_CHANNEL);
+    if (test_err == BIST_ESP_IO_TEST_ERR) {
+        ESP_LOGE(TAG, "ADC low level test failed");
+        fail_safe_exit();
+    }
+
+    test_err = bist_adc_high_level_test(ADC_UNIT, ADC_CHANNEL);
+    if (test_err == BIST_ESP_IO_TEST_ERR) {
+        ESP_LOGE(TAG, "ADC high level test failed");
+        fail_safe_exit();
+    }
+
+#if defined(SOC_TARGET_ESP32C3)
+    test_err = bist_adc_reference_test(ADC_UNIT, ADC_CHANNEL);
+    if (test_err == BIST_ESP_IO_TEST_ERR) {
+        ESP_LOGE(TAG, "ADC reference test failed");
+        fail_safe_exit();
+    }
+#endif
 
     ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash, Stack, IO");
 }

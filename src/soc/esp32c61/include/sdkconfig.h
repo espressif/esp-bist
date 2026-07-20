@@ -25,3 +25,4 @@
 #define CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM    0
 #define CONFIG_PARTITION_OFFSET                   0x20000
 #define CONFIG_RTC_CLK_SRC_EXT_CRYS               1
+#define NON_OS_BUILD                              1

@@ -189,6 +189,7 @@ Available test applications (each in `tests/<name>/`):
 | `flash_test`        | Non-volatile memory (CRC32) |
 | `pc_test`           | Program counter and indirect time-slot monitoring |
 | `digital_io_test`   | Digital I/O (GPIO) |
+| `analog_io_test`    | Analog I/O (ADC) |
 | `wdt_test`          | Main system watchdog timer |
 | `windowed_wdt_test` | Windowed watchdog: normal operation, underflow detection, and consecutive feed cycles |
 | `esp_timer_test`    | High-resolution software timers (e.g. one-shot) |

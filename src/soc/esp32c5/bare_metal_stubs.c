@@ -9,7 +9,10 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "sdkconfig.h"
+#include "esp_log_level.h"
+#include "esp_private/log_print.h"
 
 /* -------------------------------------------------------------------------
  * Modem clock (optional for BIST). Stubs so rtc_clk and clock_init link.
@@ -47,4 +50,19 @@ __attribute__((weak)) esp_err_t esp_clk_tree_enable_src(soc_module_clk_t clk_src
 __attribute__((weak)) void modem_clock_deselect_all_module_lp_clock_source(void)
 {
 }
+
+bool esp_log_is_tag_loggable(esp_log_level_t level, const char *tag)
+{
+    (void)level;
+    (void)tag;
+    return true;
+}
+
+char *esp_log_system_timestamp(void)
+{
+    static char buffer = ' ';
+    return &buffer;
+}
+
+vprintf_like_t esp_log_vprint_func = &vprintf;
 

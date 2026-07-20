@@ -12,11 +12,13 @@
 #include "hal/regi2c_ctrl.h"
 #include "hal/regi2c_ctrl_ll.h"
 #include "esp_hw_log.h"
+#include "sdkconfig.h"
 
 // static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 static DRAM_ATTR __attribute__((unused)) const char *TAG = "REGI2C";
 
+#if !NON_OS_BUILD
 uint8_t IRAM_ATTR regi2c_ctrl_read_reg(uint8_t block, uint8_t host_id, uint8_t reg_add)
 {
     // portENTER_CRITICAL_SAFE(&mux);
@@ -46,6 +48,7 @@ void IRAM_ATTR regi2c_ctrl_write_reg_mask(uint8_t block, uint8_t host_id, uint8_
     regi2c_write_reg_mask_raw(block, host_id, reg_add, msb, lsb, data);
     // portEXIT_CRITICAL_SAFE(&mux);
 }
+#endif // !NON_OS_BUILD
 
 void IRAM_ATTR regi2c_enter_critical(void)
 {

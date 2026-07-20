@@ -1262,6 +1262,203 @@ Coding and Interfaces
 - Type conversions are only used for driver calls, which are explicit and safe.
 - No division operations are present in this test.
 
+.. _adc-plausibility-test:
+
+ADC Plausibility Test
+---------------------
+
+ADC Low Level
+^^^^^^^^^^^^^
+.. blockdiag::
+    :scale: 100%
+    :caption: ADC Low Level Test
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> NewUnit;
+        NewUnit -> Error [label = "Fail"];
+        NewUnit -> Config [label = "OK"];
+        Config -> Error [label = "Fail"];
+        Config -> PullDown [label = "OK"];
+        PullDown -> Error [label = "Fail"];
+        PullDown -> Delay -> Read;
+        Read -> Error [label = "Fail"];
+        Read -> Check;
+        Check -> Error [label = "raw > CONFIG_ESP_BIST\n_ADC_PERCENT_DEVIATION"];
+        Check -> Cleanup [label = "OK"];
+        Cleanup -> Success;
+
+        Start [label = "Start", shape = roundedbox];
+        NewUnit [label = "adc_oneshot_new_unit"];
+        Config [label = "adc_oneshot_config_channel\nATTEN_DB_12"];
+        PullDown [label = "gpio_set_pull_mode PULLDOWN_ONLY"];
+        Delay [label = "ets_delay_us 10000"];
+        Read [label = "adc_oneshot_read"];
+        Check [label = "raw <= CONFIG_ESP_BIST\n_ADC_PERCENT\n_DEVIATION?", shape = diamond];
+        Cleanup [label = "gpio_reset_pin\nadc_oneshot_del_unit"];
+        Error [label = "Return BIST_ESP_ADC_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK"];
+    }
+
+**ADC Low Level Test:**
+
+- Creates ADC oneshot unit with ``adc_oneshot_new_unit``
+- Configures channel with 12 dB attenuation and default bitwidth
+- Maps ADC channel to GPIO and enables internal pull-down with ``gpio_set_pull_mode``
+- Waits 10 ms for the pin to settle
+- Reads raw ADC value with ``adc_oneshot_read``
+- Verifies raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` of zero
+- Resets GPIO and deletes ADC unit on completion or error
+
+ADC High Level
+^^^^^^^^^^^^^^
+.. blockdiag::
+    :scale: 100%
+    :caption: ADC High Level Test
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> NewUnit;
+        NewUnit -> Error [label = "Fail"];
+        NewUnit -> Config [label = "OK"];
+        Config -> Error [label = "Fail"];
+        Config -> PullUp [label = "OK"];
+        PullUp -> Error [label = "Fail"];
+        PullUp -> Delay -> Read;
+        Read -> Error [label = "Fail"];
+        Read -> Check;
+        Check -> Error [label = "raw too low"];
+        Check -> Cleanup [label = "OK"];
+        Cleanup -> Success;
+
+        Start [label = "Start", shape = roundedbox];
+        NewUnit [label = "adc_oneshot_new_unit"];
+        Config [label = "adc_oneshot_config_channel\nATTEN_DB_12"];
+        PullUp [label = "gpio_set_pull_mode PULLUP_ONLY"];
+        Delay [label = "ets_delay_us 10000"];
+        Read [label = "adc_oneshot_read"];
+        Check [label = "raw >= high - CONFIG_ESP_BIST\n_ADC_PERCENT\n_DEVIATION?", shape = diamond];
+        Cleanup [label = "gpio_reset_pin\nadc_oneshot_del_unit"];
+        Error [label = "Return BIST_ESP_ADC_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK"];
+    }
+
+**ADC High Level Test:**
+
+- Creates and configures ADC oneshot unit (same as low level test)
+- Maps ADC channel which is attenuated ~12 dB for extending measurement range to GPIO and enables internal pull-up with ``gpio_set_pull_mode``
+- Waits 10 ms for the pin to settle
+- Reads raw ADC value with ``adc_oneshot_read``
+- Verifies raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` (configurable tolerance) of the SoC-specific high reference (``BIST_ADC_HIGH_VAL``)
+- Resets GPIO and deletes ADC unit on completion or error
+
+ADC Reference (ESP32-C3 only)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. blockdiag::
+    :scale: 100%
+    :caption: ADC Reference Test (ESP32-C3)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> Validate;
+        Validate -> Error [label = "No"];
+        Validate -> NewUnit [label = "Yes"];
+        NewUnit -> Error [label = "Fail"];
+        NewUnit -> Config [label = "OK"];
+        Config -> Error [label = "Fail"];
+        Config -> Vref [label = "OK"];
+        Vref -> Delay -> Read;
+        Read -> Error [label = "Fail"];
+        Read -> Check;
+        Check -> Error [label = "out of range"];
+        Check -> Cleanup [label = "OK"];
+        Cleanup -> Success;
+
+        Start [label = "Start", shape = roundedbox];
+        Validate [label = "valid unit/channel?", shape = diamond];
+        NewUnit [label = "adc_oneshot_new_unit"];
+        Config [label = "adc_oneshot_config_channel\nATTEN_DB_12"];
+        Vref [label = "adc_ll_vref_output enable"];
+        Delay [label = "ets_delay_us 10000"];
+        Read [label = "adc_oneshot_read"];
+        Check [label = "raw in reference range?", shape = diamond];
+        Cleanup [label = "gpio_reset_pin\nadc_oneshot_del_unit"];
+        Error [label = "Return BIST_ESP_ADC_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK"];
+    }
+
+**ADC Reference Test (ESP32-C3 only):**
+
+- Validates ADC unit and channel parameters
+- Creates and configures ADC oneshot unit
+- Enables internal VREF output with ``adc_ll_vref_output`` to bias the pin near mid-scale
+- Waits 10 ms, reads raw value, and verifies it is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` (configurable tolerance) of ``BIST_ADC_REFERENCE`` (1500)
+- Detects stuck-at-low or stuck-at-high faults that pass the pull-up/pull-down tests alone
+- Resets GPIO and deletes ADC unit on completion or error
+
+All tests ensure the ADC channel GPIO is restored to default state after testing to avoid side effects.
+
+Module API
+^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 20 15 20 20
+
+   * - Function name
+     - Exec Time
+     - Cycles
+     - Instruction Count
+     - Code size (Bytes)
+   * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
+     - 126.43 ms
+     - 5057005
+     - 2697513
+     - 380
+   * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
+     - 127.77 ms
+     - 5110753
+     - 2723904
+     - 388
+   * - ``bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)`` (ESP32-C3 only)
+     - 129.51 ms
+     - 5180240
+     - 2749217
+     - 748
+
+Source Files
+^^^^^^^^^^^^
+
+.. list-table:: Source Files
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - Source File
+     - Version
+     - MD5
+   * - ``src/bist/core/io/bist_adc.c``
+     - N/A
+     - 5329ede84aa9604bf42a116b040d2d74
+
+Coding and Interfaces
+^^^^^^^^^^^^^^^^^^^^^
+- The ADC test validates unit and channel parameters (on the reference test) and returns explicit error codes on failure.
+- This test uses the ADC oneshot driver (``adc_oneshot_new_unit``, ``adc_oneshot_config_channel``, ``adc_oneshot_read``, ``adc_oneshot_del_unit``), GPIO pull configuration (``gpio_set_pull_mode``, ``gpio_reset_pin``), and on ESP32-C3 the low-level VREF output (``adc_ll_vref_output``).
+- Uses local variables for configuration and state; ADC unit handle is managed through the oneshot driver API.
+- All functions have a single entry and exit. Early returns and a single ``cleanup`` label are used for error handling.
+- Branching is limited to error detection and reading validation. No deep nesting or complex logic.
+- A fixed 10 ms delay bounds settling time before each ADC read.
+- Integer comparisons and tolerance arithmetic are used; tolerance is derived from ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION``.
+- No interrupts are used or manipulated by this test.
+- Pointers are used for driver calls and local variables. All pointer usage is explicit and safe.
+- No recursion is used in this test.
+- No goto or label-based jumps are used except for centralized cleanup.
+- Type conversions are only used for driver calls, which are explicit and safe.
+- Division is used only for tolerance calculation with a bounded divisor (100).
+
 Performance Metrics Collection
 ------------------------------
 

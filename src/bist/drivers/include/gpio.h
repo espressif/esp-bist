@@ -188,6 +188,17 @@ esp_err_t gpio_pulldown_en(gpio_num_t gpio_num);
  */
 esp_err_t gpio_pulldown_dis(gpio_num_t gpio_num);
 
+/**
+ * @brief Configure GPIO pad as analog input
+ *
+ * @param gpio_num GPIO number
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ */
+esp_err_t gpio_config_as_analog(gpio_num_t gpio_num);
+
 #ifdef __cplusplus
 }
 #endif

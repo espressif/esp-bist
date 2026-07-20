@@ -90,6 +90,16 @@
     "prompt": "GPIO Test"
   },
   {
+    "name": "ESP_BIST_ADC_TEST",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
+    "help": "Enable tests for the ADC pins.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "ADC Test"
+  },
+  {
     "name": "ESP_BIST_WATCHDOG_TEST",
     "type": "bool",
     "default": "y",
@@ -128,6 +138,16 @@
     "menu": "",
     "range": "0 100",
     "prompt": "Clock Frequency Drift Percentage"
+  },
+  {
+    "name": "ESP_BIST_ADC_PERCENT_DEVIATION",
+    "type": "int",
+    "default": "6",
+    "depends_on": "ESP_BIST_ADC_TEST",
+    "help": "Specify the acceptable percentage deviation of ADC readings from\nthe expected low or high reference values for the ADC plausibility tests.",
+    "menu": "",
+    "range": "0 100",
+    "prompt": "ADC Reading Deviation Percentage"
   },
   {
     "name": "ESP_BIST_FLASH_SIZE",

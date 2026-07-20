@@ -9,6 +9,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include "esp_log_level.h"
+#include "esp_private/log_print.h"
 
 /* -------------------------------------------------------------------------
  * Modem clock (optional for BIST). Stubs so rtc_clk and clock_init link.
@@ -25,3 +28,18 @@ __attribute__((weak)) void modem_clock_module_disable(shared_periph_module_t mod
 {
     (void)module;
 }
+
+bool esp_log_is_tag_loggable(esp_log_level_t level, const char *tag)
+{
+    (void)level;
+    (void)tag;
+    return true;
+}
+
+char *esp_log_system_timestamp(void)
+{
+    static char buffer = ' ';
+    return &buffer;
+}
+
+vprintf_like_t esp_log_vprint_func = &vprintf;

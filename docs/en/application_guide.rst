@@ -117,6 +117,27 @@ Post-Boot Self-Tests
    - **Rationale**: Input validation ensures correct reading of external signals
    - **Implementation**: Reads GPIO level and verifies it matches expected value (button tied to GND = 0)
 
+9. **ADC Low Level Test** (``bist_adc_low_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
+
+   - **IEC 60730 Component**: 7.2 (Analog I/O)
+   - **Purpose**: Verifies ADC reads near zero with internal pull-down
+   - **Rationale**: Analog input functionality must be validated before use in safety-critical applications
+   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of zero
+
+10. **ADC High Level Test** (``bist_adc_high_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
+
+    - **IEC 60730 Component**: 7.2 (Analog I/O)
+    - **Purpose**: Verifies ADC reads near full scale with internal pull-up
+    - **Rationale**: Detects stuck-at-low faults and verifies ADC conversion path
+    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference
+
+11. **ADC Reference Test** (``bist_adc_reference_test(ADC_UNIT_1, ADC_CHANNEL_2)``) — ESP32-C3 only
+
+    - **IEC 60730 Component**: 7.2 (Analog I/O)
+    - **Purpose**: Verifies mid-scale ADC reading using internal VREF biasing
+    - **Rationale**: Detects faults that may pass pull-up/pull-down tests alone
+    - **Implementation**: Enables VREF output, reads raw value within tolerance of reference level
+
 **Error Handling**: All post-boot tests call ``fail_safe_exit()`` on failure, which enters an infinite loop. This prevents the application from continuing with detected hardware faults.
 
 Stack Sentinel Initialization
@@ -314,6 +335,7 @@ The application uses default BIST configuration. Customize via ``bist.conf``:
 - ``CONFIG_ESP_BIST_WDT_TIMEOUT_US``: Watchdog timeout
 - ``CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US``: Windowed WDT underflow timeout
 - ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT``: Clock drift tolerance
+- ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION``: ADC reading tolerance for plausibility tests
 
 Integration Patterns
 --------------------

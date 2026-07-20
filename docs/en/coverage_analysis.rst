@@ -184,6 +184,12 @@ Requirements Coverage Matrix
      - Hardware-only (GPIO config, I/O levels)
      - ``tests/digital_io_test/build/tests/*_report.xml``
 
+   * - 7.2
+     - Analog I/O Plausibility
+     - ``bist_adc_test()``
+     - Hardware-only (ADC config, pull-up/pull-down/VREF readings)
+     - ``tests/analog_io_test/build/tests/*_report.xml``
+
 Coverage Gaps and Justification
 --------------------------------
 
@@ -196,12 +202,14 @@ Known Coverage Limitations
 
 3. **Watchdog Two-Boot Sequence**: Watchdog reset verification requires two consecutive boots. This is tested on both QEMU and hardware.
 
+4. **ADC Tests (Hardware-Only)**: ADC functionality requires physical hardware and internal pull resistors or VREF. QEMU simulation is not applicable.
+
 Justification
 ^^^^^^^^^^^^^
 
 All coverage limitations are justified:
 
-- **Hardware-Only Tests**: Physical hardware is required for accurate validation of clock and GPIO functionality. QEMU limitations are documented and hardware testing provides adequate coverage.
+- **Hardware-Only Tests**: Physical hardware is required for accurate validation of clock, GPIO, and ADC functionality. QEMU limitations are documented and hardware testing provides adequate coverage.
 
 - **Test Environment**: Both QEMU (deterministic, repeatable) and hardware (real-world conditions) testing provide complementary coverage.
 

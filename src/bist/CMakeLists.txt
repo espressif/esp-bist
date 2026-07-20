@@ -41,6 +41,7 @@ set(bist_src
     drivers/wdt.c
     drivers/gpio.c
     drivers/esp_timer.c
+    drivers/adc_oneshot.c
     )
 if(SOC_TARGET STREQUAL "esp32c3")
     list(APPEND bist_src drivers/xt_wdt.c)
@@ -65,6 +66,9 @@ if(CONFIG_ESP_BIST_CLOCK_TEST)
 endif()
 if(CONFIG_ESP_BIST_GPIO_TEST)
     list(APPEND bist_src core/io/bist_gpio.c)
+endif()
+if(CONFIG_ESP_BIST_ADC_TEST)
+    list(APPEND bist_src core/io/bist_adc.c)
 endif()
 if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST)
     list(APPEND bist_src core/cpu/bist_pc.c)
@@ -177,12 +181,16 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
     ${IDF_PATH}/components/esp_hal_gpio/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_ana_conv/include
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_clock/include
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_adc/include
+    ${IDF_PATH}/components/esp_adc/include/esp_adc
+    ${IDF_PATH}/components/esp_adc/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hw_support/etm/include
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
-    ../../components/hal/${SOC_TARGET}/include
-    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
-    ${IDF_PATH}/components/hal/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
