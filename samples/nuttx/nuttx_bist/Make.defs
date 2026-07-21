@@ -1,0 +1,9 @@
+############################################################################
+# samples/nuttx/nuttx_bist/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+############################################################################
+
+ifneq ($(CONFIG_ESP_NUTTX_BIST),)
+CONFIGURED_APPS += $(APPDIR)/esp_bist/nuttx_bist
+endif
