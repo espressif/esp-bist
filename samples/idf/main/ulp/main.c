@@ -7,28 +7,27 @@
 /*
  * LP-core side of the ESP-BIST IDF sample.
  *
- * Waits for a BIST_MSG_READY handshake from the HP core, then runs
- * BIST post-boot tests once, followed by periodic runtime tests.
- * Results are communicated to the HP core via shared variables.
+ * Waits for a BIST_MSG_READY handshake from the HP core over the LP
+ * mailbox, then runs BIST post-boot tests once, followed by periodic
+ * runtime tests. Results are sent to the HP core as bitmask messages.
  */
 
 #include <stdint.h>
 #include "ulp_lp_core_utils.h"
 #include "ulp_lp_core_print.h"
+#include "ulp_lp_core_mailbox.h"
 #include "bist_esp.h"
 #include "bist_log.h"
 #include "lp_wdt.h"
 #include "bist_protocol.h"
 
 #define RUNTIME_INTERVAL_US 10000
+/* Mailbox timeout is in CPU cycles. (Assuming 40MHz CPU frequency for ~1s)*/
+#define READY_TIMEOUT_CYCLES  (10 * 40000000)
 
 static const char *TAG = "ulp_idf_bist_sample";
 
-/* Shared variables -- accessible from HP core as ulp_<name> */
-volatile uint32_t hp_ready = 0;
-volatile uint32_t postboot_result = 0;
-volatile uint32_t runtime_result = 0;
-volatile uint32_t runtime_count = 0;
+static lp_mailbox_t mailbox;
 
 void handle_stack_overflow(void)
 {
@@ -143,22 +142,38 @@ static uint32_t run_runtime_tests(void)
 
 int main(void)
 {
+    lp_message_t msg;
     uint32_t result;
+    esp_err_t err;
 
     ESP_LOGI(TAG, "Starting ULP BIST sample\r\n");
+
+    /* Software mailbox requires LP init before HP; do this first. */
+    err = lp_core_mailbox_init(&mailbox, NULL);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Mailbox init failed: %d\r\n", err);
+        return 0;
+    }
 
     bist_cpu_stack_overflow_init();
 
     ESP_LOGI(TAG, "Waiting for HP core ready signal...\r\n");
-    while (hp_ready != BIST_MSG_READY) {
-        ulp_lp_core_delay_us(1000);
+    err = lp_core_mailbox_receive(mailbox, &msg, READY_TIMEOUT_CYCLES);
+    if (err != ESP_OK || (uint32_t)msg != BIST_MSG_READY) {
+        ESP_LOGE(TAG, "Ready handshake failed: err=%d msg=0x%08x\r\n",
+                 err, (unsigned)msg);
+        return 0;
     }
     ESP_LOGI(TAG, "HP core ready, starting tests\r\n");
 
     ESP_LOGI(TAG, "=== Post-boot tests ===\r\n");
     result = run_postboot_tests() | BIST_BIT_POSTBOOT;
     ESP_LOGI(TAG, "Post-boot result: 0x%08x\r\n", result);
-    postboot_result = result;
+    err = lp_core_mailbox_send(mailbox, (lp_message_t)result, -1);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send post-boot result: %d\r\n", err);
+        return 0;
+    }
 
     lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
 
@@ -167,8 +182,10 @@ int main(void)
         ulp_lp_core_delay_us(RUNTIME_INTERVAL_US);
         lp_wdt_feed();
         result = run_runtime_tests() | BIST_BIT_RUNTIME;
-        runtime_result = result;
-        runtime_count++;
+        err = lp_core_mailbox_send(mailbox, (lp_message_t)result, -1);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to send runtime result: %d\r\n", err);
+        }
     }
 
     return 0;

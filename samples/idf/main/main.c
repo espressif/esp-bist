@@ -7,9 +7,9 @@
 /*
  * HP-core side of the ESP-BIST IDF sample.
  *
- * Loads the LP core firmware and signals it to start BIST tests.
- * After the LP core completes each test phase, results are read from
- * ULP shared variables and printed on the main UART so that
+ * Loads the LP core firmware and signals it to start BIST tests over
+ * the LP mailbox. After the LP core completes each test phase, results
+ * are received as bitmask messages and printed on the main UART so that
  * pytest-embedded can verify them.
  *
  * Two rounds are collected:
@@ -20,20 +20,22 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include "esp_err.h"
 #include "esp_sleep.h"
 #include "ulp_lp_core.h"
 #include "lp_core_uart.h"
-#include "ulp_idf_bist_sample.h"
+#include "lp_core_mailbox.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "bist_protocol.h"
 
-#define POLL_INTERVAL_MS  100
-#define POLL_TIMEOUT_MS   10000
-#define RUNTIME_LOOPS     10
+#define MAILBOX_TIMEOUT_MS  10000
+#define RUNTIME_LOOPS       10
 
 extern const uint8_t ulp_idf_bist_sample_bin_start[] asm("_binary_ulp_idf_bist_sample_bin_start");
 extern const uint8_t ulp_idf_bist_sample_bin_end[]   asm("_binary_ulp_idf_bist_sample_bin_end");
+
+static lp_mailbox_t s_mailbox;
 
 static void lp_uart_init(void)
 {
@@ -58,30 +60,6 @@ static void lp_core_init(void)
     printf("LP core loaded with firmware and running successfully\n");
 }
 
-static int wait_for_result(volatile uint32_t *result_var)
-{
-    int remaining_ms = POLL_TIMEOUT_MS;
-
-    while (!(*result_var & BIST_BIT_POSTBOOT) && remaining_ms > 0) {
-        vTaskDelay(pdMS_TO_TICKS(POLL_INTERVAL_MS));
-        remaining_ms -= POLL_INTERVAL_MS;
-    }
-
-    return (*result_var & BIST_BIT_POSTBOOT) ? 0 : -1;
-}
-
-static int wait_for_runtime_count(uint32_t target)
-{
-    int remaining_ms = POLL_TIMEOUT_MS;
-
-    while (ulp_runtime_count < target && remaining_ms > 0) {
-        vTaskDelay(pdMS_TO_TICKS(POLL_INTERVAL_MS));
-        remaining_ms -= POLL_INTERVAL_MS;
-    }
-
-    return (ulp_runtime_count >= target) ? 0 : -1;
-}
-
 static void print_postboot_results(uint32_t result)
 {
     printf("=== Post-boot BIST results ===\n");
@@ -104,6 +82,10 @@ static void print_runtime_results(uint32_t result)
 
 void app_main(void)
 {
+    lp_message_t msg;
+    esp_err_t err;
+    TickType_t timeout = pdMS_TO_TICKS(MAILBOX_TIMEOUT_MS);
+
     vTaskDelay(pdMS_TO_TICKS(1000));
 
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_causes();
@@ -115,12 +97,27 @@ void app_main(void)
         lp_core_init();
     }
 
+    /* Give the LP core time to initialize the software mailbox first. */
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    err = lp_core_mailbox_init(&s_mailbox, NULL);
+    if (err != ESP_OK) {
+        printf("Could not initialize mailbox: %x\n", err);
+        return;
+    }
+    printf("LP Mailbox initialized successfully\n");
+
     /* Signal LP core to start BIST tests */
-    ulp_hp_ready = BIST_MSG_READY;
+    err = lp_core_mailbox_send(s_mailbox, (lp_message_t)BIST_MSG_READY, timeout);
+    if (err != ESP_OK) {
+        printf("Failed to send ready signal: %x\n", err);
+        return;
+    }
 
     /* Wait for post-boot results */
-    if (wait_for_result(&ulp_postboot_result) == 0) {
-        print_postboot_results(ulp_postboot_result);
+    err = lp_core_mailbox_receive(s_mailbox, &msg, timeout);
+    if (err == ESP_OK && ((uint32_t)msg & BIST_BIT_POSTBOOT)) {
+        print_postboot_results((uint32_t)msg);
     } else {
         printf("test_BIST_postboot:TIMEOUT\n");
     }
@@ -129,12 +126,13 @@ void app_main(void)
     bool all_pass = true;
 
     for (int i = 1; i <= RUNTIME_LOOPS; i++) {
-        if (wait_for_runtime_count(i) != 0) {
+        err = lp_core_mailbox_receive(s_mailbox, &msg, timeout);
+        if (err != ESP_OK || !((uint32_t)msg & BIST_BIT_RUNTIME)) {
             printf("test_BIST_runtime:TIMEOUT (loop %d)\n", i);
             all_pass = false;
             break;
         }
-        uint32_t result = ulp_runtime_result;
+        uint32_t result = (uint32_t)msg;
         printf("--- Runtime loop %d/%d ---\n", i, RUNTIME_LOOPS);
         print_runtime_results(result);
         if ((result & BIST_RUNTIME_ALL_PASS) != BIST_RUNTIME_ALL_PASS) {
@@ -146,7 +144,12 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
 
+    /*
+     * Keep acknowledging LP runtime messages. Synchronous mailbox send on
+     * the LP core blocks until HP receives; without this drain the LP WDT
+     * fires and resets the chip (LP_WDT_HPSYS).
+     */
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        (void)lp_core_mailbox_receive(s_mailbox, &msg, portMAX_DELAY);
     }
 }
