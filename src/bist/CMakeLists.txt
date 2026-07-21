@@ -24,6 +24,11 @@ if(DEFINED IDF_TARGET)
     return()
 endif()
 
+if(DEFINED NUTTX_DIR)
+    include(nuttx.cmake)
+    return()
+endif()
+
 if(NOT DEFINED SOC_TARGET)
     message(FATAL_ERROR "SOC_TARGET not defined. Please set -DSOC_TARGET.")
 endif()
