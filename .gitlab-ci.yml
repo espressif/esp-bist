@@ -1,8 +1,18 @@
+spec:
+  inputs:
+    build_docker_image:
+      type: boolean
+      default: false
+      description: "Build and push the Docker CI image"
+
+---
+
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "web"
 
 stages:
   - Lint
@@ -118,6 +128,7 @@ build_docker_image:
     - docker --config=./config push ${CI_DOCKER_REGISTRY}/${IMAGE_NAME}
   allow_failure: true
   rules:
+    - if: '"$[[ inputs.build_docker_image ]]" == "true"'
     - changes:
         - .devcontainer/Dockerfile
       when: manual
