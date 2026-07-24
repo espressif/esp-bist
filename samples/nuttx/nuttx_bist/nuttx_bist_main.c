@@ -6,9 +6,8 @@
  *
  * HP-core side of the ESP-BIST NuttX sample.
  *
- * Loads the LP core firmware and signals it to start BIST tests.
- * After the LP core completes each test phase, results are read from
- * ULP shared variables and printed on the main UART.
+ * Loads the LP core firmware, signals start over /dev/lp_mailbox, then
+ * receives post-boot and runtime BIST result bitmasks from the LP core.
  ****************************************************************************/
 
 /****************************************************************************
@@ -23,10 +22,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
-
-#include <nuttx/fs/ioctl.h>
-#include <nuttx/symtab.h>
 
 #include "bist_protocol.h"
 #include "ulp/ulp/ulp_code.h"
@@ -35,84 +30,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define POLL_INTERVAL_US  100000
-#define POLL_TIMEOUT_US   10000000
-#define RUNTIME_LOOPS     10
+#define RUNTIME_LOOPS 10
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static int ulp_read_u32(int fd, const char *name, uint32_t *value)
-{
-  struct symtab_s sym =
-    {
-      .sym_name = name,
-      .sym_value = value,
-    };
-
-  return ioctl(fd, FIONREAD, &sym);
-}
-
-static int ulp_write_u32(int fd, const char *name, uint32_t value)
-{
-  struct symtab_s sym =
-    {
-      .sym_name = name,
-      .sym_value = &value,
-    };
-
-  return ioctl(fd, FIONWRITE, &sym);
-}
-
-static int wait_for_postboot(int fd, uint32_t *result)
-{
-  int remaining_us = POLL_TIMEOUT_US;
-  uint32_t value = 0;
-
-  while (remaining_us > 0)
-    {
-      if (ulp_read_u32(fd, "nuttx_bist_postboot_result", &value) < 0)
-        {
-          return -1;
-        }
-
-      if (value & BIST_BIT_POSTBOOT)
-        {
-          *result = value;
-          return 0;
-        }
-
-      usleep(POLL_INTERVAL_US);
-      remaining_us -= POLL_INTERVAL_US;
-    }
-
-  return -1;
-}
-
-static int wait_for_runtime_count(int fd, uint32_t target)
-{
-  int remaining_us = POLL_TIMEOUT_US;
-  uint32_t count = 0;
-
-  while (remaining_us > 0)
-    {
-      if (ulp_read_u32(fd, "nuttx_bist_runtime_count", &count) < 0)
-        {
-          return -1;
-        }
-
-      if (count >= target)
-        {
-          return 0;
-        }
-
-      usleep(POLL_INTERVAL_US);
-      remaining_us -= POLL_INTERVAL_US;
-    }
-
-  return -1;
-}
 
 static void print_postboot_results(uint32_t result)
 {
@@ -146,7 +68,10 @@ static void print_runtime_results(uint32_t result)
 
 int main(int argc, FAR char *argv[])
 {
-  int fd;
+  int ulp_fd;
+  int mb_fd;
+  int lp_uart_fd;
+  uint32_t ready = BIST_MSG_READY;
   uint32_t postboot = 0;
   uint32_t runtime = 0;
   bool all_pass = true;
@@ -155,32 +80,56 @@ int main(int argc, FAR char *argv[])
   UNUSED(argc);
   UNUSED(argv);
 
-  fd = open("/dev/ulp", O_RDWR);
-  if (fd < 0)
+  lp_uart_fd = open("/dev/ttyS1", O_WRONLY);
+  if (lp_uart_fd < 0)
+    {
+      printf("Failed to open LP-UART: %d\n", errno);
+      return -1;
+    }
+
+  if (write(lp_uart_fd, "\n", 1) < 0)
+    {
+      printf("Failed to initialize LP-UART: %d\n", errno);
+      return -1;
+    }
+
+
+  ulp_fd = open("/dev/ulp", O_WRONLY);
+  if (ulp_fd < 0)
     {
       printf("Failed to open ULP: %d\n", errno);
       return -1;
     }
 
-  if (write(fd, nuttx_bist_bin, nuttx_bist_bin_len) < 0)
+  if (write(ulp_fd, nuttx_bist_bin, nuttx_bist_bin_len) < 0)
     {
       printf("Failed to load ULP binary: %d\n", errno);
-      close(fd);
+      close(ulp_fd);
       return -1;
     }
 
+  close(ulp_fd);
   printf("LP core loaded with BIST firmware\n");
 
-  /* Signal LP core to start BIST tests */
+  /* Allow LP core to initialize the SW mailbox context. */
 
-  if (ulp_write_u32(fd, "nuttx_bist_hp_ready", BIST_MSG_READY) < 0)
+  sleep(1);
+
+  mb_fd = open("/dev/lp_mailbox", O_RDWR);
+  if (mb_fd < 0)
     {
-      printf("Failed to signal HP ready: %d\n", errno);
-      close(fd);
+      printf("Failed to open LP Mailbox: %d\n", errno);
       return -1;
     }
 
-  if (wait_for_postboot(fd, &postboot) == 0)
+  if (write(mb_fd, &ready, 4) != 4)
+    {
+      printf("Failed to signal HP ready: %d\n", errno);
+      close(mb_fd);
+      return -1;
+    }
+
+  if (read(mb_fd, &postboot, 4) == 4 && (postboot & BIST_BIT_POSTBOOT))
     {
       print_postboot_results(postboot);
       if ((postboot & BIST_POSTBOOT_ALL_PASS) != BIST_POSTBOOT_ALL_PASS)
@@ -190,22 +139,15 @@ int main(int argc, FAR char *argv[])
     }
   else
     {
-      printf("test_BIST_postboot:TIMEOUT\n");
+      printf("test_BIST_postboot:FAIL (mailbox read)\n");
       all_pass = false;
     }
 
   for (i = 1; i <= RUNTIME_LOOPS; i++)
     {
-      if (wait_for_runtime_count(fd, (uint32_t)i) != 0)
+      if (read(mb_fd, &runtime, 4) != 4)
         {
-          printf("test_BIST_runtime:TIMEOUT (loop %d)\n", i);
-          all_pass = false;
-          break;
-        }
-
-      if (ulp_read_u32(fd, "nuttx_bist_runtime_result", &runtime) < 0)
-        {
-          printf("Failed to read runtime result: %d\n", errno);
+          printf("test_BIST_runtime:FAIL (mailbox read, loop %d)\n", i);
           all_pass = false;
           break;
         }
@@ -219,6 +161,19 @@ int main(int argc, FAR char *argv[])
     }
 
   printf("BIST_RESULT:%s\n", all_pass ? "PASS" : "FAIL");
-  close(fd);
+
+  /* Keep acknowledging LP runtime messages so synchronous LP send does not
+   * block forever and trip the LP WDT.
+   */
+
+  while (1)
+    {
+      if (read(mb_fd, &runtime, 4) != 4)
+        {
+          break;
+        }
+    }
+
+  close(mb_fd);
   return all_pass ? 0 : 1;
 }

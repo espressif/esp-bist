@@ -1,7 +1,8 @@
 # ESP-BIST NuttX Sample
 
 This sample demonstrates running ESP-BIST tests on the LP core (ULP coprocessor)
-under NuttX. The HP CPU loads and starts the LP-core firmware, which executes
+under NuttX. The HP CPU loads and starts the LP-core firmware, then exchanges
+handshake and result bitmasks with the LP core over `/dev/lp_mailbox`.
 
 ## What this sample covers
 
@@ -19,8 +20,9 @@ Results are encoded as a `uint32_t` bitmask:
 | 2 | RAM March-A test passed |
 | 3 | RAM March-X test passed |
 | 4 | Flash CRC test passed |
+| 5 | Stack overflow check passed |
 | 30 | Runtime flag (distinguishes runtime from post-boot) |
-| 31 | Done sentinel |
+| 31 | Post-boot complete flag |
 
 ## Supported SoCs
 
@@ -40,7 +42,7 @@ Results are encoded as a `uint32_t` bitmask:
 -ln -s /path/to/esp-bist/samples/nuttx /path/to/apps/external
 ```
 
-## Configure and build (CMake)
+## Configure, build and flash (CMake)
 
 Base board: **`esp32c6-devkitc:ulp`**.
 Extra options: [`nuttx_bist/configs/espressif`](nuttx_bist/configs/espressif).
@@ -51,14 +53,31 @@ cmake -B build-bist -DBOARD_CONFIG=esp32c6-devkitc:ulp -GNinja
 kconfig-merge -m -O build-bist build-bist/.config \
     /path/to/esp-bist/samples/nuttx/nuttx_bist/configs/espressif
 cmake --build build-bist -t olddefconfig
+kconfig-merge -m -O build-bist build-bist/.config \
+    /path/to/esp-bist/samples/nuttx/nuttx_bist/configs/espressif
 cmake -B build-bist -GNinja
 cmake --build build-bist -j$(nproc)
+ESPTOOL_PORT=<PORT_NAME> cmake --build build-bist -t flash
 ```
 
-## Flash and monitor
+## Configure, build and flash (Make)
+
+Base board: **`esp32c6-devkitc:ulp`**.
+Extra options: [`nuttx_bist/configs/espressif`](nuttx_bist/configs/espressif).
 
 ```bash
-ESPTOOL_PORT=<PORT_NAME> cmake --build build-bist -t flash
+cd /path/to/nuttx
+./tools/configure.sh esp32c6-devkitc:ulp
+kconfig-merge -m .config /path/to/esp-bist/samples/nuttx/nuttx_bist/configs/espressif
+make olddefconfig
+kconfig-merge -m .config /path/to/esp-bist/samples/nuttx/nuttx_bist/configs/espressif
+make
+make flash ESPTOOL_PORT=<PORT_NAME>
+```
+
+## Monitor
+
+```bash
 picocom -b 115200 <PORT_NAME>
 ```
 
@@ -67,6 +86,16 @@ picocom -b 115200 <PORT_NAME>
 ```text
 nsh> nuttx_bist
 ```
+
+### Automated device test
+
+```bash
+cd /path/to/esp-bist/samples/nuttx
+pytest pytest_device* --port=<PORT_NAME> --baud=115200
+```
+
+The test uses pytest-embedded serial at 115200 baud, waits for `nsh>`, runs
+`nuttx_bist`, and checks the same PASS markers as below.
 
 Expected markers:
 

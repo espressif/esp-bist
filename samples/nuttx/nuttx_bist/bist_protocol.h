@@ -7,6 +7,11 @@
 /*
  * Shared protocol definitions between HP and LP cores for the NuttX sample.
  *
+ * HP and LP exchange uint32_t values over /dev/lp_mailbox as 4 byte-sized
+ * mailbox messages (little-endian):
+ *   HP -> LP : BIST_MSG_READY handshake
+ *   LP -> HP : post-boot result, then periodic runtime results
+ *
  * Bitmask layout (bit set = test passed):
  *   bit 0  - CPU register test
  *   bit 1  - CPU CSR register test
