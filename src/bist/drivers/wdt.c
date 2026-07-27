@@ -23,10 +23,12 @@
 #include "bist_esp_types.h"
 #include "esp_timer.h"
 #include "hal/clk_tree_ll.h"
+#include "hal/timg_ll.h"
 #include "esp_private/periph_ctrl.h"
 #include "soc/system_intr.h"
 
 #define MWDT_DEFAULT_TICKS_PER_US       500
+#define MWDT_TIMER_GROUP                0
 
 static const char *TAG = "WDT";
 
@@ -87,11 +89,14 @@ int wdt_init(uint32_t timeout_us)
     ESP_LOGI(TAG, "WDT prescaler: %u", MWDT_LL_DEFAULT_CLK_PRESCALER);
     ESP_LOGI(TAG, "Stage timeout ticks: %u", stage_timeout_ticks);
 
-    /* Guard avoids -Wdeprecated-declarations on SoCs where IDF retired
-     * the legacy API (C5/C61/...); TIMG0 is on by reset default there. */
-#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API
-    periph_module_enable(PERIPH_TIMG0_MODULE);
-#endif
+    /* Without its bus clock, MWDT register writes are silently dropped and the
+     * watchdog never counts. The clock is on at reset, but esp_perip_clk_init()
+     * gates it again on some SoCs (ESP32-P4). BIST is the only TIMG0 user, so
+     * ungate unconditionally instead of reference counting. */
+    PERIPH_RCC_ATOMIC() {
+        _timg_ll_enable_bus_clock(MWDT_TIMER_GROUP, true);
+        _timg_ll_reset_register(MWDT_TIMER_GROUP);
+    }
 
     esp_cpu_intr_disable(1 << ETS_INT_WDT_INUM);
     esp_rom_route_intr_matrix(esp_cpu_get_core_id(), SYS_TG0_WDT_INTR_SOURCE, ETS_INT_WDT_INUM);
