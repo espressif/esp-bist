@@ -69,7 +69,7 @@ ENV IDF_PATH=/opt/esp/idf
 ENV IDF_TOOLS_PATH=/opt/esp
 ENV IDF_VERSION=v6.0
 
-RUN git clone -b $IDF_VERSION --recursive $IDF_URL_PATH $IDF_PATH
+RUN git clone -b $IDF_VERSION --recursive --shallow-submodules $IDF_URL_PATH $IDF_PATH
 
 # Install IDF
 RUN : \
