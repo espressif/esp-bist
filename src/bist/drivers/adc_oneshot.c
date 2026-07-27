@@ -97,11 +97,11 @@ esp_err_t adc_oneshot_new_unit(const adc_oneshot_unit_init_cfg_t *init_config, a
     adc_oneshot_clk_src_t clk_src;
 #if SOC_LP_ADC_SUPPORTED
     if (init_config->ulp_mode != ADC_ULP_MODE_DISABLE) {
-        clk_src = LP_ADC_CLK_SRC_LP_DYN_FAST;
+        clk_src = (adc_oneshot_clk_src_t)LP_ADC_CLK_SRC_LP_DYN_FAST;
     } else
 #endif /* SOC_LP_ADC_SUPPORTED */
     {
-        clk_src = ADC_DIGI_CLK_SRC_DEFAULT;
+        clk_src = (adc_oneshot_clk_src_t)ADC_DIGI_CLK_SRC_DEFAULT;
         if (init_config->clk_src) {
             clk_src = init_config->clk_src;
         }
