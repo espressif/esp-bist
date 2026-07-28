@@ -2,6 +2,8 @@
 
 This sample demonstrates running ESP-BIST tests on the LP core (ULP coprocessor) within an ESP-IDF application. The HP CPU loads and starts the LP-core firmware, which executes BIST tests in a loop.
 
+HP and LP cores communicate over the LP mailbox (`lp_core_mailbox_*`). On ESP32-C5/C6 this uses the software mailbox (shared memory + PMU interrupt). The HP core sends a `BIST_MSG_READY` handshake; the LP core replies with post-boot and periodic runtime result bitmasks.
+
 ## Supported SoCs
 
 - ESP32-C5
