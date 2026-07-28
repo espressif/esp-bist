@@ -54,6 +54,105 @@
     "content_type": "source"
   },
   {
+    "function_name": "bist_hw_interrupt_check_ratio",
+    "body": "static void bist_hw_interrupt_check_ratio(void)\n{\n    uint32_t expected = 2 * hw_interrupt_count_2;\n    uint32_t diff = (hw_interrupt_count_1 > expected)\n                        ? (hw_interrupt_count_1 - expected)\n                        : (expected - hw_interrupt_count_1);\n    if (diff > 1U) {\n        hw_interrupt_test_failed = true;\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 48,
+    "line_end": 57,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer_ack",
+    "body": "static void bist_hw_timer_ack(bist_hw_timer_t *timer)\n{\n    uint32_t event = TIMER_LL_EVENT_ALARM(timer->timer_id);\n\n    if (timer_ll_get_intr_status(timer->hal.dev) & event) {\n        timer_ll_clear_intr_status(timer->hal.dev, event);\n        /* Alarm auto-disables in hardware; re-arm for periodic mode. */\n        timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, true);\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 59,
+    "line_end": 68,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer0_isr",
+    "body": "static void bist_hw_timer0_isr(void *arg)\n{\n    bist_hw_timer_t *timer = (bist_hw_timer_t *)arg;\n    bist_hw_timer_ack(timer);\n    hw_interrupt_count_1++;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 70,
+    "line_end": 75,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer1_isr",
+    "body": "static void bist_hw_timer1_isr(void *arg)\n{\n    bist_hw_timer_t *timer = (bist_hw_timer_t *)arg;\n    bist_hw_timer_ack(timer);\n    hw_interrupt_count_2++;\n    hw_check_divider++;\n    if (hw_check_divider >= BIST_HW_CHECK_EVERY_N) {\n        hw_check_divider = 0;\n        bist_hw_interrupt_check_ratio();\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 77,
+    "line_end": 87,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer_start",
+    "body": "static bist_esp_err_t bist_hw_timer_start(bist_hw_timer_t *timer)\n{\n    const uint32_t core_id = esp_cpu_get_core_id();\n    const uint32_t divider = CONFIG_XTAL_FREQ; /* XTAL_MHz -> 1 MHz (1 tick = 1 us) */\n    const uint32_t cpu_intr_mask = 1U << timer->cpu_intr;\n    esp_cpu_intr_handler_t isr = (timer->group_id == 0) ? bist_hw_timer0_isr : bist_hw_timer1_isr;\n\n    if (divider < 2U) {\n        ESP_LOGE(TAG, \"Invalid XTAL divider %u\", (unsigned)divider);\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API\n    periph_module_enable((timer->group_id == 0) ? PERIPH_TIMG0_MODULE : PERIPH_TIMG1_MODULE);\n#else\n    /* Avoid resetting the group: TIMG0 may already host MWDT. */\n    _timg_ll_enable_bus_clock(timer->group_id, true);\n#endif\n\n    timer_hal_init(&timer->hal, timer->group_id, timer->timer_id);\n    timer_ll_enable_clock(timer->group_id, timer->timer_id, true);\n    timer_ll_set_clock_source(timer->group_id, timer->timer_id, GPTIMER_CLK_SRC_XTAL);\n    timer_ll_set_clock_prescale(timer->hal.dev, timer->timer_id, divider);\n    timer_ll_set_count_direction(timer->hal.dev, timer->timer_id, GPTIMER_COUNT_UP);\n    timer_ll_enable_auto_reload(timer->hal.dev, timer->timer_id, true);\n    timer_ll_set_reload_value(timer->hal.dev, timer->timer_id, 0);\n    timer_hal_set_counter_value(&timer->hal, 0);\n    timer_ll_set_alarm_value(timer->hal.dev, timer->timer_id, timer->period_us);\n    timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), false);\n    timer_ll_clear_intr_status(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id));\n\n    esp_cpu_intr_disable(cpu_intr_mask);\n    esp_rom_route_intr_matrix(core_id, timer->intr_source, timer->cpu_intr);\n    esp_cpu_intr_set_type(timer->cpu_intr, ESP_CPU_INTR_TYPE_LEVEL);\n    esp_cpu_intr_set_priority(timer->cpu_intr, SOC_INTERRUPT_LEVEL_MEDIUM);\n    esp_cpu_intr_set_handler(timer->cpu_intr, isr, timer);\n    esp_cpu_intr_enable(cpu_intr_mask);\n\n    timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), true);\n    timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, true);\n    timer_ll_enable_counter(timer->hal.dev, timer->timer_id, true);\n\n    ESP_LOGD(TAG, \"TIMG%d T%d period %u us -> CPU intr %d\",\n             timer->group_id, (int)timer->timer_id, (unsigned)timer->period_us, timer->cpu_intr);\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 89,
+    "line_end": 134,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer_deinit",
+    "body": "static void bist_hw_timer_deinit(bist_hw_timer_t *timer)\n{\n    const uint32_t cpu_intr_mask = 1U << timer->cpu_intr;\n\n    if (timer->hal.dev == NULL) {\n        return;\n    }\n\n    timer_ll_enable_counter(timer->hal.dev, timer->timer_id, false);\n    timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, false);\n    timer_ll_clear_intr_status(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id));\n    timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), false);\n    esp_cpu_intr_disable(cpu_intr_mask);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), timer->intr_source, ETS_INVALID_INUM);\n    timer_hal_deinit(&timer->hal);\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 137,
+    "line_end": 152,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timers_deinit",
+    "body": "static void bist_hw_timers_deinit(void)\n{\n    for (int i = 0; i < BIST_HW_TIMER_COUNT; i++) {\n        bist_hw_timer_deinit(&hw_timers[i]);\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 154,
+    "line_end": 159,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hardware_interrupt_test_init",
+    "body": "static bist_esp_err_t bist_hardware_interrupt_test_init(void)\n{\n    bist_esp_err_t ret;\n    hw_check_divider = 0;\n    hw_interrupt_count_1 = 0;\n    hw_interrupt_count_2 = 0;\n    hw_interrupt_test_failed = false;\n\n    hw_timers[0] = (bist_hw_timer_t){\n        .group_id = 0,\n        .cpu_intr = BIST_HW_TIMER_CPU_INTR_0,\n        .timer_id = 0,\n        .intr_source = soc_timg_gptimer_signals[0][0].irq_id,\n        .period_us = BIST_HARDWARE_INTERRUPT_PERIOD_US_1,\n    };\n    hw_timers[1] = (bist_hw_timer_t){\n        .group_id = 1,\n        .cpu_intr = BIST_HW_TIMER_CPU_INTR_1,\n        .timer_id = 0,\n        .intr_source = soc_timg_gptimer_signals[1][0].irq_id,\n        .period_us = BIST_HARDWARE_INTERRUPT_PERIOD_US_2,\n    };\n\n    for (int i = 0; i < BIST_HW_TIMER_COUNT; i++) {\n        ret = bist_hw_timer_start(&hw_timers[i]);\n        if (ret != BIST_ESP_OK) {\n            ESP_LOGE(TAG, \"Failed to start TIMG hardware timer %d\", i);\n            bist_hw_timers_deinit();\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n    }\n\n    ESP_LOGD(TAG, \"Hardware interrupt setup complete: TIMG0/TIMG1, periods %u/%u us\",\n             (unsigned)BIST_HARDWARE_INTERRUPT_PERIOD_US_1,\n             (unsigned)BIST_HARDWARE_INTERRUPT_PERIOD_US_2);\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 161,
+    "line_end": 198,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hardware_interrupt_test",
+    "body": "bist_esp_err_t bist_hardware_interrupt_test(void)\n{\n    int ret = BIST_ESP_OK;\n\n    ret = bist_hardware_interrupt_test_init();\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to initialize hardware interrupt test\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    do {\n        esp_rom_delay_us(10);\n        if (hw_interrupt_test_failed) {\n            break;\n        }\n    } while (hw_interrupt_count_1 < 1000 && hw_interrupt_count_2 < 1000);\n\n    bist_hw_timers_deinit();\n\n    if (hw_interrupt_test_failed) {\n        ESP_LOGE(TAG, \"Hardware interrupt test failed: cnt1 %d, cnt2 %d\",\n                 hw_interrupt_count_1, hw_interrupt_count_2);\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt.c",
+    "line_start": 201,
+    "line_end": 227,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_interrupt_callback",
+    "body": "static void bist_interrupt_callback(void *arg)\n{\n    REG_WRITE((uint32_t)arg, 0U);\n    interrupt_count++;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw.c",
+    "line_start": 47,
+    "line_end": 51,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_interrupt_source_map_test",
+    "body": "bist_esp_err_t bist_interrupt_source_map_test(void)\n{\n    const uint32_t core_id = esp_cpu_get_core_id();\n    const uint32_t cpu_intr_mask = 1U << BIST_INTERRUPT_CPU_NUMBER;\n    uint32_t intr_enabled_mask = 0x0;\n\n    /* Keep the CPU interrupt disabled while sweeping sources so a pending\n     * peripheral IRQ cannot fire while briefly routed to this line. */\n    esp_cpu_intr_disable(cpu_intr_mask);\n    esp_cpu_intr_set_type(BIST_INTERRUPT_CPU_NUMBER, ESP_CPU_INTR_TYPE_LEVEL);\n    esp_cpu_intr_set_priority(BIST_INTERRUPT_CPU_NUMBER, SOC_INTERRUPT_LEVEL_MEDIUM);\n\n    for (int src = 0; src < BIST_INTERRUPT_SOURCE_COUNT; src++) {\n        ESP_LOGD(TAG, \"Mapping interrupt source %d\", src);\n        interrupt_count = 0;\n        bool error = false;\n        uint32_t source = test_interrupt_sources[src].source;\n        uint32_t reg = test_interrupt_sources[src].reg;\n\n        esp_rom_route_intr_matrix(core_id, source, BIST_INTERRUPT_CPU_NUMBER);\n        esp_cpu_intr_set_handler(BIST_INTERRUPT_CPU_NUMBER, bist_interrupt_callback, (void *)reg);\n        esp_cpu_intr_enable(cpu_intr_mask);\n\n        for (int i = 0; i < BIST_INTERRUPT_LOOP_COUNT; ++i) {\n            REG_WRITE(reg, BIT(0));\n            esp_rom_delay_us(100);\n        }\n        BIST_ADD_LABEL(\"bist_interrupt_source_map_count\");\n\n        intr_enabled_mask = esp_cpu_intr_get_enabled_mask();\n        if (!(intr_enabled_mask & cpu_intr_mask)) {\n            ESP_LOGE(TAG, \"Enabled interrupts mismatch: expect bit %d set, got 0x%lx\", BIST_INTERRUPT_CPU_NUMBER, intr_enabled_mask);\n            error = true;\n        }\n\n        esp_cpu_intr_disable(cpu_intr_mask);\n\n        /* Unmap the interrupt source */\n        esp_rom_route_intr_matrix(core_id, source, ETS_INVALID_INUM);\n\n        if (error) {\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n\n        intr_enabled_mask = esp_cpu_intr_get_enabled_mask();\n        if (intr_enabled_mask & cpu_intr_mask) {\n            ESP_LOGE(TAG, \"Enabled interrupts mismatch: expect bit %d unset, got 0x%lx\", BIST_INTERRUPT_CPU_NUMBER, intr_enabled_mask);\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n\n        if (interrupt_count != BIST_INTERRUPT_LOOP_COUNT) {\n            ESP_LOGE(TAG, \"Interrupt count mismatch (%d): %d != %d\", src, interrupt_count, BIST_INTERRUPT_LOOP_COUNT);\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n        ESP_LOGD(TAG, \"Interrupt source %d mapped to CPU interrupt %d -- count: %d == %d\", src, BIST_INTERRUPT_CPU_NUMBER, interrupt_count, BIST_INTERRUPT_LOOP_COUNT);\n    }\n\n    ESP_LOGD(TAG, \"Software IRQ sources successfully triggered CPU interrupt %d\", BIST_INTERRUPT_CPU_NUMBER);\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw.c",
+    "line_start": 53,
+    "line_end": 112,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
     "function_name": "internal_crc32",
     "body": "uint32_t internal_crc32(uint8_t *data, size_t len, uint32_t crc)\n{\n    crc = ~crc & 0xFFFFFFFF;\n    for (size_t i = 0; i < len; ++i) {\n        uint8_t b = data[i];\n        crc = crc_32_tab[(crc ^ b) & 0xFF] ^ (crc >> 8);\n    }\n    return ~crc & 0xFFFFFFFF;\n}",
     "file": "src/bist/core/memory/bist_flash.c",
