@@ -332,15 +332,10 @@ test_idf_device:
     QEMU_BRANCH: 'feature/esp32c61'
   before_script:
     - . $IDF_PATH/export.sh
-    - apt-get update && apt-get install -y -q --no-install-recommends openssh-client
-    - eval $(ssh-agent -s)
-    - echo "$GITLAB_KEY_PEM" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - ssh-keyscan -p 27227 gitlab.espressif.cn >> ~/.ssh/known_hosts
   script:
     - echo "Cloning QEMU from espressif/qemu at branch $QEMU_BRANCH"
     - cd /opt
-    - git clone -b $QEMU_BRANCH ssh://git@gitlab.espressif.cn:27227/idf/qemu.git
+    - git clone -b $QEMU_BRANCH https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/idf/qemu.git
     - cd qemu
     - mkdir build
     - cd build
