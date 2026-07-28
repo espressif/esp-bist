@@ -38,6 +38,7 @@
 #include "bist_wdt.h"
 #include "bist_gpio.h"
 #include "bist_adc.h"
+#include "bist_interrupt.h"
 #ifndef __ZEPHYR__
 #include "bist_conf.h"
 #endif

@@ -7,6 +7,7 @@ The Espressif's Built-in Self Test library performs the following tests:
 - CPU registers
 - CPU stack overflow
 - Configuration and Status Registers (CSR)
+- Interrupt handling and execution
 - Volatile memory
 - Non-volatile memory
 - Program Counter (PC)
@@ -191,6 +192,29 @@ If the application tries to reset the watchdog:
 - Too early (before CONFIG_WDT_UNDERFLOW_US): Private timer flags an underflow, blocking the watchdog reset.
 - Too late (after the max window): Hardware watchdog will expire, triggering an interrupt that the application can register for fault handling and resetting the device.
 - Within the allowed window: The reset is done correctly.
+
+## Interrupt Handling and Execution Test
+
+The interrupt tests cover IEC 60730 Table H.1 ID 2 (Interrupt handling and execution). They are enabled with `CONFIG_ESP_BIST_INTERRUPT_TEST` (standalone builds) and are intended as post-boot checks.
+
+### Software interrupt source map (`bist_interrupt_source_map_test`)
+
+Exercises the four SoC software interrupt sources `CPU_INTR_FROM_CPU_0` through `CPU_INTR_FROM_CPU_3`. These are software-triggered sources (not peripheral IRQs): writing the corresponding register asserts the source into the interrupt matrix.
+
+For each source the test:
+
+1. Routes the source to free CPU interrupt line 9 and installs an ISR
+2. Triggers the source eight times
+3. Verifies the enable mask and that the ISR count equals eight
+4. Disables and unmaps the source
+
+Returns `BIST_ESP_OK` on success, or `BIST_ESP_INTERRUPT_TEST_ERR` on failure.
+
+### Hardware interrupt delivery (`bist_hardware_interrupt_test`)
+
+Starts GPTimer alarms on TIMG0 (500 us → CPU interrupt 9) and TIMG1 (1000 us → CPU interrupt 10). While both ISR counts are below 1000, the test periodically checks that `|count1 - 2*count2| ≤ 1`. The ±1 tolerance accounts for possible synchronization skew between the two independent timer interrupts. Requires two Timer Groups (`TIMG_LL_INST_NUM >= 2`).
+
+Returns `BIST_ESP_OK` on success, or `BIST_ESP_INTERRUPT_TEST_ERR` on failure. QEMU validates the software path only; the TIMG hardware path requires device testing.
 
 ## Clock Testing
 

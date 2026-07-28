@@ -23,6 +23,7 @@ if(CONFIG_ESP_BIST)
                 core/clock/include
                 core/wdt/include
                 core/io/include
+                core/interrupt/include
                 drivers/include
         )
 
