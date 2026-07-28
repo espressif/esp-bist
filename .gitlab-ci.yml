@@ -399,7 +399,7 @@ build_idf_samples:
 .test_idf_device_template:
   stage: Test Device
   variables:
-    REPORT_PATH: 'samples/idf/build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml'
+    REPORT_PATH: 'build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
     - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch || true
