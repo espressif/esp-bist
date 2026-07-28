@@ -152,7 +152,19 @@ static void post_boot_tests(void)
     }
 #endif
 
-    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash, Stack, IO");
+    test_err = bist_interrupt_source_map_test();
+    if (test_err == BIST_ESP_INTERRUPT_TEST_ERR) {
+        ESP_LOGE(TAG, "Software interrupt test failed");
+        fail_safe_exit();
+    }
+
+    test_err = bist_hardware_interrupt_test();
+    if (test_err == BIST_ESP_INTERRUPT_TEST_ERR) {
+        ESP_LOGE(TAG, "Hardware interrupt test failed");
+        fail_safe_exit();
+    }
+
+    ESP_LOGI(TAG, "All post boot tests passed! Executed tests: External Crystal, Main Crystal, RAM, Flash, Stack, IO, Interrupt");
 }
 
 int test_malloc(void)
