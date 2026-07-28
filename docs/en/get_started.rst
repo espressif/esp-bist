@@ -5,6 +5,7 @@ ESP-BIST is a library with routines designed to verify the integrity and proper 
 
 - CPU Register Test
 - Configuration and Status Registers (CSR) Test
+- Interrupt Handling and Execution Test
 - Volatile Memory Test (RAM)
 - Non-Volatile Memory Test (Flash)
 - CPU Stack Test

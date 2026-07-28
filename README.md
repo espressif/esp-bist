@@ -2,7 +2,7 @@
 
 This repository holds the tests, samples and SoC files for the Espressif's Built-In Self Test (BIST) library.
 
-The BIST library is a cmake library with a set of routines designed to verify the integrity and proper operation of the hardware components in Espressif's SoCs. The library includes tests for the CPU registers, configuration and status registers (CSRs), volatile memory, non-volatile memory, cpu stack, program counter (PC), and clock sources. The tests are intended for use in safety-critical applications that require compliance with the IEC 60730 Class B standard.
+The BIST library is a cmake library with a set of routines designed to verify the integrity and proper operation of the hardware components in Espressif's SoCs. The library includes tests for the CPU registers, configuration and status registers (CSRs), interrupt handling and execution, volatile memory, non-volatile memory, cpu stack, program counter (PC), and clock sources. The tests are intended for use in safety-critical applications that require compliance with the IEC 60730 Class B standard.
 
 This repository includes the necessary files to build an application that runs the BIST library tests.
 
@@ -188,6 +188,7 @@ Available test applications (each in `tests/<name>/`):
 | `clock_test`        | Clock sources (32 kHz and 40 MHz oscillators) |
 | `flash_test`        | Non-volatile memory (CRC32) |
 | `pc_test`           | Program counter and indirect time-slot monitoring |
+| `interrupt_test`    | Interrupt handling and execution |
 | `digital_io_test`   | Digital I/O (GPIO) |
 | `analog_io_test`    | Analog I/O (ADC) |
 | `wdt_test`          | Main system watchdog timer |

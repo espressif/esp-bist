@@ -20,6 +20,11 @@ CPU Tests
 .. include-build-file:: inc/bist_cpu_stack.inc
 .. include-build-file:: inc/bist_pc.inc
 
+Interrupt Tests
+---------------
+
+.. include-build-file:: inc/bist_interrupt.inc
+
 Memory Tests
 ------------
 

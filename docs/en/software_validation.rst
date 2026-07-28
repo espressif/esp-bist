@@ -697,6 +697,78 @@ CI Test Results
 .. xml-junit-test-results:: tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Program Counter Device Test Results
 
+Interrupt Handling and Execution Test
+-------------------------------------
+
+**Purpose:** Verify interrupt-matrix routing and ISR delivery for software interrupt sources, and concurrent hardware interrupt delivery via dual timer-group alarms (IEC 60730 Table H.1 ID 2).
+
+QEMU/Emulation Validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/interrupt_test/pytest_qemu_interrupt_test.py``
+
+**Note:** QEMU validates the software interrupt source map path only. Timer Group (TIMG0/TIMG1) alarms used by ``bist_hardware_interrupt_test()`` are not supported in QEMU, so the hardware interrupt Unity test is not expected to PASS under emulation.
+
+**Execution:**
+
+1. QEMU executes ``bist_interrupt_source_map_test()``
+2. Test configures CPU interrupt line 9 and maps each software source ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_3``
+3. Each source is triggered eight times; the ISR clears the request and increments a counter
+4. Test verifies the enable mask and that the ISR count equals eight for each source
+5. Returns ``BIST_ESP_OK`` and prints ``test_BIST_Interrupt_Source_Map:PASS``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:PASS
+
+Hardware Validation
+^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/interrupt_test/pytest_device_interrupt_test.py``
+
+**Expected Inputs/Environment:**
+
+- Device with interrupt matrix and two Timer Groups (``TIMG_LL_INST_NUM >= 2``)
+- Free CPU interrupt lines 9 and 10 available for the test
+- No conflicting handlers on ``CPU_INTR_FROM_CPU_0..3`` or the TIMG GPTimer alarm sources used by the test
+
+**Execution:**
+
+1. Flash firmware to device
+2. Run ``pytest pytest_device_interrupt_test.py``
+3. Application runs ``bist_interrupt_source_map_test()`` then ``bist_hardware_interrupt_test()``
+4. Software path: map/trigger/unmap four software IRQ sources on CPU interrupt 9
+5. Hardware path: start TIMG0 (500 µs) and TIMG1 (1000 µs) alarms on CPU interrupts 9 and 10; wait until both ISR counts reach 1000 while checking the 2:1 period ratio with ±1 count tolerance
+6. Serial output captured and validated
+
+**Expected Behavior:**
+
+- ``test_BIST_Interrupt_Source_Map:PASS``
+- ``test_BIST_Hardware_Interrupt:PASS``
+- Incorrect routing, missed ISRs, or period-ratio failures return ``BIST_ESP_INTERRUPT_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:PASS
+    test_BIST_Hardware_Interrupt:PASS
+
+CI Test Results
+^^^^^^^^^^^^^^^
+
+**QEMU Test:**
+
+.. xml-junit-test-results:: tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+    :title: Interrupt QEMU Test Results
+
+**Device Test:**
+
+.. xml-junit-test-results:: tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+    :title: Interrupt Device Test Results
+
 Clock Integrity Test
 --------------------
 

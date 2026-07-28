@@ -920,6 +920,179 @@ Coding and Interfaces
 - Type conversions are only used for function pointer casting, which is standard and explicit.
 - No division operations are present in this test.
 
+.. _interrupt-test:
+
+Interrupt Handling and Execution Test
+-------------------------------------
+
+Software Interrupt Source Map Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Software Interrupt Source Map Test
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 220;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> Configure -> SrcLoop;
+        SrcLoop -> Map [label = "Next"];
+        Map -> Enable -> Trigger -> CheckEn;
+        CheckEn -> Fail [label = "No"];
+        CheckEn -> Teardown [label = "Yes"];
+        Teardown -> CheckOk;
+        CheckOk -> Fail [label = "No"];
+        CheckOk -> SrcLoop [label = "Yes"];
+        SrcLoop -> Success [label = "Done"];
+        Fail -> End;
+        Success -> End;
+
+        Start [label = "Start", shape = roundedbox];
+        Configure [label = "Set type/priority\nCPU intr 9"];
+        SrcLoop [label = "For each SW source\nCPU_INTR_FROM_CPU_0..3", shape = diamond];
+        Map [label = "Route source to\nCPU intr 9"];
+        Enable [label = "Enable ISR"];
+        Trigger [label = "Trigger interrupt source\nN times"];
+        CheckEn [label = "Enable mask\nbit set?", shape = diamond];
+        Teardown [label = "Disable and unmap\nCPU intr 9"];
+        CheckOk [label = "Mask clear and\nISR count == N?", shape = diamond];
+        Fail [label = "Return\nBIST_ESP_INTERRUPT_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK"];
+        End [label = "End", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Software Interrupt IRQ Callback
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 220;
+        node_height = 55;
+        default_fontsize = 11;
+
+        HwAssert -> IrqClear -> IrqCount -> IrqRet;
+
+        HwAssert [label = "IRQ callback", shape = roundedbox];
+        IrqClear [label = "Clear interrupt bit"];
+        IrqCount [label = "Increment ISR count"];
+        IrqRet [label = "Return from ISR", shape = roundedbox];
+    }
+
+``bist_interrupt_source_map_test()`` exercises interrupt-matrix routing and ISR delivery using the four SoC software interrupt sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_3``. These are dedicated software-triggered interrupt sources (not peripheral IRQs): software raises each by writing its ``CPU_INTR_FROM_CPU_n`` register, which asserts that interrupt source into the interrupt matrix. Each source is routed to free CPU interrupt line 9, triggered eight times, then unmapped. The test fails if the enable mask is wrong or the ISR count is not exactly eight. The IRQ callback runs asynchronously when hardware asserts the source; it clears the interrupt request and increments the ISR count used by the test.
+
+Hardware Interrupt Test
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Hardware Interrupt Test
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 45;
+        node_width = 240;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> Init -> Route0 -> Route1 -> Poll;
+        Poll -> RatioOk;
+        RatioOk -> MarkFail [label = "No"];
+        RatioOk -> CountsDone [label = "Yes"];
+        CountsDone -> Poll [label = "No"];
+        CountsDone -> Deinit [label = "Yes"];
+        MarkFail -> Deinit;
+        Deinit -> Failed;
+        Failed -> Err [label = "No"];
+        Failed -> Ok [label = "Yes"];
+        Err -> End;
+        Ok -> End;
+
+        Start [label = "Start", shape = roundedbox];
+        Init [label = "Init TIMG0/TIMG1\n500 us / 1000 us"];
+        Route0 [label = "Route TIMG0 to\nCPU intr 9"];
+        Route1 [label = "Route TIMG1 to\nCPU intr 10"];
+        Poll [label = "Delay and sample\nISR counts"];
+        RatioOk [label = "count1 ~= 2*count2\n(tolerance ±1)?", shape = diamond];
+        MarkFail [label = "Mark test failed\n(ratio error)"];
+        CountsDone [label = "Both counts\n>= 1000?", shape = diamond];
+        Deinit [label = "Stop timers\nunmap interrupts"];
+        Failed [label = "Counters within\ntolerance?", shape = diamond];
+        Err [label = "Return\nBIST_ESP_INTERRUPT_TEST_ERR"];
+        Ok [label = "Return BIST_ESP_OK"];
+        End [label = "End", shape = roundedbox];
+    }
+
+``bist_hardware_interrupt_test()`` starts GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10). While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for possible synchronization skew between the two independent timer interrupts (for example, sampling the counters while one ISR has run and the other has not yet). Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
+
+Module API
+^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 15 15 20 20
+
+   * - Function name
+     - Exec Time
+     - Cycles
+     - Instruction Count
+     - Code size (Bytes)
+   * - ``bist_interrupt_source_map_test``
+     - 44.6 ms
+     - 7140244
+     - 2565393
+     - 528
+   * - ``bist_hardware_interrupt_test``
+     - 500 ms
+     - 80001979
+     - 39957618
+     - 1014
+
+.. note::
+
+   Interrupt test measurements were taken on ESP32-C3 at 160 MHz.
+   The hardware interrupt test takes a longer time due to expecting 1000 interrupts.
+
+Source Files
+^^^^^^^^^^^^
+
+.. list-table:: Source Files
+   :header-rows: 1
+   :widths: 45 15 40
+
+   * - Source File
+     - Version
+     - MD5
+   * - ``src/bist/core/interrupt/bist_interrupt_sw.c``
+     - v1.0.0
+     - 12e7e301dad87b8990c57927ac906366
+   * - ``src/bist/core/interrupt/bist_interrupt.c``
+     - v1.0.0
+     - f9dd6bd7a1530a88757e927e3d426c5b
+
+Coding and Interfaces
+^^^^^^^^^^^^^^^^^^^^^
+
+- Explicit error handling: any enable-mask, ISR-count, or period-ratio failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
+- Uses ``esp_cpu_intr_*`` and ``esp_rom_route_intr_matrix`` for CPU interrupt control and interrupt-matrix routing; hardware path also uses TIMG HAL/LL (``timer_hal``, ``timer_ll``, ``timg_ll``).
+- Static state holds ISR counters and timer contexts; no dynamic memory allocation.
+- Public APIs have a single entry; early returns are used for error paths. Hardware path always deinitializes timers before exit.
+- Branching is limited to setup checks, enable-mask checks, count checks, and the period-ratio check. No deep nesting.
+- Only integer comparisons and assignments are used for pass/fail decisions.
+- Interrupts are intentionally installed, enabled, and torn down by this test; CPU lines 9 and 10 are used as free test lines.
+- Pointers are used for ISR arguments (source register or timer context). Usage is explicit and bounded to the test lifetime.
+- No recursion is used.
+- No goto or label-based jumps are used.
+- No division operations are present in the pass/fail logic (ratio check uses multiply-by-two and absolute difference).
+
 .. _clock-test:
 
 Clock Tests
