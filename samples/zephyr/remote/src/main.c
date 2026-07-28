@@ -11,8 +11,8 @@
  * BIST post-boot tests once, followed by periodic runtime tests.
  * Results are sent to the HP core over the mailbox as a bitmask.
  *
- * Post-boot: CPU reg, RAM March-X, Flash CRC
- * Runtime:   CPU reg, RAM March-A
+ * Post-boot: CPU reg, RAM March-X, Abraham full, Flash CRC
+ * Runtime:   CPU reg, RAM March-A, Abraham one-pair
  *
  * Bitmask layout (bit set = passed):
  *   bit 0  – CPU register test
@@ -20,6 +20,8 @@
  *   bit 2  – RAM March-A test       (runtime only)
  *   bit 3  – RAM March-X test       (post-boot only)
  *   bit 4  – Flash CRC test         (post-boot only)
+ *   bit 5  – Stack overflow check   (runtime only)
+ *   bit 6  – RAM Abraham test       (post-boot full / runtime one-pair)
  *   bit 30 – runtime flag (set when this is a runtime round)
  *   bit 31 – "all tests done" sentinel
  */
@@ -35,6 +37,7 @@
 #define BIST_BIT_RAM_X      BIT(3)
 #define BIST_BIT_FLASH      BIT(4)
 #define BIST_BIT_STACK      BIT(5)
+#define BIST_BIT_ABRAHAM    BIT(6)
 #define BIST_BIT_RUNTIME    BIT(30)
 #define BIST_BIT_DONE       BIT(31)
 
@@ -84,6 +87,13 @@ static uint32_t run_postboot_tests(void)
 	if (err == BIST_ESP_OK) {
 		mask |= BIST_BIT_RAM_X;
 	}
+
+	printk("[LP BIST] RAM Abraham full test... ");
+	err = bist_ram_test_abraham_full();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_ABRAHAM;
+	}
 #endif
 
 #if IS_ENABLED(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
@@ -118,6 +128,13 @@ static uint32_t run_runtime_tests(void)
 	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
 	if (err == BIST_ESP_OK) {
 		mask |= BIST_BIT_RAM_A;
+	}
+
+	printk("[LP BIST] RAM Abraham test... ");
+	err = bist_ram_test_abraham();
+	printk("%s (%d)\n", err == BIST_ESP_OK ? "PASS" : "FAIL", err);
+	if (err == BIST_ESP_OK) {
+		mask |= BIST_BIT_ABRAHAM;
 	}
 #endif
 

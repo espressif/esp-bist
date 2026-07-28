@@ -6,7 +6,8 @@ from tests.idf_targets import pytestmark  # noqa: F401
 
 def test_ram_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
-    tests_names = ["test_BIST_ram_march_a", "test_BIST_ram_march_x"]
+    tests_names = ["test_BIST_ram_march_a", "test_BIST_ram_march_x",
+                   "test_BIST_ram_abraham", "test_BIST_ram_abraham_full"]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
     output_lines = []
     found_outputs = []
@@ -67,3 +68,6 @@ def test_ram_march_a_error(qemu_debug_instance, gdb_instance, target):
 
 def test_ram_march_x_error(qemu_debug_instance, gdb_instance, target):
     ram_error_test(qemu_debug_instance, gdb_instance, "test_BIST_ram_march_x",  "bist_ram_test_march_x_step2", "0xFF")
+
+def test_ram_abraham_error(qemu_debug_instance, gdb_instance, target):
+    ram_error_test(qemu_debug_instance, gdb_instance, "test_BIST_ram_abraham", "bist_ram_test_abraham_seq1", "0xFF")

@@ -25,7 +25,7 @@ Modules Architecture
 --------------------
 
 - **CPU tests** (``core/cpu/``): register integrity, CSR integrity, PC integrity (functions placed in IRAM/Flash/RTC), stack overflow detection
-- **Memory tests** (``core/memory/``): RAM March A/X; flash CRC validation
+- **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC validation
 - **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); 40MHz crystal drift measurement
 - **WDT tests** (``core/wdt/``): watchdog init and stack overflow handler registration
 - **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks

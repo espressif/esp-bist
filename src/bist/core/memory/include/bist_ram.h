@@ -17,12 +17,15 @@
  * @file bist_ram.h
  * @brief RAM integrity testing using March algorithms
  *
- * Implements March A and March X algorithms for detecting stuck-at
- * and transition faults in RAM. Tests are non-destructive as original
- * RAM content is backed up and restored.
+ * Implements March A, March X, and Abraham algorithms for detecting stuck-at,
+ * transition, coupling, and address decoder faults in RAM. Tests are
+ * non-destructive as original RAM content is backed up and restored.
  *
  * - March A: 3-step algorithm (Write 0, Read 0/Write 1, Read 1)
  * - March X: 6-step algorithm with additional descending address operations
+ * - Abraham: 10-element / 30n-operation algorithm per IEC 60730-1 Annex H
+ *   H.2.19.1, using time-division over partition pairs for inter-chunk
+ *   coupling fault coverage without requiring a full-RAM backup buffer.
  */
 
 #pragma once
@@ -68,3 +71,43 @@ bist_esp_err_t bist_ram_test_march_a(void);
  * @return BIST_ESP_RAM_TEST_ERR if mismatch detected
  */
 bist_esp_err_t bist_ram_test_march_x(void);
+
+/**
+ * @brief Test RAM integrity using Abraham algorithm (one time-division period)
+ *
+ * Executes the IEC 60730-1 Annex H H.2.19.1 Abraham algorithm on one pair of
+ * RAM partitions, then advances the internal pair index for the next call.
+ * The algorithm uses 10 march elements (30 operations per cell) to detect:
+ *   - Stuck-At Faults (SAF)
+ *   - Transition Faults (TF)
+ *   - Coupling Faults (CF) between cells in the tested pair
+ *   - Address Decoder Faults (AF)
+ *
+ * After all C(N,2) pairs have been tested (one per call), the schedule wraps.
+ * Backs up and restores RAM content for both partitions under test.
+ *
+ * @return BIST_ESP_OK if RAM passes test
+ * @return BIST_ESP_RAM_TEST_ERR if mismatch detected
+ */
+bist_esp_err_t bist_ram_test_abraham(void);
+
+/**
+ * @brief Reset Abraham time-division pair schedule to the first pair
+ *
+ * Resets the internal pair index so the next call to bist_ram_test_abraham()
+ * starts from pair (0,1). Call once at startup or before beginning a new
+ * full coverage cycle.
+ */
+void bist_ram_test_abraham_reset(void);
+
+/**
+ * @brief Run Abraham algorithm over all partition pairs (full coverage)
+ *
+ * Resets the pair schedule and runs bist_ram_test_abraham() for every
+ * C(N,2) partition pair. Suitable for post-boot thorough RAM verification.
+ * Returns on the first failure encountered.
+ *
+ * @return BIST_ESP_OK if all pairs pass
+ * @return BIST_ESP_RAM_TEST_ERR if any pair fails
+ */
+bist_esp_err_t bist_ram_test_abraham_full(void);

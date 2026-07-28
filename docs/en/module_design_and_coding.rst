@@ -501,6 +501,47 @@ Comparison of March A and March X
 - March X provides higher fault coverage by alternating directions and including more read/write transitions, at the cost of increased test time.
 - March A is a subset of March X, suitable for faster but less exhaustive checks.
 
+Abraham (IEC 60730-1 H.2.19.1)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Abraham algorithm implements the IEC 60730-1 Annex H H.2.19.1 variable-memory
+test, providing Class C–level coverage for stuck-at faults (SAF), transition faults (TF),
+coupling faults (CF), and address decoder faults (AF).
+
+- **Sequence (10 elements, 30n operations):**
+
+  | ``↕(w0)``
+  | ``↓(r0,w1)  ↑(r1)``   — Sequence 1
+  | ``↓(r1,w0)  ↑(r0)``   — Sequence 2
+  | ``↑(r0,w1)  ↓(r1)``   — Sequence 3
+  | ``↑(r1,w0)  ↓(r0)``   — Sequence 4
+  | ``↓(r0,w1,w0)  ↑(r0)`` — Sequence 5
+  | ``↑(r0,w1,w0)  ↑(r0)`` — Sequence 6
+  | ``↕(w1)``
+  | ``↑(r1,w0,w1)  ↑(r1)`` — Sequence 7
+  | ``↓(r1,w0,w1)  ↑(r1)`` — Sequence 8
+
+- **Word-Oriented Memory (WOM) variant:** Uses ``0x00000000`` (w0) and ``0xFFFFFFFF`` (w1)
+  as data backgrounds for inter-word coupling detection.
+
+- **Time-Division Partition Pairs:** The test region is divided into N partitions whose
+  size is set by ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE`` (default 512 words = 2 KiB).
+  Each invocation of ``bist_ram_test_abraham()`` tests one pair ``(mi, mj)`` where
+  ``i < j``. Over C(N,2) successive calls, all pairs are tested, providing equivalent
+  coupling coverage to a full-region run without requiring a full-RAM backup buffer.
+  Increasing the partition size reduces N and thus the quadratic pair count.
+
+- **Backup model:** Two partitions are backed up simultaneously into a buffer of
+  ``2 × CONFIG_ESP_BIST_RAM_PARTITION_SIZE`` words in ``.dram0.safe_ram``. On failure,
+  both are restored before returning the error code.
+
+- **Fault Coverage:** Detects SAF, TF, CF (including inter-partition coupling between
+  the tested pair), and AF. More comprehensive than March X for coupling fault detection.
+
+- **Usage in ESP-BIST:** Used for thorough post-boot RAM verification where Class C–level
+  confidence is required. ``bist_ram_test_abraham_full()`` runs the complete pair schedule.
+  ``bist_ram_test_abraham()`` tests one pair per call for WDT-friendly runtime usage.
+
 Module API
 ^^^^^^^^^^
 
@@ -523,6 +564,25 @@ Module API
      - 457611
      - 313843
      - 664
+   * - ``bist_ram_test_abraham``
+     - 3.14 ms
+     - 502704
+     - 311512
+     - 1320
+   * - ``bist_ram_test_abraham_full``
+     - 5260.72 ms
+     - 841715631
+     - 524484762
+     - 1526
+
+.. note::
+
+   Abraham measurements were taken on ESP32-C3 at 160 MHz with
+   ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE`` set to 1024 words. Abraham metrics depend on
+   the partition size: single-pair cost scales linearly with partition size (more cells
+   per pair), while full-coverage cost depends quadratically on the number of partitions
+   N = ceil(region / partition_size), since C(N,2) pairs must be tested. March A and
+   March X are unaffected by partition size as they iterate the full region regardless.
 
 Source Files
 ^^^^^^^^^^^^
@@ -550,10 +610,11 @@ the compiler's stack-frame layout — different GCC versions place variables at 
 offsets, so the defect can manifest as a crash on one toolchain and a silent early loop
 exit on another.
 
-To eliminate this class of failure the public entry points ``bist_ram_test_march_a()``
-and ``bist_ram_test_march_x()`` relocate the stack pointer into a 256-byte buffer
-(``ram_test_stack``) placed in ``.dram0.safe_ram`` — the same linker section that holds
-``backup_chunk``.  Because ``.dram0.safe_ram`` sits **below** ``_bist_ram_test_start``,
+To eliminate this class of failure the public entry points ``bist_ram_test_march_a()``,
+``bist_ram_test_march_x()``, and ``bist_ram_test_abraham()`` relocate the stack pointer
+into a 256-byte buffer (``ram_test_stack``) placed in ``.dram0.safe_ram`` — the same
+linker section that holds ``backup_chunk``.  Because ``.dram0.safe_ram`` sits **below**
+``_bist_ram_test_start``,
 the march algorithm never writes to the relocated stack, and the full linker-defined
 region — including the normal stack — is tested.
 

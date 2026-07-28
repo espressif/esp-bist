@@ -63,10 +63,10 @@ The following table provides code coverage information for each BIST module:
      - :doc:`software_validation` (Stack Overflow Test)
 
    * - RAM Test
-     - 2
-     - 2 (100%)
-     - 2 (March A, March X)
-     - 2 (memory corruption)
+     - 4
+     - 4 (100%)
+     - 4 (March A, March X, Abraham, Abraham Full)
+     - 3 (memory corruption)
      - :doc:`software_validation` (RAM Test)
 
    * - Flash CRC
@@ -162,8 +162,8 @@ Requirements Coverage Matrix
 
    * - 4.2
      - RAM Integrity
-     - ``bist_ram_test_march_a()``, ``bist_ram_test_march_x()``
-     - QEMU + Hardware (March algorithms, fault injection)
+     - ``bist_ram_test_march_a()``, ``bist_ram_test_march_x()``, ``bist_ram_test_abraham()``, ``bist_ram_test_abraham_full()``
+     - QEMU + Hardware (March + Abraham algorithms, fault injection)
      - ``tests/ram_test/build/tests/*_report.xml``
 
    * - 4.2

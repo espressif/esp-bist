@@ -146,26 +146,27 @@ Flash CRC Test (IEC 60730 ID: 4.1)
 RAM Test (IEC 60730 ID: 4.2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: RAM March tests, pattern checks
+**Requirement**: RAM March tests, Abraham test (H.2.19.1), pattern checks
 
 **Design**:
 
 - Module: ``src/bist/core/memory/bist_ram.c``
-- Functions: ``bist_ram_test_march_a()``, ``bist_ram_test_march_x()``
+- Functions: ``bist_ram_test_march_a()``, ``bist_ram_test_march_x()``,
+  ``bist_ram_test_abraham()``, ``bist_ram_test_abraham_full()``
 - Design Doc: :doc:`module_design_and_coding` (RAM Test section)
 
 **Test Implementation**:
 
 - QEMU: ``tests/ram_test/pytest_qemu_ram_test.py``
-  - Success test: March A and March X algorithms
-  - Failure test: Memory corruption via GDB
+  - Success test: March A, March X, Abraham (single period), Abraham (full schedule)
+  - Failure test: Memory corruption via GDB (March A, March X, Abraham)
 - Hardware: ``tests/ram_test/pytest_device_ram_test.py``
 
 **Test Results**:
 - QEMU: ``tests/ram_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/ram_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 2 algorithms × 2 test cases (pass + fail) = 4 test cases total
+**Coverage**: 3 algorithms × 2 test cases (pass + fail) + 1 full-schedule pass = 7 test cases total
 
 Stack Overflow Test (IEC 60730 ID: 4.2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

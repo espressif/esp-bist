@@ -18,12 +18,14 @@ def test_bist_idf_sample(dut, target):
     dut.expect('test_BIST_cpu_reg:PASS', timeout=30)
     dut.expect('test_BIST_cpu_csr:PASS', timeout=10)
     dut.expect('test_BIST_ram_march_x:PASS', timeout=10)
+    dut.expect('test_BIST_ram_abraham:PASS', timeout=30)
     dut.expect('test_BIST_flash_crc:PASS', timeout=10)
 
     # Runtime tests (first iteration)
     dut.expect('test_BIST_runtime_cpu_reg:PASS', timeout=30)
     dut.expect('test_BIST_runtime_cpu_csr:PASS', timeout=10)
     dut.expect('test_BIST_runtime_ram_march_a:PASS', timeout=10)
+    dut.expect('test_BIST_runtime_ram_abraham:PASS', timeout=10)
     dut.expect('test_BIST_runtime_stack_check:PASS', timeout=10)
 
     # Verify all 10 runtime loops completed with no failures in any iteration

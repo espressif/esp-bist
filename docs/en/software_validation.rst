@@ -368,7 +368,7 @@ QEMU/Emulation Validation
 
 **Execution:**
 
-1. QEMU executes both RAM test algorithms over linker-defined RAM region
+1. QEMU executes all RAM test algorithms over linker-defined RAM region
 2. **March A** (ascending):
    - Write 0x00000000 to all addresses ascending
    - Read 0, write 0xFFFFFFFF ascending
@@ -379,8 +379,11 @@ QEMU/Emulation Validation
    - Read 0xFFFFFFFF, write 0 descending
    - Read 0, write 0xFFFFFFFF ascending
    - Read 0xFFFFFFFF, write 0 descending
-4. Backup/restore chunk buffer preserves RAM content on failure
-5. Returns ``BIST_ESP_OK`` if all patterns verified
+4. **Abraham** (H.2.19.1, time-division):
+   - Single period: tests one partition pair through the 10-element/30n-op sequence
+   - Full: resets pair schedule and runs all C(N,2) pairs to completion
+5. Backup/restore chunk buffer preserves RAM content on failure
+6. Returns ``BIST_ESP_OK`` if all patterns verified
 
 **Expected Output:**
 
@@ -388,6 +391,8 @@ QEMU/Emulation Validation
 
     test_BIST_ram_march_a:PASS
     test_BIST_ram_march_x:PASS
+    test_BIST_ram_abraham:PASS
+    test_BIST_ram_abraham_full:PASS
 
 **Failure Test: Memory Corruption via GDB**
 
@@ -418,7 +423,7 @@ QEMU/Emulation Validation
 4. Mismatch detected, returns ``BIST_ESP_RAM_TEST_ERR``
 5. Test prints "test_BIST_ram_march_x:FAIL"
 
-**Test Coverage:** 2 test cases (March A and March X algorithms)
+**Test Coverage:** 3 test cases (March A, March X, and Abraham algorithms)
 
 **Expected Output per Test:**
 
@@ -441,14 +446,15 @@ Hardware Validation
 
 1. Flash firmware to device
 2. Run ``pytest pytest_device_ram_test.py``
-3. Application runs ``bist_ram_test_march_a()`` and ``bist_ram_test_march_x()``
-4. Both algorithms verify all RAM patterns
+3. Application runs ``bist_ram_test_march_a()``, ``bist_ram_test_march_x()``,
+   ``bist_ram_test_abraham()``, and ``bist_ram_test_abraham_full()``
+4. All algorithms verify RAM patterns
 5. Serial output captured and validated
 
 **Expected Behavior:**
 
-- Both March A and March X pass on real hardware
-- No stuck-at faults or data path errors detected
+- March A, March X, and Abraham tests pass on real hardware
+- No stuck-at, coupling, or address decoder faults detected
 - RAM backup/restore prevents data loss during test
 
 CI Test Results

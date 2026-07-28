@@ -42,8 +42,8 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 4.2
      - Variable Memory
-     - March tests, pattern/CRC checks, stack sentinel checks
-     - RAM corruption, coupling/transition faults, stack overflows, memory retention errors
+     - March tests (Class B), Abraham test (H.2.19.1, Class C), stack sentinel checks
+     - RAM corruption, coupling/transition faults, address decoder faults, stack overflows, memory retention errors
      - :ref:`ram-test`
 
    * - 6.3

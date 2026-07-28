@@ -84,8 +84,8 @@
     "function_name": "bist_ram_test_march_a",
     "body": "bist_esp_err_t bist_ram_test_march_a(void)\n{\n    return run_on_safe_stack(march_a_impl);\n}",
     "file": "src/bist/core/memory/bist_ram.c",
-    "line_start": 195,
-    "line_end": 198,
+    "line_start": 203,
+    "line_end": 206,
     "module": "memory",
     "content_type": "source"
   },
@@ -93,8 +93,44 @@
     "function_name": "bist_ram_test_march_x",
     "body": "bist_esp_err_t bist_ram_test_march_x(void)\n{\n    return run_on_safe_stack(march_x_impl);\n}",
     "file": "src/bist/core/memory/bist_ram.c",
-    "line_start": 200,
-    "line_end": 203,
+    "line_start": 208,
+    "line_end": 211,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "abraham_advance_pair",
+    "body": "static void abraham_advance_pair(size_t num_partitions)\n{\n    if (num_partitions <= 1) {\n        return;\n    }\n    abraham_pair_j++;\n    if (abraham_pair_j >= num_partitions) {\n        abraham_pair_i++;\n        abraham_pair_j = abraham_pair_i + 1;\n    }\n    if (abraham_pair_i >= num_partitions - 1) {\n        abraham_pair_i = 0;\n        abraham_pair_j = 1;\n    }\n}",
+    "file": "src/bist/core/memory/bist_ram.c",
+    "line_start": 460,
+    "line_end": 474,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_ram_test_abraham",
+    "body": "bist_esp_err_t bist_ram_test_abraham(void)\n{\n    bist_esp_err_t result = run_on_safe_stack(abraham_impl);\n    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;\n    size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)\n                            / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;\n    abraham_advance_pair(num_partitions);\n    return result;\n}",
+    "file": "src/bist/core/memory/bist_ram.c",
+    "line_start": 476,
+    "line_end": 484,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_ram_test_abraham_reset",
+    "body": "void bist_ram_test_abraham_reset(void)\n{\n    abraham_pair_i = 0;\n    abraham_pair_j = 1;\n}",
+    "file": "src/bist/core/memory/bist_ram.c",
+    "line_start": 486,
+    "line_end": 490,
+    "module": "memory",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_ram_test_abraham_full",
+    "body": "bist_esp_err_t bist_ram_test_abraham_full(void)\n{\n    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;\n    size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)\n                            / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;\n    size_t total_pairs = (num_partitions <= 1)\n                             ? 1\n                             : (num_partitions * (num_partitions - 1)) / 2;\n\n    bist_ram_test_abraham_reset();\n\n    for (size_t p = 0; p < total_pairs; p++) {\n        bist_esp_err_t err = run_on_safe_stack(abraham_impl);\n        if (err != BIST_ESP_OK) {\n            return err;\n        }\n        abraham_advance_pair(num_partitions);\n    }\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/memory/bist_ram.c",
+    "line_start": 492,
+    "line_end": 511,
     "module": "memory",
     "content_type": "source"
   },

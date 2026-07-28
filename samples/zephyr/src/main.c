@@ -32,6 +32,7 @@
 #define BIST_BIT_RAM_X    BIT(3)
 #define BIST_BIT_FLASH    BIT(4)
 #define BIST_BIT_STACK    BIT(5)
+#define BIST_BIT_ABRAHAM  BIT(6)
 #define BIST_BIT_RUNTIME  BIT(30)
 #define BIST_BIT_DONE     BIT(31)
 
@@ -101,6 +102,12 @@ ZTEST(bist_lp, test_postboot_ram_march_x)
 		     "LP post-boot: RAM March-X test failed");
 }
 
+ZTEST(bist_lp, test_postboot_ram_abraham)
+{
+	zassert_true(postboot_result & BIST_BIT_ABRAHAM,
+		     "LP post-boot: RAM Abraham test failed");
+}
+
 ZTEST(bist_lp, test_postboot_flash_crc)
 {
 	zassert_true(postboot_result & BIST_BIT_FLASH,
@@ -119,6 +126,12 @@ ZTEST(bist_lp, test_runtime_ram_march_a)
 {
 	zassert_true(runtime_result & BIST_BIT_RAM_A,
 		     "LP runtime: RAM March-A test failed");
+}
+
+ZTEST(bist_lp, test_runtime_ram_abraham)
+{
+	zassert_true(runtime_result & BIST_BIT_ABRAHAM,
+		     "LP runtime: RAM Abraham test failed");
 }
 
 ZTEST(bist_lp, test_runtime_stack_check)

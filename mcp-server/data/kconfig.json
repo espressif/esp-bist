@@ -34,10 +34,20 @@
     "type": "bool",
     "default": "y if !ZEPHYR_ESP_BIST_MODULE",
     "depends_on": "",
-    "help": "Enable tests for the RAM memory integrity (March A and March X).",
+    "help": "Enable tests for the RAM memory integrity (March A, March X, and\nAbraham).",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "Memory RAM Test"
+  },
+  {
+    "name": "ESP_BIST_RAM_PARTITION_SIZE",
+    "type": "int",
+    "default": "512",
+    "depends_on": "ESP_BIST_MEMORY_RAM_TEST",
+    "help": "Size of each RAM test partition in 32-bit words. March A/X test one\npartition at a time; Abraham tests pairs. Larger values reduce the\nnumber of Abraham pairs C(N,2) and thus the execution time of\nbist_ram_test_abraham_full(), at the cost of a larger safe-RAM\nbackup buffer (2 x partition_size x 4 bytes).\n\nCommon values:\n256  = 1 KiB partitions, 2 KiB backup buffer (LP core default)\n512  = 2 KiB partitions, 4 KiB backup buffer (standalone default)\n1024 = 4 KiB partitions, 8 KiB backup buffer",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "RAM test partition size (words)"
   },
   {
     "name": "ESP_BIST_STACK_TEST",

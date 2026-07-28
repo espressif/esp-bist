@@ -33,11 +33,14 @@ The LP core runs tests in two phases:
 **Post-boot** (runs once after handshake):
 - CPU register test
 - RAM March-X test
+- RAM Abraham full test
 - Flash CRC integrity test
 
 **Runtime** (runs periodically every 500 ms):
 - CPU register test
 - RAM March-A test
+- RAM Abraham test (one partition pair per round)
+- Stack overflow check
 
 Results are encoded as a `uint32_t` bitmask:
 
@@ -48,8 +51,12 @@ Results are encoded as a `uint32_t` bitmask:
 | 2 | RAM March-A test passed |
 | 3 | RAM March-X test passed |
 | 4 | Flash CRC test passed |
+| 5 | Stack overflow check passed |
+| 6 | RAM Abraham test passed |
 | 30 | Runtime flag (distinguishes runtime from post-boot) |
 | 31 | Done sentinel |
+
+LP builds default `CONFIG_ESP_BIST_RAM_PARTITION_SIZE` to **256 words** (1 KiB partitions, 2 KiB backup buffer) to fit within the ~16 KiB LP SRAM.
 
 ## Supported boards
 
@@ -99,14 +106,23 @@ START - test_postboot_cpu_reg
 START - test_postboot_flash_crc
  PASS - test_postboot_flash_crc in 0.001 seconds
 ===================================================================
+START - test_postboot_ram_abraham
+ PASS - test_postboot_ram_abraham in 0.001 seconds
+===================================================================
 START - test_postboot_ram_march_x
  PASS - test_postboot_ram_march_x in 0.001 seconds
 ===================================================================
 START - test_runtime_cpu_reg
  PASS - test_runtime_cpu_reg in 0.001 seconds
 ===================================================================
+START - test_runtime_ram_abraham
+ PASS - test_runtime_ram_abraham in 0.001 seconds
+===================================================================
 START - test_runtime_ram_march_a
  PASS - test_runtime_ram_march_a in 0.001 seconds
+===================================================================
+START - test_runtime_stack_check
+ PASS - test_runtime_stack_check in 0.001 seconds
 ===================================================================
 TESTSUITE bist_lp succeeded
 ```
@@ -119,10 +135,13 @@ The LP core serial port (typically `/dev/ttyUSB1`) shows the BIST execution log:
 [LP BIST] === Post-boot tests ===
 [LP BIST] CPU reg test... PASS (0)
 [LP BIST] RAM March-X test... PASS (0)
+[LP BIST] RAM Abraham full test... PASS (0)
 [LP BIST] Flash CRC test... PASS (0)
 [LP BIST] === Runtime tests (periodic) ===
 [LP BIST] CPU reg test... PASS (0)
 [LP BIST] RAM March-A test... PASS (0)
+[LP BIST] RAM Abraham test... PASS (0)
+[LP BIST] Stack overflow check... PASS (0)
 ```
 
 ## Running with Twister

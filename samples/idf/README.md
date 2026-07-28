@@ -53,7 +53,13 @@ Relevant options:
 |------|----------------|
 | CPU registers | `CONFIG_ESP_BIST_CPU_REG_TEST` |
 | CPU CSRs | `CONFIG_ESP_BIST_CPU_CSR_REG_TEST` |
-| RAM (March A/X) | `CONFIG_ESP_BIST_MEMORY_RAM_TEST` |
+| RAM (March A/X / Abraham) | `CONFIG_ESP_BIST_MEMORY_RAM_TEST` |
 | Stack overflow | `CONFIG_ESP_BIST_STACK_TEST` |
 | Flash CRC | `CONFIG_ESP_BIST_MEMORY_FLASH_TEST` |
 | LP watchdog | `CONFIG_ESP_BIST_WDT_TIMEOUT_US` |
+
+### RAM test notes
+
+- **Post-boot:** March-X followed by `bist_ram_test_abraham_full()` (complete pair schedule).
+- **Runtime:** March-A followed by `bist_ram_test_abraham()` (one partition pair per round).
+- LP builds default `CONFIG_ESP_BIST_RAM_PARTITION_SIZE` to **256 words** (1 KiB partitions, 2 KiB backup buffer) to fit within the ~16 KiB LP SRAM.
