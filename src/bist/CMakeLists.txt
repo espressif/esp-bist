@@ -171,7 +171,6 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
-    ${IDF_PATH}/components/soc/${SOC_TARGET}/register
     ${IDF_PATH}/components/log/include
     ${IDF_PATH}/components/esp_system/include
     ${IDF_PATH}/components/esp_hw_support/include
@@ -195,6 +194,16 @@ target_include_directories(
     ${IDF_PATH}/components/hal/platform_port/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
     )
+
+if(SOC_TARGET STREQUAL "esp32p4")
+    target_include_directories(bist_esp PUBLIC
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
+    )
+else()
+    target_include_directories(bist_esp PUBLIC
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/register
+    )
+endif()
 
 # Per-file compiler override for IDF source (see docs/en/software_safety_requirements.rst)
 if(SOC_TARGET STREQUAL "esp32c3")

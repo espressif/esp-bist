@@ -77,7 +77,7 @@
  *   - ESP32-C3: 25 CSRs (5 trap + 16 pmpaddr + 4 pmpcfg)
  *   - ESP32-C6/H2: 37 CSRs (25 common + 12 pma_addr)
  *   - ESP32-C5: 39 CSRs (25 common + 12 pma_addr + mexstatus + mhint)
- *   - ESP32-H4: 40 CSRs (25 common + 12 pma_addr + fflags + frm + fcsr)
+ *   - ESP32-H4/P4: 40 CSRs (25 common + 12 pma_addr + fflags + frm + fcsr)
  *
  * @return BIST_ESP_OK if all CSRs pass
  * @return BIST_ESP_CPU_CSR_TEST_ERR if any CSR fails

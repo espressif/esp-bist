@@ -13,7 +13,7 @@ With this server enabled, the assistant stops guessing and starts citing: it can
 | `get_architecture_info` | Get architecture, design, memory model, and safety documentation |
 | `search_kconfig_options` | Search Kconfig options with defaults, types, and dependencies |
 | `search_source_code` | Search C source code for implementation details and algorithms |
-| `get_supported_socs` | SoC support matrix (ESP32-C3, C5, C6, H2) with capabilities |
+| `get_supported_socs` | SoC support matrix (ESP32-C3, C5, C6, C61, H2, P4) with capabilities |
 
 ## Project layout
 
@@ -154,8 +154,8 @@ If `mcp_data_drift` fails on your MR, just run the command above locally and com
 
 ## Content coverage
 
-- **285** documentation chunks from 13 RST files + 3 READMEs
-- **56** API entries (functions, types, enums) from 16 headers
+- **297** documentation chunks from 13 RST files + 3 READMEs
+- **57** API entries (functions, types, enums) from 16 headers
 - **18** Kconfig options with defaults, types, and help text
 - **50** source code function chunks from 13 C files
-- **4** SoCs: ESP32-C3, ESP32-C5, ESP32-C6, ESP32-H2
+- **6** SoCs: ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-P4

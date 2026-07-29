@@ -23,12 +23,20 @@
 #include "esp_rom_sys.h"
 #include "wdt.h"
 
+
+#ifdef SOC_TARGET_ESP32P4
+    #define RESET_REASON_CORE RESET_REASON_CORE_MWDT
+#else
+    #define RESET_REASON_CORE RESET_REASON_CORE_MWDT0
+#endif
+
+
 bist_esp_err_t bist_wdt_test(void)
 {
     volatile uint32_t wdt_timeout_us = 10000;
     soc_reset_reason_t reset = esp_rom_get_reset_reason(0);
 
-    if (reset == RESET_REASON_CORE_MWDT0) {
+    if (reset == RESET_REASON_CORE) {
         return BIST_ESP_OK;
     }
 

@@ -218,10 +218,10 @@ Content Coverage
 
 The shipped ``data/`` snapshot covers:
 
-- **285** documentation chunks across 13 RST files and 3 READMEs
-- **56** API entries (functions, types, enums) from 16 public headers
+- **297** documentation chunks across 13 RST files and 3 READMEs
+- **57** API entries (functions, types, enums) from 16 public headers
 - **18** Kconfig options with defaults, types, and help text
 - **50** C function bodies from 13 source files
-- **4** SoCs (ESP32-C3, ESP32-C5, ESP32-C6, ESP32-H2) with capability metadata
+- **6** SoCs (ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-P4) with capability metadata
 
 See ``mcp-server/README.md`` for the full reference.
