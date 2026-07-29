@@ -123,6 +123,12 @@ target_include_directories(bist_esp
     ${IDF_PATH}/components/ulp/lp_core/shared/include
 )
 
+if(SOC_TARGET STREQUAL "esp32p4")
+    target_include_directories(bist_esp PUBLIC
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
+    )
+endif()
+
 target_link_libraries(bist_esp PUBLIC c)
 
 set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
