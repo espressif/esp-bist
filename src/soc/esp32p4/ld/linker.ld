@@ -189,7 +189,13 @@ SECTIONS
   {
     _tcm_text_start = ABSOLUTE(.);
     *(.tcm.text .tcm.text.*)
+
+    . = ALIGN(8);
+    _pc_test_4_start = ABSOLUTE(.);
+    *(.pc_test_4 .pc_test_4.*)
+    _pc_test_4_end = ABSOLUTE(.);
     . = ALIGN(4);
+
     _tcm_text_end = ABSOLUTE(.);
   } > tcm_idram_seg AT>ROM
 
