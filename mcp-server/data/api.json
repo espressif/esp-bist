@@ -91,6 +91,11 @@
         "name": "BIST_ESP_ADC_TEST_ERR",
         "value": 11,
         "description": "ADC test failed"
+      },
+      {
+        "name": "BIST_ESP_INTERRUPT_TEST_ERR",
+        "value": 12,
+        "description": "Interrupt test failed"
       }
     ]
   },
@@ -248,6 +253,28 @@
     "returns": "BIST_ESP_OK if all 4 functions return correctly; BIST_ESP_PC_TEST_ERR if return address mismatch detected",
     "note": "Covers 24 of 30 addressable PC bits (bits 0-1 always 0 due to alignment)",
     "header_file": "src/bist/core/cpu/include/bist_pc.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_interrupt_source_map_test",
+    "signature": "bist_esp_err_t bist_interrupt_source_map_test(void)",
+    "module": "interrupt",
+    "description": "Software and hardware interrupt tests (IEC 60730 Table H.1 ID 2)",
+    "params": [],
+    "returns": "BIST_ESP_OK if every software source maps, fires, and unmaps correctly; BIST_ESP_INTERRUPT_TEST_ERR if enable-mask or ISR-count checks fail",
+    "note": "",
+    "header_file": "src/bist/core/interrupt/include/bist_interrupt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hardware_interrupt_test",
+    "signature": "bist_esp_err_t bist_hardware_interrupt_test(void)",
+    "module": "interrupt",
+    "description": "Test concurrent hardware interrupt delivery via dual timer groups",
+    "params": [],
+    "returns": "BIST_ESP_OK if both timers deliver interrupts at the expected ratio; BIST_ESP_INTERRUPT_TEST_ERR if setup fails or the period ratio check fails",
+    "note": "",
+    "header_file": "src/bist/core/interrupt/include/bist_interrupt.h",
     "kconfig_guards": []
   },
   {

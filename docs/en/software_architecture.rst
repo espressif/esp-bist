@@ -9,7 +9,7 @@ The ESP-BIST standalone firmware uses a three-layer architecture:
 - **Application layer** — Integrates BIST tests and fail-safe logic (e.g., ``samples/standalone/main.c``). Runs post-boot tests, registers watchdog and crystal failure callbacks, initializes stack overflow detection, and runs runtime tests in the main loop.
 - **BIST library layer** (``src/bist/``) — Core safety test routines and driver wrappers:
 
-  - Core modules ``core/cpu/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``
+  - Core modules ``core/cpu/``, ``core/interrupt/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``
   - Driver layer ``drivers/`` for watchdog, XT WDT, GPIO, timer
   - Public API headers ``src/bist/include/`` and ``src/bist/core/include/`` expose test functions and error codes
 - **SoC and HAL layer** (``soc/{IDF_TARGET_PATH_NAME}/``, ``components/``) — Startup code, vector table, linker script, minimal HAL stubs, and memory layout control.
@@ -26,6 +26,7 @@ Modules Architecture
 
 - **CPU tests** (``core/cpu/``): register integrity, CSR integrity, PC integrity (functions placed in IRAM/Flash/RTC), stack overflow detection
 - **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC validation
+- **Interrupt tests** (``core/interrupt/``): software IRQ source mapping and dual timer-group hardware interrupt delivery
 - **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); 40MHz crystal drift measurement
 - **WDT tests** (``core/wdt/``): watchdog init and stack overflow handler registration
 - **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks
@@ -67,7 +68,11 @@ Interrupt Handling
 - Vector table in ``soc/{IDF_TARGET_PATH_NAME}/vectors.S`` mapped to IRAM.
 - MWDT interrupt before reset; callback registered via ``wdt_register_callback`` must be short and deterministic.
 - XT WDT interrupt for 32kHz crystal failure via ``esp_xt_wdt_register_callback`` (available on SoCs with ``SOC_XT_WDT_SUPPORTED``; on other SoCs the external crystal fail test is skipped).
-- Library does not install ISRs; it exposes registration APIs only.
+- Interrupt self-test (``core/interrupt/``, enabled by ``CONFIG_ESP_BIST_INTERRUPT_TEST``) temporarily installs ISRs and interrupt-matrix routes, then tears them down:
+
+  - Software path: maps ``CPU_INTR_FROM_CPU_0..3`` to CPU interrupt line 9, triggers each source, and verifies enable-mask state plus ISR delivery count.
+  - Hardware path: routes TIMG0/TIMG1 GPTimer alarms to CPU interrupt lines 9 and 10, then checks that ISR counts follow the configured 2:1 period ratio.
+- Outside the interrupt self-test, the library does not retain application ISRs; watchdog and XT WDT paths continue to use registration callbacks only.
 
 Data Storage Model
 ------------------
@@ -87,7 +92,7 @@ Time-Based Dependencies
 - **Clock tests**: Measure frequency ratio vs 32.768 kHz; tolerance via ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT``.
 - **XT WDT**: Detects 32kHz failure after ~200 cycles.
 - **Runtime tests**: CPU/CSR/stack/PC executed within watchdog window; deterministic bounded execution.
-- **Post-boot tests**: RAM, flash, stack, GPIO run once at startup; integrators ensure total time fits safety goals.
+- **Post-boot tests**: RAM, flash, stack, GPIO, and interrupt tests run once at startup; integrators ensure total time fits safety goals.
 
 Hardware/Software Interfaces
 ----------------------------
@@ -97,7 +102,7 @@ Hardware/Software Interfaces
 - GPIO configuration and I/O via driver wrappers
 - ADC oneshot configuration and raw reading via driver wrappers
 - Watchdog APIs for MWDT/windowed and XT WDT callbacks
-- Interrupt controller use limited to watchdog-related handlers
+- Interrupt controller and matrix for watchdog-related handlers and the interrupt self-test
 
 Error Control Measures (Architecture)
 -------------------------------------

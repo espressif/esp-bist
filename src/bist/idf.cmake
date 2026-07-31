@@ -93,6 +93,7 @@ target_include_directories(bist_esp
     core/clock/include
     core/wdt/include
     core/io/include
+    core/interrupt/include
     drivers/include
     ../soc/${SOC_TARGET}/include
     ${IDF_PATH}/components/riscv/include
@@ -116,6 +117,7 @@ target_include_directories(bist_esp
     ${IDF_PATH}/components/esp_hal_wdt/include
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
+    ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
     ${IDF_PATH}/components/ulp/lp_core/lp_core/include
     ${IDF_PATH}/components/ulp/lp_core/shared/include

@@ -28,6 +28,12 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
      - Control-flow faults, stuck PC, unexpected jumps, code execution outside intended regions
      - :ref:`program-counter-test`
 
+   * - 2
+     - Interrupt handling and execution
+     - Validates interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery via dual timer-group alarms
+     - Stuck or missed interrupts, incorrect interrupt-matrix routing, enable/disable faults, incorrect interrupt frequency or period
+     - :ref:`interrupt-test`
+
    * - 3
      - Clock
      - Validates main and reference clock sources, monitors drift
@@ -119,7 +125,8 @@ The BIST library interfaces with hardware through a HAL layer; low-level access 
   - Main System Watchdog Timer (MWDT) (``src/bist/drivers/wdt.c``, ``hal/wdt_hal.h``): Hardware watchdog for system monitoring and reset capability
   - External Crystal Watchdog (XT WDT) (``src/bist/drivers/xt_wdt.c``, ``hal/xt_wdt_hal.h``): 32kHz crystal oscillator failure detection
 - **System Timer (SYSTIMER)** (``src/bist/drivers/esp_timer.c``, ``hal/systimer_hal.h``): Microsecond-precision timer for windowed watchdog underflow detection and clock test timing
-- **Interrupt controller** (``esp_intr_alloc.h``, interrupt routing): Interrupt allocation, routing, and handler registration for watchdog timeouts, XT WDT failures, and timer callbacks
+- **Interrupt controller** (``esp_cpu.h``, ``esp_rom_sys.h``, ``esp_intr_alloc.h``, interrupt matrix): CPU interrupt enable/disable, priority/type configuration, handler installation, and interrupt-matrix routing for watchdog timeouts, XT WDT failures, timer callbacks, and the interrupt self-test (software IRQ sources and timer-group alarms)
+- **Timer Groups (TIMG)** (``hal/timer_hal.h``, ``hal/timer_ll.h``, ``hal/timg_ll.h``): GPTimer alarms used by interrupt test to exercise concurrent hardware interrupt delivery and period ratio checks
 - **Peripheral control** (``components/esp_hw_support/periph_ctrl.c``): Peripheral clock gating and reset control for enabling/disabling hardware modules (e.g., SYSTIMER)
 - **Memory interfaces**:
 

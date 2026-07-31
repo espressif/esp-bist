@@ -120,6 +120,16 @@
     "prompt": "Watchdog Test"
   },
   {
+    "name": "ESP_BIST_INTERRUPT_TEST",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
+    "help": "Enable tests for software and hardware interrupts.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Interrupt Test"
+  },
+  {
     "name": "ESP_BIST_WDT_TIMEOUT_US",
     "type": "int",
     "default": "50000",

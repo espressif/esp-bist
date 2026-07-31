@@ -1,7 +1,7 @@
 ESP-BIST Documentation
 ======================
 
-The BIST library is a cmake library with a set of routines designed to verify the integrity and proper operation of the hardware components in Espressif's SoCs. The library includes tests for the CPU registers, configuration and status registers (CSRs), volatile memory, non-volatile memory, cpu stack, program counter (PC), clock sources and safety related peripherals.
+The BIST library is a cmake library with a set of routines designed to verify the integrity and proper operation of the hardware components in Espressif's SoCs. The library includes tests for the CPU registers, configuration and status registers (CSRs), interrupt handling and execution, volatile memory, non-volatile memory, cpu stack, program counter (PC), clock sources and safety related peripherals.
 
 This documentation provides a comprehensive overview of ESP-BIST, including its software safety requirements, risk assessment, architecture, module design and coding, validation methods, test traceability, coverage analysis, tool qualification, safety case summary, application guidance, and API reference. It also details the project's conformity with IEC 60335-1 Annex R and IEC 60730-1 Annex H (class B) standards.
 

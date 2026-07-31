@@ -143,6 +143,8 @@ def parse_c_header(filepath: Path) -> list[dict]:
     module = "unknown"
     if "core/cpu" in str(filepath):
         module = "cpu"
+    elif "core/interrupt" in str(filepath):
+        module = "interrupt"
     elif "core/memory" in str(filepath):
         module = "memory"
     elif "core/clock" in str(filepath):
@@ -389,6 +391,8 @@ def chunk_source_file(filepath: Path) -> list[dict]:
     module = "unknown"
     if "core/cpu" in str(filepath):
         module = "cpu"
+    elif "core/interrupt" in str(filepath):
+        module = "interrupt"
     elif "core/memory" in str(filepath):
         module = "memory"
     elif "core/clock" in str(filepath):
@@ -608,6 +612,7 @@ def ingest(repo_root: Path, output_dir: Path):
     header_dirs = [
         repo_root / "src" / "bist" / "include",
         repo_root / "src" / "bist" / "core" / "cpu" / "include",
+        repo_root / "src" / "bist" / "core" / "interrupt" / "include",
         repo_root / "src" / "bist" / "core" / "memory" / "include",
         repo_root / "src" / "bist" / "core" / "clock" / "include",
         repo_root / "src" / "bist" / "core" / "wdt" / "include",
@@ -648,6 +653,7 @@ def ingest(repo_root: Path, output_dir: Path):
 
     source_dirs = [
         repo_root / "src" / "bist" / "core" / "cpu",
+        repo_root / "src" / "bist" / "core" / "interrupt",
         repo_root / "src" / "bist" / "core" / "memory",
         repo_root / "src" / "bist" / "core" / "clock",
         repo_root / "src" / "bist" / "core" / "wdt",

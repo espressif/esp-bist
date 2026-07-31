@@ -50,36 +50,42 @@ The following table maps identified hazards to safety functions, risk levels, an
      - ``bist_pc_test()`` exercises PC bits by calling functions placed in IRAM, Flash, and RTC regions, detecting stuck-at faults or unexpected jumps
 
    * - H4
+     - Interrupt handling or execution failure causing missed, stuck, or incorrectly routed interrupts
+     - High
+     - 2 (Interrupt handling and execution)
+     - ``bist_interrupt_source_map_test()`` verifies software IRQ source mapping, enable/disable, and ISR delivery; ``bist_hardware_interrupt_test()`` validates concurrent timer-group interrupt delivery via a 2:1 period ratio check
+
+   * - H5
      - Clock oscillator failure causing timing violations and missed deadlines
      - High
      - 3 (Clock)
      - ``bist_clock_test()`` monitors 32kHz crystal via XT WDT and validates 40MHz main crystal frequency within ±1% tolerance
 
-   * - H5
+   * - H6
      - Flash memory corruption leading to execution of incorrect code or use of corrupted data
      - High
      - 4.1 (Invariable Memory)
      - ``bist_flash_test()`` computes CRC32 over ``.flash.text`` and ``.flash.rodata`` sections and compares against post-build injected checksums
 
-   * - H6
+   * - H7
      - RAM corruption causing data integrity loss or stack overflow
      - High
      - 4.2 (Variable Memory)
      - ``bist_ram_test_march_a()`` and ``bist_ram_test_march_x()`` detect coupling and transition faults; ``bist_cpu_stack_overflow_check()`` monitors stack sentinel
 
-   * - H7
+   * - H8
      - Infinite loop or deadlock preventing watchdog feeding and system recovery
      - High
      - 6.3 (Timing)
      - Windowed watchdog (MWDT) with configurable timeout enforces periodic ``wdt_feed()`` calls; early feeds detect underflow; timeout triggers system reset
 
-   * - H8
+   * - H9
      - GPIO misconfiguration or stuck I/O lines causing incorrect system behavior
      - Medium
      - 7.1 (Digital I/O)
      - ``bist_gpio_test()`` verifies GPIO configuration and validates output/input levels are readable and controllable
 
-   * - H9
+   * - H10
      - ADC misconfiguration or stuck analog input lines causing incorrect sensor readings
      - Medium
      - 7.2 (Analog I/O)

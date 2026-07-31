@@ -139,6 +139,20 @@ Post-Boot Self-Tests
     - **Rationale**: Detects faults that may pass pull-up/pull-down tests alone
     - **Implementation**: Enables VREF output, reads raw value within tolerance of reference level
 
+12. **Software Interrupt Source Map Test** (``bist_interrupt_source_map_test()``)
+
+    - **IEC 60730 Component**: 2 (Interrupt handling and execution)
+    - **Purpose**: Verifies interrupt-matrix routing and ISR delivery for software IRQ sources ``CPU_INTR_FROM_CPU_0..3``
+    - **Rationale**: Stuck or mis-routed interrupts can prevent fault handlers and safety responses from running
+    - **Implementation**: Maps each software source to CPU interrupt 9, triggers eight times, checks enable mask and ISR count, then unmaps. Enabled when ``CONFIG_ESP_BIST_INTERRUPT_TEST`` is set (standalone builds).
+
+13. **Hardware Interrupt Test** (``bist_hardware_interrupt_test()``)
+
+    - **IEC 60730 Component**: 2 (Interrupt handling and execution)
+    - **Purpose**: Verifies concurrent hardware interrupt delivery via dual timer-group alarms
+    - **Rationale**: Incorrect interrupt frequency or missed peripheral IRQs can break timing-critical safety functions
+    - **Implementation**: TIMG0 (500 µs) and TIMG1 (1000 µs) on CPU interrupts 9 and 10; checks 2:1 ISR count ratio with ±1 tolerance. Post-boot only; requires two Timer Groups.
+
 **Error Handling**: All post-boot tests call ``fail_safe_exit()`` on failure, which enters an infinite loop. This prevents the application from continuing with detected hardware faults.
 
 Stack Sentinel Initialization

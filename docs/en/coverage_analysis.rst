@@ -55,6 +55,13 @@ The following table provides code coverage information for each BIST module:
      - 2 (fault injection)
      - :doc:`software_validation` (Program Counter Test)
 
+   * - Interrupt Test
+     - 2
+     - 2 (100%)
+     - 2 (SW source map, HW dual TIMG)
+     - Hardware / QEMU SW path
+     - :doc:`software_validation` (Interrupt Handling and Execution Test)
+
    * - Stack Overflow
      - 3
      - 3 (100%)
@@ -148,6 +155,18 @@ Requirements Coverage Matrix
      - QEMU + Hardware (4 regions, fault injection)
      - ``tests/pc_test/build/tests/*_report.xml``
 
+   * - 2
+     - Interrupt Source Map
+     - ``bist_interrupt_source_map_test()``
+     - QEMU + Hardware (``CPU_INTR_FROM_CPU_0..3``)
+     - ``tests/interrupt_test/build/tests/*_report.xml``
+
+   * - 2
+     - Hardware Interrupt Delivery
+     - ``bist_hardware_interrupt_test()``
+     - Hardware (dual TIMG 2:1 period ratio; QEMU TIMG unsupported)
+     - ``tests/interrupt_test/build/tests/*_report.xml``
+
    * - 3
      - Clock Source Validation
      - ``bist_clock_test()``
@@ -204,12 +223,14 @@ Known Coverage Limitations
 
 4. **ADC Tests (Hardware-Only)**: ADC functionality requires physical hardware and internal pull resistors or VREF. QEMU simulation is not applicable.
 
+5. **Hardware Interrupt Path (TIMG)**: QEMU does not support Timer Group 0/1 alarms used by ``bist_hardware_interrupt_test()``. The software interrupt source map path is validated in QEMU; the dual-TIMG hardware path is validated on device.
+
 Justification
 ^^^^^^^^^^^^^
 
 All coverage limitations are justified:
 
-- **Hardware-Only Tests**: Physical hardware is required for accurate validation of clock, GPIO, and ADC functionality. QEMU limitations are documented and hardware testing provides adequate coverage.
+- **Hardware-Only Tests**: Physical hardware is required for accurate validation of clock, GPIO, ADC, and TIMG hardware-interrupt functionality. QEMU limitations are documented and hardware testing provides adequate coverage.
 
 - **Test Environment**: Both QEMU (deterministic, repeatable) and hardware (real-world conditions) testing provide complementary coverage.
 

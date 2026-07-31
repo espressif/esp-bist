@@ -49,6 +49,7 @@ stages:
   - pc_test
   - wdt_test
   - windowed_wdt_test
+  - interrupt_test
 
 .device_test_apps: &device_test_apps
   - cpu_reg_test
@@ -60,6 +61,7 @@ stages:
   - digital_io_test
   - analog_io_test
   - windowed_wdt_test
+  - interrupt_test
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2

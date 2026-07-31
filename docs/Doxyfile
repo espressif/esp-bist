@@ -30,6 +30,7 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_regs.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_stack.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_pc.h \
+    $(PROJECT_PATH)/src/bist/core/interrupt/include/bist_interrupt.h \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_gpio.h \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_adc.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash.h \

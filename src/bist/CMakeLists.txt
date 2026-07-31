@@ -76,12 +76,21 @@ endif()
 if(CONFIG_ESP_BIST_WATCHDOG_TEST)
     list(APPEND bist_src core/wdt/bist_wdt.c)
 endif()
+if(CONFIG_ESP_BIST_INTERRUPT_TEST)
+    list(APPEND 
+         bist_src
+         core/interrupt/bist_interrupt.c
+         core/interrupt/bist_interrupt_sw.c
+         )
+endif()
 
 set(idf_srcs
     ${IDF_PATH}/components/log/src/log.c
     # ${IDF_PATH}/components/log/log_noos.c
     ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
     ${IDF_PATH}/components/hal/systimer_hal.c
+    ${IDF_PATH}/components/esp_hal_timg/timer_hal.c
+    ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/timer_periph.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/systimer.c
 )
 if(SOC_TARGET STREQUAL "esp32c3")
@@ -158,6 +167,7 @@ target_include_directories(
     core/clock/include
     core/wdt/include
     core/io/include
+    core/interrupt/include
     drivers/include
     ../soc/${SOC_TARGET}/include
     ${IDF_PATH}/components/riscv/include
@@ -187,6 +197,7 @@ target_include_directories(
     ${IDF_PATH}/components/esp_adc/include
     ${IDF_PATH}/components/esp_adc/include/esp_adc
     ${IDF_PATH}/components/esp_adc/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hw_support/etm/include
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include

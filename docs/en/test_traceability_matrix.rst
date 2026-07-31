@@ -95,6 +95,32 @@ Program Counter Test (IEC 60730 ID: 1.3)
 
 **Coverage**: 4 functions × 2 test cases (pass + fail) = 8 test cases total
 
+Interrupt Test (IEC 60730 ID: 2)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Requirement**: Validate interrupt handling and execution — interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery
+
+**Design**:
+
+- Modules: ``src/bist/core/interrupt/bist_interrupt_sw.c``, ``src/bist/core/interrupt/bist_interrupt.c``
+- Functions: ``bist_interrupt_source_map_test()``, ``bist_hardware_interrupt_test()``
+- Design Doc: :doc:`module_design_and_coding` (Interrupt Handling and Execution Test section)
+
+**Test Implementation**:
+
+- QEMU: ``tests/interrupt_test/pytest_qemu_interrupt_test.py``
+  - Success test: software source map (``CPU_INTR_FROM_CPU_0..3``) on CPU interrupt 9
+  - Hardware TIMG path not validated in QEMU (no TIMG0/TIMG1 support)
+- Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py``
+  - Software source map and dual TIMG hardware interrupt (2:1 period ratio)
+
+**Test Results**:
+
+- QEMU: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Hardware: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+
+**Coverage**: 2 functions (software source map + hardware dual-timer); QEMU covers software path; hardware covers both
+
 Clock Test (IEC 60730 ID: 3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -297,8 +323,8 @@ ADC Test (IEC 60730 ID: 7.2)
 Traceability Summary
 --------------------
 
-- **Total IEC 60730 Components**: 8 (1.1, 1.3, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
-- **Total Test Modules**: 11
+- **Total IEC 60730 Components**: 9 (1.1, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
+- **Total Test Modules**: 12
 - **Total Test Cases**: 100+
 - **Test Environments**: QEMU (emulation) + Hardware (real-world)
 - **Coverage**: 100% of safety-relevant functions tested
