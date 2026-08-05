@@ -68,9 +68,28 @@ SECTIONS
         _crc_section_data_end = ABSOLUTE(.);
     } > ram
 
+    /*
+     * Safe RAM sits below the marched region (matches bist_ram.c): backup
+     * buffer + March stack, plus the software-mailbox context. The mailbox
+     * must not be marched while the HP agent is online.
+     */
+    .dram0.safe_ram (NOLOAD):
+    {
+        . = ALIGN(4);
+        _safe_ram_start = ABSOLUTE(.);
+        KEEP(*(.dram0.safe_ram));
+        *lp_core_mailbox_impl_hw*(.bss .bss.* .sbss .sbss.*);
+        _safe_ram_end = ABSOLUTE(.);
+    } > ram
+
+    /*
+     * Under-test RAM: live .data/.bss and the unused stack gap up to the
+     * top of the LP ram region (March runs on the safe stack above).
+     */
+    _bist_ram_test_start = ABSOLUTE(.);
+
     .data ALIGN(4):
     {
-        _bist_ram_test_start = .;
         *(.data)
         *(.data*)
         *(.sdata)
@@ -79,23 +98,9 @@ SECTIONS
 
     .bss ALIGN(4) :
     {
-        *(.bss)
-        *(.bss*)
-        *(.sbss)
-        *(.sbss*)
+        *(EXCLUDE_FILE(*lp_core_mailbox_impl_hw*) .bss .bss.* .sbss .sbss.*)
         PROVIDE(end = .);
         . = ALIGN(4);
-        _bist_ram_test_end = .;
-    } > ram
-
-    _bist_ram_test_size = _bist_ram_test_end - _bist_ram_test_start;
-
-    .dram0.safe_ram (NOLOAD):
-    {
-        . = ALIGN(4);
-        _safe_ram_start = ABSOLUTE(.);
-        KEEP(*(.dram0.safe_ram));
-        _safe_ram_end = ABSOLUTE(.);
     } > ram
 
     /* define the stack overflow section */
@@ -112,6 +117,8 @@ SECTIONS
 
     __stack_top = ORIGIN(ram) + LENGTH(ram);
     __stack_size = __stack_top - __data_end;
+
+    _bist_ram_test_end = __stack_top;
 
     . = ORIGIN(shared_mem_ram);
     .shared_mem (ALIGN(4)) :

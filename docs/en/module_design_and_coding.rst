@@ -601,14 +601,26 @@ Source Files
 Stack-Pointer Relocation (Safe Stack)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The linker defines the RAM test region as ``_bist_ram_test_start`` to ``_dram0_end``.
-Because ``_dram0_end`` is also ``_stack_top``, this region includes the active call stack.
+Each SOC linker script defines the RAM test region via the symbol pair
+``_bist_ram_test_start`` / ``_bist_ram_test_end``. The end symbol is aliased per
+target to the top of the RAM region (``_dram0_end`` on ESP32-C3, ``_sram_end`` on
+ESP32-C5/C6/C61/H2/P4 standalone builds, ``_image_ram_end`` on Zephyr, or
+``__stack_top`` on IDF LP builds). Because that top-of-RAM address is also the
+stack top, the test region includes the active call stack.
+
 During the W0 pass the march algorithm writes zeros to every word in the current chunk;
 if that chunk overlaps the function's own stack frame, local variables (``start_addr``,
 loop counters, etc.) are corrupted, causing undefined behaviour whose symptom depends on
 the compiler's stack-frame layout — different GCC versions place variables at different
 offsets, so the defect can manifest as a crash on one toolchain and a silent early loop
 exit on another.
+
+The region size is computed at run time as
+``(&_bist_ram_test_end - &_bist_ram_test_start) / 4`` rather than read from an
+absolute linker symbol. Materialising an absolute value
+forces a GP-relative relocation on RV32, which is limited to ±2 KiB; a large
+under-test region overflows that range. Subtracting two address-taken boundary
+symbols avoids the relocation entirely.
 
 To eliminate this class of failure the public entry points ``bist_ram_test_march_a()``,
 ``bist_ram_test_march_x()``, and ``bist_ram_test_abraham()`` relocate the stack pointer
@@ -635,7 +647,9 @@ Coding and Interfaces
 - The RAM test uses explicit backup and restore of memory regions to prevent data loss during testing. If a test fails, the original memory contents are restored before returning an error.
 - Explicit error codes; bounded loops sized by region and chunk size
 - No dynamic memory; statically allocated backup buffer and safe stack
-- This test uses linker-defined symbols for RAM region boundaries and size.
+- This test uses linker-defined symbols for the region boundaries
+  (``_bist_ram_test_start`` / ``_bist_ram_test_end``) and computes the size from
+  their difference at run time.
 - Uses a statically allocated backup buffer (``backup_chunk``) and a 256-byte safe stack (``ram_test_stack``), both placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region.
 - The stack pointer is temporarily relocated to ``ram_test_stack`` via inline assembly before calling the march implementation, ensuring the march algorithm can test the entire linker-defined region — including the normal stack — without corrupting its own frame. See *Stack-Pointer Relocation* above.
 - No dynamic memory is used.
@@ -646,7 +660,9 @@ Coding and Interfaces
 - No interrupts are used or manipulated by this test.
 - Pointers are used to access RAM regions and the backup buffer. All pointer arithmetic is explicit and bounds-checked.
 - No recursion is used in this test.
-- Division is only used to convert byte size to word count, and the size is guaranteed to be nonzero and aligned by the linker.
+- Division is only used to convert the boundary difference
+  (``_bist_ram_test_end - _bist_ram_test_start``) from byte size to word count;
+  the difference is guaranteed to be nonzero and 4-byte aligned by the linker.
 - Inline assembly is used in ``run_on_safe_stack()`` to save/restore the stack pointer; the clobber list is explicit and covers all caller-saved registers.
 
 .. _flash-test:
