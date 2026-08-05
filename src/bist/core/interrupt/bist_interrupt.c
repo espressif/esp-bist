@@ -8,9 +8,7 @@
 #include "hal/timg_ll.h"
 #include "hal/timer_periph.h"
 #include "esp_rom_sys.h"
-#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API
 #include "esp_private/periph_ctrl.h"
-#endif
 
 #if TIMG_LL_INST_NUM < 2
 #  error "bist_hardware_interrupt_test requires two Timer Groups (TIMG0 and TIMG1)"
@@ -106,8 +104,11 @@ static bist_esp_err_t bist_hw_timer_start(bist_hw_timer_t *timer)
 #endif
 
     timer_hal_init(&timer->hal, timer->group_id, timer->timer_id);
-    timer_ll_enable_clock(timer->group_id, timer->timer_id, true);
-    timer_ll_set_clock_source(timer->group_id, timer->timer_id, GPTIMER_CLK_SRC_XTAL);
+
+    PERIPH_RCC_ATOMIC() {
+        timer_ll_enable_clock(timer->group_id, timer->timer_id, true);
+        timer_ll_set_clock_source(timer->group_id, timer->timer_id, GPTIMER_CLK_SRC_XTAL);
+    }
     timer_ll_set_clock_prescale(timer->hal.dev, timer->timer_id, divider);
     timer_ll_set_count_direction(timer->hal.dev, timer->timer_id, GPTIMER_COUNT_UP);
     timer_ll_enable_auto_reload(timer->hal.dev, timer->timer_id, true);
