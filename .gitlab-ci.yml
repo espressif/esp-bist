@@ -4,6 +4,10 @@ spec:
       type: boolean
       default: false
       description: "Build and push the Docker CI image"
+    use_mirror:
+      type: boolean
+      default: true
+      description: "Use mirror sources to fetch data."
 
 ---
 
@@ -14,6 +18,9 @@ workflow:
     - if: $CI_COMMIT_TAG
     - if: $CI_PIPELINE_SOURCE == "web"
 
+variables:
+  USE_MIRROR: $[[ inputs.use_mirror ]]
+
 stages:
   - Lint
   - Build
@@ -22,6 +29,17 @@ stages:
   - Static-Analysis
   - Build Docs
   - Deploy Docs
+
+.get_qemu_repo: &get_qemu_repo |
+  QEMU_PATH="idf/qemu.git"
+  QEMU_REPO="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
+  QEMU_REPO_MIRROR="http://gitmirror.brew:6688/${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
+  if [ "${USE_MIRROR}" = "false" ]; then
+    QEMU_REPO="${QEMU_REPO}"
+  elif [ -n "${QEMU_REPO_MIRROR:-}" ]; then
+    QEMU_REPO="${QEMU_REPO_MIRROR}"
+  fi
+  echo "QEMU_REPO: ${QEMU_REPO}"
 
 .socs: &socs
   - esp32c3
@@ -170,7 +188,9 @@ build_qemu_remote:
     - . $IDF_PATH/export.sh
   script:
     - echo "Cloning QEMU from espressif/qemu at branch $QEMU_BRANCH"
+    - *get_qemu_repo
     - cd /opt
+    - git clone --depth=1 -b $QEMU_BRANCH "${QEMU_REPO}"
     - git clone --depth=1 -b $QEMU_BRANCH https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/idf/qemu.git
     - cd qemu
     - mkdir build
