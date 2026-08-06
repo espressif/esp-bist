@@ -4,6 +4,10 @@ spec:
       type: boolean
       default: false
       description: "Build and push the Docker CI image"
+    use_mirror:
+      type: boolean
+      default: true
+      description: "Use mirror sources to fetch data."
 
 ---
 
@@ -14,6 +18,9 @@ workflow:
     - if: $CI_COMMIT_TAG
     - if: $CI_PIPELINE_SOURCE == "web"
 
+variables:
+  USE_MIRROR: $[[ inputs.use_mirror ]]
+
 stages:
   - Lint
   - Build
@@ -22,6 +29,17 @@ stages:
   - Static-Analysis
   - Build Docs
   - Deploy Docs
+
+.get_qemu_repo: &get_qemu_repo |
+  QEMU_PATH="idf/qemu.git"
+  QEMU_REPO_SOURCE="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
+  QEMU_REPO_MIRROR="http://gitmirror.brew:6688/${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
+  if [ "${USE_MIRROR}" = "false" ]; then
+    QEMU_REPO="${QEMU_REPO_SOURCE}"
+  elif [ -n "${QEMU_REPO_MIRROR:-}" ]; then
+    QEMU_REPO="${QEMU_REPO_MIRROR}"
+  fi
+  echo "QEMU_REPO: ${QEMU_REPO}"
 
 .socs: &socs
   - esp32c3
@@ -155,6 +173,35 @@ build_mcuboot:
   artifacts:
     paths:
       - mcuboot_build/
+    expire_in: 1 week
+  rules:
+    - when: always
+  tags: [build]
+
+build_qemu_remote:
+  stage: Build
+  before_script: []
+  timeout: 2h
+  variables:
+    QEMU_BRANCH: 'feature/esp32p4'
+  before_script:
+    - . $IDF_PATH/export.sh
+  script:
+    - echo "Cloning QEMU from espressif/qemu at branch $QEMU_BRANCH"
+    - *get_qemu_repo
+    - cd /opt
+    - git clone --depth=1 -b "${QEMU_BRANCH}" "${QEMU_REPO}"
+    - cd qemu
+    - mkdir build
+    - cd build
+    - ../configure --target-list=riscv32-softmmu
+    - ninja
+    - mkdir -p $CI_PROJECT_DIR/qemu_build/qemu-bundle/usr/local/share/qemu
+    - cp qemu-system-riscv32 $CI_PROJECT_DIR/qemu_build/
+    - cp -L ../pc-bios/esp32* $CI_PROJECT_DIR/qemu_build/qemu-bundle/usr/local/share/qemu/
+  artifacts:
+    paths:
+      - qemu_build/
     expire_in: 1 week
   rules:
     - when: always
@@ -333,21 +380,11 @@ test_idf_device:
   stage: Test Qemu
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
-    QEMU_BRANCH: 'feature/esp32p4'
   before_script:
     - . $IDF_PATH/export.sh
   script:
-    - echo "Cloning QEMU from espressif/qemu at branch $QEMU_BRANCH"
-    - cd /opt
-    - git clone -b $QEMU_BRANCH https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/idf/qemu.git
-    - cd qemu
-    - mkdir build
-    - cd build
-    - ../configure --target-list=riscv32-softmmu
-    - ninja
     - echo "Adding QEMU to PATH"
-    - export PATH=/opt/qemu/build:$PATH
-    - cd $CI_PROJECT_DIR
+    - export PATH=$CI_PROJECT_DIR/qemu_build:$PATH
     - echo "Testing $TEST_APP_NAME"
     - cd tests/$TEST_APP_NAME
     - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
@@ -355,6 +392,8 @@ test_idf_device:
     - when: always
   tags: [build]
   needs:
+    - job: build_qemu_remote
+      artifacts: true
     - job: build_tests
       parallel:
         matrix:
