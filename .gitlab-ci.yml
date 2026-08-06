@@ -293,6 +293,7 @@ build_zephyr_samples:
   matrix:
     - IDF_TARGET: esp32c6
     - IDF_TARGET: esp32c5
+    - IDF_TARGET: esp32p4
 
 .build_idf_sample_template:
   stage: Build

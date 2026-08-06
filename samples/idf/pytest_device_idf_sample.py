@@ -12,7 +12,7 @@ All assertions run against a single boot to avoid unnecessary reflashes.
 import pytest
 
 
-@pytest.mark.parametrize('target', ['esp32c5', 'esp32c6'], indirect=True)
+@pytest.mark.parametrize('target', ['esp32c5', 'esp32c6', 'esp32p4'], indirect=True)
 def test_bist_idf_sample(dut, target):
     # Post-boot tests
     dut.expect('test_BIST_cpu_reg:PASS', timeout=30)

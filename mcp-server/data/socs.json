@@ -88,6 +88,7 @@
     "csr_count": 40,
     "cmake_file": "cmake/esp32p4.cmake",
     "linker_scripts": [
+      "src/soc/esp32p4/ld/idf.ld",
       "src/soc/esp32p4/ld/linker.ld"
     ],
     "soc_dir": "src/soc/esp32p4",
