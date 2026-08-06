@@ -32,10 +32,10 @@ stages:
 
 .get_qemu_repo: &get_qemu_repo |
   QEMU_PATH="idf/qemu.git"
-  QEMU_REPO="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
+  QEMU_REPO_SOURCE="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
   QEMU_REPO_MIRROR="http://gitmirror.brew:6688/${CI_SERVER_HOST}:${CI_SERVER_PORT}/${QEMU_PATH}"
   if [ "${USE_MIRROR}" = "false" ]; then
-    QEMU_REPO="${QEMU_REPO}"
+    QEMU_REPO="${QEMU_REPO_SOURCE}"
   elif [ -n "${QEMU_REPO_MIRROR:-}" ]; then
     QEMU_REPO="${QEMU_REPO_MIRROR}"
   fi
@@ -190,8 +190,7 @@ build_qemu_remote:
     - echo "Cloning QEMU from espressif/qemu at branch $QEMU_BRANCH"
     - *get_qemu_repo
     - cd /opt
-    - git clone --depth=1 -b $QEMU_BRANCH "${QEMU_REPO}"
-    - git clone --depth=1 -b $QEMU_BRANCH https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/idf/qemu.git
+    - git clone --depth=1 -b "${QEMU_BRANCH}" "${QEMU_REPO}"
     - cd qemu
     - mkdir build
     - cd build
