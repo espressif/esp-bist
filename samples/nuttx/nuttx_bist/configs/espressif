@@ -1,0 +1,29 @@
+# ESP-BIST NuttX sample fragment — merge onto esp32c6-devkitc:ulp
+#
+#   cd nuttx
+#   cmake -B build-bist -DBOARD_CONFIG=esp32c6-devkitc:ulp -GNinja
+#   kconfig-merge -m -O build-bist build-bist/.config \
+#       /path/to/esp-bist/samples/nuttx/nuttx_bist/configs/espressif
+#   cmake --build build-bist -t olddefconfig
+#   cmake -B build-bist -GNinja
+#   cmake --build build-bist -j$(nproc)
+
+# CONFIG_ESPRESSIF_ULP_USE_TEST_BIN is not set
+CONFIG_ESP_NUTTX_BIST_PROGNAME="nuttx_bist"
+CONFIG_ESP_NUTTX_BIST_PRIORITY=100
+CONFIG_ESP_NUTTX_BIST_STACKSIZE=2048
+CONFIG_ESPRESSIF_ULP_COPROC_RESERVE_MEM_SIZE=16240
+CONFIG_ESPRESSIF_LP_MAILBOX=y
+CONFIG_ESPRESSIF_LP_UART=y
+CONFIG_ESPRESSIF_LP_UART0=y
+CONFIG_ESP_NUTTX_BIST=y
+CONFIG_ESP_BIST=y
+CONFIG_ESP_BIST_CPU_REG_TEST=y
+CONFIG_ESP_BIST_CPU_CSR_REG_TEST=y
+CONFIG_ESP_BIST_MEMORY_RAM_TEST=y
+CONFIG_ESP_BIST_STACK_TEST=y
+CONFIG_ESP_BIST_MEMORY_FLASH_TEST=y
+CONFIG_ESP_BIST_WDT_TIMEOUT_US=10000000
+CONFIG_BIST_FLASH_TEST_CHUNK_SIZE=0x1000
+CONFIG_NUTTX_ESP_BIST_MODULE=y
+CONFIG_ESPRESSIF_MERGE_BINS=y

@@ -1,0 +1,45 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config NUTTX_ESP_BIST_MODULE
+	bool
+	---help---
+		Internal symbol. Indicates ESP-BIST is integrated as a NuttX LP-core module.
+
+config ESP_NUTTX_BIST
+	tristate "ESP-BIST LP-core example"
+	default n
+	depends on ESPRESSIF_USE_LP_CORE
+	select NUTTX_ESP_BIST_MODULE
+	---help---
+		Enable the ESP-BIST LP-core sample. The HP-core NuttX application loads
+		LP firmware that runs post-boot and runtime BIST tests.
+
+if ESP_NUTTX_BIST
+
+config ESP_NUTTX_BIST_PROGNAME
+	string "Program name"
+	default "nuttx_bist"
+	---help---
+		This is the name of the program that will be used when the NSH ELF
+		program is installed.
+
+config ESP_NUTTX_BIST_PRIORITY
+	int "Task priority"
+	default 100
+
+config ESP_NUTTX_BIST_STACKSIZE
+	int "Stack size"
+	default DEFAULT_TASK_STACKSIZE
+
+config ESP_BIST_RUNTIME_TEST_INTERVAL_US
+	int "Runtime test interval (us)"
+	default 10000
+	range 1 10000000
+	---help---
+		Interval in microseconds between periodic runtime BIST test rounds
+		on the LP core (passed to ulp_lp_core_delay_us()).
+
+endif

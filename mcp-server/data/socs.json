@@ -52,6 +52,7 @@
     "linker_scripts": [
       "src/soc/esp32c6/ld/idf.ld",
       "src/soc/esp32c6/ld/linker.ld",
+      "src/soc/esp32c6/ld/nuttx.ld",
       "src/soc/esp32c6/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32c6",
@@ -89,7 +90,8 @@
     "cmake_file": "cmake/esp32p4.cmake",
     "linker_scripts": [
       "src/soc/esp32p4/ld/idf.ld",
-      "src/soc/esp32p4/ld/linker.ld"
+      "src/soc/esp32p4/ld/linker.ld",
+      "src/soc/esp32p4/ld/nuttx.ld"
     ],
     "soc_dir": "src/soc/esp32p4",
     "specific_notes": "CMake config at cmake/esp32p4.cmake (129 lines)"
