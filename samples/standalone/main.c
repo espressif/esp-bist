@@ -132,6 +132,7 @@ static void post_boot_tests(void)
         fail_safe_exit();
     }
 
+#if !defined(SOC_TARGET_ESP32H4)
     test_err = bist_adc_low_level_test(ADC_UNIT, ADC_CHANNEL);
     if (test_err == BIST_ESP_IO_TEST_ERR) {
         ESP_LOGE(TAG, "ADC low level test failed");
@@ -150,6 +151,7 @@ static void post_boot_tests(void)
         ESP_LOGE(TAG, "ADC reference test failed");
         fail_safe_exit();
     }
+#endif
 #endif
 
     test_err = bist_interrupt_source_map_test();

@@ -1,7 +1,12 @@
+import pytest
+
 from tests.idf_targets import pytestmark  # noqa: F401
 
 
 def test_io(dut, target):
+    if target in ("esp32h4"):
+        pytest.skip("Test is not available for this board")
+
     tests_names = [
         "test_BIST_ANALOG_IO_INVALID_ADC",
         "test_BIST_ANALOG_IO_LOW_LEVEL",

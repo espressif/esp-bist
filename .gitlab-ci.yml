@@ -48,6 +48,7 @@ stages:
   - esp32c61
   - esp32h2
   - esp32p4
+  - esp32h4
 
 .qemu_upstream_socs: &qemu_upstream_socs
   - esp32c3
@@ -58,6 +59,7 @@ stages:
   - esp32c61
   - esp32h2
   - esp32p4
+  - esp32h4
 
 .qemu_test_apps: &qemu_test_apps
   - cpu_reg_test
@@ -183,7 +185,7 @@ build_qemu_remote:
   before_script: []
   timeout: 2h
   variables:
-    QEMU_BRANCH: 'feature/esp32p4'
+    QEMU_BRANCH: 'feature/esp32h4'
   before_script:
     - . $IDF_PATH/export.sh
   script:

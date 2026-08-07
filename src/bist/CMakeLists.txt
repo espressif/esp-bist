@@ -41,8 +41,10 @@ set(bist_src
     drivers/wdt.c
     drivers/gpio.c
     drivers/esp_timer.c
-    drivers/adc_oneshot.c
     )
+if(NOT SOC_TARGET STREQUAL "esp32h4")
+    list(APPEND bist_src drivers/adc_oneshot.c)
+endif()
 if(SOC_TARGET STREQUAL "esp32c3")
     list(APPEND bist_src drivers/xt_wdt.c)
 endif()
@@ -68,7 +70,9 @@ if(CONFIG_ESP_BIST_GPIO_TEST)
     list(APPEND bist_src core/io/bist_gpio.c)
 endif()
 if(CONFIG_ESP_BIST_ADC_TEST)
+if(NOT SOC_TARGET STREQUAL "esp32h4")
     list(APPEND bist_src core/io/bist_adc.c)
+endif()
 endif()
 if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST)
     list(APPEND bist_src core/cpu/bist_pc.c)
@@ -209,6 +213,12 @@ target_include_directories(
 if(SOC_TARGET STREQUAL "esp32p4")
     target_include_directories(bist_esp PUBLIC
         ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
+    )
+elseif(SOC_TARGET STREQUAL "esp32h4")
+    target_include_directories(bist_esp PUBLIC
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver_mp
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/include/hw_ver_mp
+        ${IDF_PATH}/components/soc/${SOC_TARGET}/register
     )
 else()
     target_include_directories(bist_esp PUBLIC

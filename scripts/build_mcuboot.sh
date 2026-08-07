@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-ALL_TARGETS=(esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4)
+ALL_TARGETS=(esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 esp32h4)
 
 if [ $# -gt 0 ]; then
     TARGETS=("$@")

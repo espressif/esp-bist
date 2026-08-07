@@ -33,6 +33,10 @@ else()
         set(ESP_MIN_REVISION 3)
         set(BOOTLOADER_ADDR 0x2000)
         set(APP_ADDR 0x20000)
+    elseif ("${SOC_TARGET}" STREQUAL "esp32h4")
+        set(ESP_MIN_REVISION 0)
+        set(BOOTLOADER_ADDR 0x2000)
+        set(APP_ADDR 0x20000)
     else()
         message(FATAL_ERROR "Unsupported target ${SOC_TARGET}")
     endif()
@@ -124,7 +128,6 @@ set(CFLAGS
     )
 
 set(LDFLAGS
-    "-nostdlib"
     "-Wno-frame-address"
     "-Wl,--cref"
     "-Wl,--Map=${APP_NAME}.map"
