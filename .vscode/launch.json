@@ -14,10 +14,10 @@
                 "board/esp32c3-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x1000",
+                "init; halt; esp appimage_offset 0x1000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -34,7 +34,7 @@
                 "thb __start",
                 "continue"
             ],
-            "svdFile": "${workspaceFolder}/src/soc/esp32c3/esp32c3.svd",
+            "svdFile": "${workspaceFolder}/src/soc/esp32c3/esp32c3.svd"
         },
         {
             "name": "Debug ESP32-C6 (OpenOCD)",
@@ -49,10 +49,10 @@
                 "board/esp32c6-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x1000",
+                "init; halt; esp appimage_offset 0x1000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -69,7 +69,7 @@
                 "thb __start",
                 "continue"
             ],
-            "svdFile": "${workspaceFolder}/src/soc/esp32c6/esp32c6.svd",
+            "svdFile": "${workspaceFolder}/src/soc/esp32c6/esp32c6.svd"
         },
         {
             "name": "Debug ESP32-C5 (OpenOCD)",
@@ -84,10 +84,10 @@
                 "board/esp32c5-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x1000",
+                "init; halt; esp appimage_offset 0x1000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -104,8 +104,7 @@
                 "thb __start",
                 "continue"
             ],
-            // TODO: Add SVD file for ESP32-C5
-            // "svdFile": "${workspaceFolder}/src/soc/esp32c5/esp32c5.svd",
+            "svdFile": "${workspaceFolder}/src/soc/esp32c5/esp32c5.svd"
         },
         {
             "name": "Debug ESP32-C61 (OpenOCD)",
@@ -120,10 +119,10 @@
                 "board/esp32c61-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x1000",
+                "init; halt; esp appimage_offset 0x1000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -140,8 +139,7 @@
                 "thb __start",
                 "continue"
             ],
-            // TODO: Add SVD file for ESP32-C61
-            // "svdFile": "${workspaceFolder}/src/soc/esp32c61/esp32c61.svd",
+            "svdFile": "${workspaceFolder}/src/soc/esp32c61/esp32c61.svd"
         },
         {
             "name": "Debug ESP32-H2 (OpenOCD)",
@@ -156,10 +154,10 @@
                 "board/esp32h2-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x1000",
+                "init; halt; esp appimage_offset 0x1000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -176,7 +174,7 @@
                 "thb __start",
                 "continue"
             ],
-            "svdFile": "${workspaceFolder}/src/soc/esp32h2/esp32h2.svd",
+            "svdFile": "${workspaceFolder}/src/soc/esp32h2/esp32h2.svd"
         },
         {
             "name": "Debug ESP32-P4 (OpenOCD)",
@@ -191,10 +189,10 @@
                 "board/esp32p4-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x2000",
+                "init; halt; esp appimage_offset 0x2000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -211,7 +209,7 @@
                 "thb __start",
                 "continue"
             ],
-            "svdFile": "${workspaceFolder}/src/soc/esp32p4/esp32p4.svd",
+            "svdFile": "${workspaceFolder}/src/soc/esp32p4/esp32p4.svd"
         },
         {
             "name": "Debug ESP32-H4 (OpenOCD)",
@@ -226,10 +224,10 @@
                 "board/esp32h4-builtin.cfg"
             ],
             "openOCDPreConfigLaunchCommands":[
-                "set ESP_RTOS none",
+                "set ESP_RTOS none"
             ],
             "openOCDLaunchCommands": [
-                "init; halt; esp appimage_offset 0x2000",
+                "init; halt; esp appimage_offset 0x2000"
             ],
             "toolchainPrefix": "riscv32-esp-elf",
             "overrideAttachCommands": [
@@ -246,9 +244,8 @@
                 "thb __start",
                 "continue"
             ],
-            // TODO: Add SVD file for ESP32-H4
-            // "svdFile": "${workspaceFolder}/src/soc/esp32h4/esp32h4.svd",
-        },
+            "svdFile": "${workspaceFolder}/src/soc/esp32h4/esp32h4.svd"
+        }
     ],
     "inputs": [
         {
