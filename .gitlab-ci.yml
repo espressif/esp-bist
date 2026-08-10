@@ -8,6 +8,10 @@ spec:
       type: boolean
       default: true
       description: "Use mirror sources to fetch data."
+    build_qemu_remote:
+      type: boolean
+      default: false
+      description: "Build Espressif QEMU and refresh the remote QEMU cache"
 
 ---
 
@@ -20,6 +24,8 @@ workflow:
 
 variables:
   USE_MIRROR: $[[ inputs.use_mirror ]]
+  QEMU_CACHE_KEY: ${CI_COMMIT_REF_SLUG}-qemu-remote-riscv32
+  QEMU_CACHE_KEY_SHARED: ${CI_DEFAULT_BRANCH}-qemu-remote-riscv32
 
 stages:
   - Lint
@@ -285,8 +291,14 @@ build_qemu_remote:
     paths:
       - qemu_build/
     expire_in: 1 week
+  cache:
+    key: $QEMU_CACHE_KEY
+    paths:
+      - qemu_build/
+    policy: push
   rules:
-    - when: always
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: '"$[[ inputs.build_qemu_remote ]]" == "true"'
   tags: [build]
 
 .build_template:
@@ -581,6 +593,11 @@ test_idf_hd_device:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
+    - |
+      if [ ! -x "$CI_PROJECT_DIR/qemu_build/qemu-system-riscv32" ]; then
+        echo "QEMU binary missing under qemu_build/."
+        exit 1
+      fi
   script:
     - echo "Adding QEMU to PATH"
     - export PATH=$CI_PROJECT_DIR/qemu_build:$PATH
@@ -588,11 +605,13 @@ test_idf_hd_device:
     - cd tests/$TEST_APP_NAME
     - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
   rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      needs: [build_qemu_remote]
+    - if: '"$[[ inputs.build_qemu_remote ]]" == "true"'
+      needs: [build_qemu_remote]
     - when: always
   tags: [build]
   needs:
-    - job: build_qemu_remote
-      artifacts: true
     - job: build_tests
       parallel:
         matrix:
@@ -606,6 +625,12 @@ test_idf_hd_device:
     reports:
       junit: tests/$TEST_APP_NAME/$REPORT_PATH
   cache:
+    - key: $QEMU_CACHE_KEY
+      fallback_keys:
+        - $QEMU_CACHE_KEY_SHARED
+      paths:
+        - qemu_build/
+      policy: pull
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
       paths:
         - tests/$TEST_APP_NAME/build
