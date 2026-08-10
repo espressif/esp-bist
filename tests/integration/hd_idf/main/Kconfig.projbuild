@@ -1,0 +1,25 @@
+# Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Host Diagnostics fail-closed validation"
+
+comment "Select one fault. The ESP-BIST library is unchanged; the fault comes from this app."
+
+config BIST_HD_TEST_KEY_MISMATCH
+    bool "Build the host agent with a challenge key the companion does not share"
+    default n
+    help
+      Compiles the HP-side library with BIST_HD_CHALLENGE_KEY set to a value
+      other than CONFIG_ESP_BIST_HD_CHALLENGE_KEY, which the LP companion keeps.
+      The production answer path then produces a wrong answer every round, so
+      the companion must enter safe state.
+
+config BIST_HD_TEST_STARVE_AGENT
+    bool "Starve the Host Diagnostic Agent past the challenge window"
+    default n
+    help
+      app_main() raises its own priority above the agent task and busy-waits,
+      occupying every HP core, so no ANSWER reaches the companion before the
+      challenge window expires.
+
+endmenu

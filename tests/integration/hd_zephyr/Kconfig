@@ -1,0 +1,14 @@
+# Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "ESP-BIST Host Diagnostics fail-closed validation"
+
+config BIST_HD_TEST_STARVE_AGENT
+	bool "Starve the Host Diagnostic Agent past the challenge window"
+	help
+	  The application becomes cooperative above the agent thread priority and
+	  busy-waits, so no ANSWER reaches the companion before the window
+	  expires. The ESP-BIST library is built exactly as a product would build
+	  it; the fault comes from this app.
+
+source "Kconfig.zephyr"

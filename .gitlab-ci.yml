@@ -159,6 +159,34 @@ mcp_data_drift:
       fi
     - echo "mcp-server/data/ is in sync with source content."
 
+# Host-native Host Diagnostics protocol / challenge unit tests (no DUT / IDF).
+test_hd_protocol_unit:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - when: always
+  script:
+    - cmake -S tests/unit/hd_protocol -B build/hd_protocol_test
+    - cmake --build build/hd_protocol_test
+    - ctest --test-dir build/hd_protocol_test --output-on-failure
+
+# Host-native verdict tests for the LP companion state machine: a scripted fake
+# agent plays every way a host can be wrong (bad value, replayed seq, wrong
+# frame, silence, late answer) against the real companion code.
+test_hd_companion_unit:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - when: always
+  script:
+    - cmake -S tests/unit/hd_companion -B build/hd_companion_test
+    - cmake --build build/hd_companion_test
+    - ctest --test-dir build/hd_companion_test --output-on-failure
+
 build_docker_image:
   before_script: []
   image: espressif/dind:1

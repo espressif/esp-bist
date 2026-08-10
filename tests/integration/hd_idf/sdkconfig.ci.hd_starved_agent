@@ -1,0 +1,7 @@
+# Fail-closed: the agent never runs during the challenge window, so no ANSWER
+# arrives and the companion must enter safe state.
+CONFIG_BIST_HD_TEST_STARVE_AGENT=y
+
+# Demote the agent below configMAX_PRIORITIES - 1 so the starving app
+# (which raises itself to configMAX_PRIORITIES - 1) strictly outranks it.
+CONFIG_ESP_BIST_HD_AGENT_TASK_PRIO=23
