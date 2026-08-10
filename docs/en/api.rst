@@ -56,6 +56,15 @@ Utilities & Metrics
 
 .. include-build-file:: inc/bist_metrics.inc
 
+Host Diagnostics
+-----------------
+
+.. include-build-file:: inc/bist_hd_protocol.inc
+.. include-build-file:: inc/bist_hd_challenge.inc
+.. include-build-file:: inc/bist_hd_crc.inc
+.. include-build-file:: inc/bist_hd_agent.inc
+.. include-build-file:: inc/bist_hd_companion.inc
+
 Driver Interfaces
 -----------------
 

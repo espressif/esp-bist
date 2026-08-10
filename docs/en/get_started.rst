@@ -290,4 +290,4 @@ To run the tests on the device, execute the following command:
 Samples
 -------
 
-The samples are located in the ``samples`` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components.
+The samples are located in the ``samples`` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components. For LP-companion Host Diagnostics samples (ESP-IDF, Zephyr, NuttX), see :doc:`host_diagnostics`.

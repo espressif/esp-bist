@@ -4,6 +4,10 @@ Software Architecture
 Architecture Overview and Layering
 -----------------------------------
 
+This chapter describes the **standalone** bare-metal architecture
+(``samples/standalone``). For the LP-companion plus HP-agent supervision
+architecture (ESP-IDF, Zephyr, NuttX), see :doc:`host_diagnostics`.
+
 The ESP-BIST standalone firmware uses a three-layer architecture:
 
 - **Application layer** — Integrates BIST tests and fail-safe logic (e.g., ``samples/standalone/main.c``). Runs post-boot tests, registers watchdog and crystal failure callbacks, initializes stack overflow detection, and runs runtime tests in the main loop.

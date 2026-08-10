@@ -41,7 +41,12 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/drivers/include/gpio.h \
     $(PROJECT_PATH)/src/bist/drivers/include/adc_oneshot.h \
     $(PROJECT_PATH)/src/bist/drivers/include/wdt.h \
-    $(PROJECT_PATH)/src/soc/esp32c3/ld/soc_memory.h
+    $(PROJECT_PATH)/src/soc/esp32c3/ld/soc_memory.h \
+    $(PROJECT_PATH)/src/bist/include/bist_hd_protocol.h \
+    $(PROJECT_PATH)/src/bist/include/bist_hd_challenge.h \
+    $(PROJECT_PATH)/src/bist/include/bist_hd_crc.h \
+    $(PROJECT_PATH)/src/bist/host/include/bist_hd_agent.h \
+    $(PROJECT_PATH)/src/bist/companion/include/bist_hd_companion.h
 
 ## Get warnings for functions that have no documentation for their parameters or return value
 ##
