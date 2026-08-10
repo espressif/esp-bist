@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Device tests for the ESP-BIST IDF sample.
+Device smoke test for the ESP-BIST IDF sample.
 
-Verifies that the LP core BIST tests run successfully by checking the
-structured output printed by the HP core on the main UART.
-All assertions run against a single boot to avoid unnecessary reflashes.
+Checks the happy path the sample demonstrates: AGENT_READY, post-boot and
+runtime LP_STATUS, and repeated Q&A challenge/answer rounds.
+
+Fail-closed behaviour is validated separately in tests/integration/hd_idf, so
+this sample stays a readable starting point.
 """
 
 import pytest
@@ -14,6 +16,8 @@ import pytest
 
 @pytest.mark.parametrize('target', ['esp32c5', 'esp32c6', 'esp32p4'], indirect=True)
 def test_bist_idf_sample(dut, target):
+    dut.expect('test_HD_agent_ready:PASS', timeout=30)
+
     # Post-boot tests
     dut.expect('test_BIST_cpu_reg:PASS', timeout=30)
     dut.expect('test_BIST_cpu_csr:PASS', timeout=10)
@@ -30,4 +34,5 @@ def test_bist_idf_sample(dut, target):
 
     # Verify all 10 runtime loops completed with no failures in any iteration
     dut.expect('Runtime loop 10/10', timeout=30)
+    dut.expect('test_HD_challenge:PASS', timeout=10)
     dut.expect('BIST_RESULT:PASS', timeout=10)

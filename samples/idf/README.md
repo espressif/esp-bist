@@ -1,8 +1,10 @@
 # ESP-BIST IDF Sample
 
-This sample demonstrates running ESP-BIST tests on the LP core (ULP coprocessor) within an ESP-IDF application. The HP CPU loads and starts the LP-core firmware, which executes BIST tests in a loop.
+This sample demonstrates running ESP-BIST tests on the LP core (ULP coprocessor) within an ESP-IDF application, plus **Host Diagnostics**: the LP companion supervises a QM host OS agent on the HP core.
 
-HP and LP cores communicate over the LP mailbox (`lp_core_mailbox_*`). On ESP32-C5/C6 this uses the software mailbox (shared memory + PMU interrupt). The HP core sends a `BIST_MSG_READY` handshake; the LP core replies with post-boot and periodic runtime result bitmasks.
+HP and LP cores communicate over the LP mailbox (`lp_core_mailbox_*`). On ESP32-C5/C6 this uses the software mailbox (shared memory + PMU interrupt). The HP agent sends `AGENT_READY`; the LP companion replies with post-boot and periodic runtime `LP_STATUS` bitmasks and (when enabled) Q&A `CHALLENGE` / `ANSWER` frames. Companion owns safe-state decisions (on failure it stops feeding the LP WDT).
+
+This is deliberately the happy path only, so it works as a starting point for your own application. Fail-closed validation lives in [`tests/integration/hd_idf`](../../tests/integration/hd_idf).
 
 ## Supported SoCs
 
@@ -48,6 +50,15 @@ Relevant options:
 
 - **Component config > Ultra Low Power (ULP) Co-processor** — LP core enable and reserved memory size.
 - **Component config > ESP-BIST** — enable individual BIST tests.
+- **Component config > ESP-BIST > Host Diagnostics** — agent/companion, equal-rank audit options, and the challenge window and key.
+
+## Validating fail-closed behaviour
+
+Making the host misbehave — answering with the wrong key, or missing the
+challenge window — belongs to
+[`tests/integration/hd_idf`](../../tests/integration/hd_idf). Keeping it out of
+here means a fail-closed build and a product build differ only in that test app;
+nothing in `src/bist/` or in this sample has a test branch.
 
 ## BIST Tests Available on LP Core
 
@@ -64,4 +75,4 @@ Relevant options:
 
 - **Post-boot:** March-X followed by `bist_ram_test_abraham_full()` (complete pair schedule).
 - **Runtime:** March-A followed by `bist_ram_test_abraham()` (one partition pair per round).
-- LP builds default `CONFIG_ESP_BIST_RAM_PARTITION_SIZE` to **256 words** (1 KiB partitions, 2 KiB backup buffer) to fit within the ~16 KiB LP SRAM.
+- LP builds default `CONFIG_ESP_BIST_RAM_PARTITION_SIZE` to **64 words** in this sample to fit LP SRAM with Host Diagnostics.

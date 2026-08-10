@@ -20,8 +20,6 @@ ulp_add_build_binary_targets(${ULP_APP_NAME})
 # BIST library — repo root is 4 levels up from samples/idf/main/ulp/
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../../../../src/bist ${CMAKE_BINARY_DIR}/bist)
 
-target_include_directories(${ULP_APP_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/..)
-
 target_link_libraries(${ULP_APP_NAME} PUBLIC bist_esp)
 
 bist_add_crc_postbuild(${ULP_APP_NAME})
