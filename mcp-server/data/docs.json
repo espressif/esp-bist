@@ -80,6 +80,14 @@
     "content_type": "doc"
   },
   {
+    "id": "doc:api.rst:host_diagnostics",
+    "title": "Host Diagnostics",
+    "section": "host_diagnostics",
+    "body": ".. include-build-file:: inc/bist_hd_protocol.inc\n.. include-build-file:: inc/bist_hd_challenge.inc\n.. include-build-file:: inc/bist_hd_crc.inc\n.. include-build-file:: inc/bist_hd_agent.inc\n.. include-build-file:: inc/bist_hd_companion.inc",
+    "source_file": "docs/en/api.rst",
+    "content_type": "doc"
+  },
+  {
     "id": "doc:api.rst:driver_interfaces",
     "title": "Driver Interfaces",
     "section": "driver_interfaces",
@@ -499,15 +507,303 @@
     "id": "doc:get_started.rst:samples",
     "title": "Samples",
     "section": "samples",
-    "body": "The samples are located in the ``samples`` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components.",
+    "body": "The samples are located in the ``samples`` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components. For LP-companion Host Diagnostics samples (ESP-IDF, Zephyr, NuttX), see :doc:`host_diagnostics`.",
     "source_file": "docs/en/get_started.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:preamble",
+    "title": "Host Diagnostics",
+    "section": "preamble",
+    "body": ".. _host-diagnostics:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:host_diagnostics",
+    "title": "Host Diagnostics",
+    "section": "host_diagnostics",
+    "body": "**Status:** Architecture and implementation overview (not a certified safety claim)\n\n.. _hd-overview:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:overview_and_scope",
+    "title": "Overview and Scope",
+    "section": "overview_and_scope",
+    "body": "ESP-BIST provides a Software Test Library (STL) of Class-B-style diagnostics\n(March RAM, flash CRC, CPU register, CSR, stack, clock, watchdog, GPIO, ADC).\nOn SoCs with a low-power RISC-V core (ESP32-C5, ESP32-C6, ESP32-P4) the\nlibrary can run on the LP-CPU as a **safety companion** that self-tests and\nthen supervises the main application running on the HP-CPU under a QM\n(Quality Management) host OS (ESP-IDF, Zephyr, NuttX).\n\n**Host Diagnostics** is the feature that turns this one-way observer model into\na bidirectional supervision architecture. It adds:\n\n- A **Host Diagnostic Agent (HDA)** on the HP side that auto-starts when the LP\n  companion is present, answers Q&A challenges, and will in future phases\n  execute companion-triggered host audits (RAM March on HP DRAM, host image\n  CRC, CPU/CSR/stack/clock checks, and more).\n- A shared **supervision protocol** with typed messages, sequence numbers,\n  timeouts, and stale-frame rejection.\n- **Companion-owned safe-state policy**: the LP companion judges every answer\n  and audit result, and forces safe state (stops feeding the LP WDT, which\n  resets the system) when the host fails.\n\n.. note::\n\n   Host Diagnostics is **not** a Safety OS. In industry that term means a\n   *certified kernel*. The agent is a thin\n   collaboration component supervised by the companion.\n\n   The on-die LP core is a valid **software supervisor** but is **not** a fully\n   independent safety channel. Shared die, supply, reset, and clock domains\n   create common-cause risk that an external Q&A watchdog / PMIC addresses when\n   stronger independence claims are required. See :ref:`hd-independence`.\n\n.. _hd-rationale:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:rationale",
+    "title": "Rationale",
+    "section": "rationale",
+    "body": "A self-test library that only proves the *supervisor* is healthy is not\nsufficient: a stuck, corrupted, or mis-executing host can still drive hazardous\noutputs while the companion has no way to detect or react. Host Diagnostics\ngives the companion a bidirectional audit channel so it can continuously\nverify that the host is alive, executing the expected code path, and producing\ncorrect computational results.\n\nThe companion issues timed Q&A challenges that the host must answer with a\nkeyed CRC within a configurable window, proving liveness and computational\nintegrity in every supervision cycle. The same channel carries a catalog of\ncompanion-triggered diagnostics (RAM March on HP DRAM, host image CRC,\nCPU/CSR/stack checks, and more -- see :ref:`hd-audit-catalog`) so the\ncompanion can systematically cover the host fault space. If any answer is\nwrong, late, or missing, the companion forces safe state without host\ncooperation.\n\n.. _hd-independence:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:independence_of_the_on_die_lp_companion",
+    "title": "Independence of the On-Die LP Companion",
+    "section": "independence_of_the_on_die_lp_companion",
+    "body": "The LP companion schedules host audits, judges results, and owns safe-state\npolicy. That does not make the on-die LP a fully independent safety channel.\nIndependence is the same physical problem across standards:\n\n.. list-table:: Independent channel vs on-die LP companion\n   :header-rows: 1\n   :widths: 30 35 35\n\n   * - Property\n     - Independent channel / external monitor\n     - On-die LP companion (ESP32-C5/C6/P4)\n   * - Power / supply\n     - Often separate rail or supervised supply\n     - Same chip; often shared supply domains\n   * - Reset\n     - Independent reset path\n     - Shared die / chip-level reset coupling\n   * - Clock\n     - Independent clock supervision\n     - Limited independent clock story vs HP\n   * - Fault containment\n     - HP hang/corruption cannot disable the monitor\n     - Shared silicon, buses, and often shared power/debug events\n   * - Safe-state actuation\n     - Can cut power or hold outputs even if main CPU is dead\n     - May still depend on chip-level resources\n   * - Safety-case expectation\n     - Explicit channel separation arguments (ASIL decomposition, HFT)\n     - Harder to claim full independence without extra hardware\n\n**What Host Diagnostics can claim architecturally:**\n\n- LP is the software supervisor of the QM host.\n- Companion BIST plus host audits plus companion-owned judgment improve\n  diagnostic coverage of the HP OS path.\n- Domain roles (companion decides; host collaborates) still apply.\n\n**What must not be claimed without additional hardware and analysis:**\n\n- That LP-on-die alone equals an automotive safety island or a fully\n  independent industrial safety channel.\n- That LP supervision alone provides the same independence as an external Q&A\n  watchdog IC / PMIC or a separate safety MCU.\n\nWhen a product needs stronger independence, add an external Q&A watchdog /\nPMIC above the on-die companion. The LP remains useful for fine-grained host\naudits; the external monitor covers common-cause and chip-level failures the LP\ncannot independently survive.\n\n.. _hd-terminology:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:terminology",
+    "title": "Terminology",
+    "section": "terminology",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 30 70\n\n   * - Term\n     - Definition\n   * - Safety companion\n     - LP-CPU (or external MCU) that supervises the host, schedules diagnostics,\n       and owns safe-state policy\n   * - QM host OS\n     - Main OS on HP (ESP-IDF / Zephyr / NuttX); not ASIL/SIL-rated by itself;\n       treated as a supervised collaborator\n   * - Host Diagnostic Agent (HDA)\n     - HP-side collaboration component that auto-enables with LP BIST, answers\n       challenges, and runs triggered diagnostics\n   * - Host audit\n     - Temporal and logical proof that the host is alive and executing expected\n       code (Q&A, checkpoints, memory/CPU diagnostics)\n   * - Companion BIST\n     - Companion runs Class-B tests on its own resources (LP CPU, LP RAM, LP\n       image, LP WDT)\n   * - FTTI\n     - Fault Tolerant Time Interval; maximum allowed time from fault occurrence\n       to reaching safe state\n   * - FFI\n     - Freedom From Interference; host faults must not corrupt companion state\n       or the HP-LP protocol\n   * - Safe state\n     - Product-defined fail-safe reaction (reset, de-energize outputs, hold\n       critical GPIOs, etc.)\n   * - Supervised entity\n     - Host software under checkpoint / Q&A supervision\n\n.. _hd-domain-roles:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:domain_roles_and_trust_model",
+    "title": "Domain Roles and Trust Model",
+    "section": "domain_roles_and_trust_model",
+    "body": "Two domains at different trust levels. The companion owns the safety decision;\nthe host runs the product and only collaborates.\n\n.. blockdiag::\n   :scale: 100%\n   :caption: Host Diagnostics Domain Roles\n   :align: center\n\n   blockdiag {\n       \"LP BIST\" -> \"Host Supervisor\";\n       \"Host Supervisor\" -> \"Safe State Owner\";\n       \"Application\" -> \"Host Agent\";\n       \"Host Agent\" -> \"Diagnostic Hooks\";\n       \"Host Supervisor\" -> \"Host Agent\" [label = \"challenge / audit\"];\n       \"Diagnostic Hooks\" -> \"Host Supervisor\" [label = \"answers / results\"];\n\n       \"LP BIST\" [shape = roundedbox];\n       \"Host Supervisor\" [shape = box];\n       \"Safe State Owner\" [shape = box];\n       \"Application\" [shape = roundedbox];\n       \"Host Agent\" [shape = box];\n       \"Diagnostic Hooks\" [shape = box];\n\n       group {\n           label = \"Safety Companion (LP)\";\n           \"LP BIST\"; \"Host Supervisor\"; \"Safe State Owner\";\n       }\n       group {\n           label = \"QM Host OS (HP)\";\n           \"Application\"; \"Host Agent\"; \"Diagnostic Hooks\";\n       }\n   }",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:companion_responsibilities_lp",
+    "title": "Companion Responsibilities (LP)",
+    "section": "companion_responsibilities_lp",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 25 75\n\n   * - Role\n     - Responsibility\n   * - BIST\n     - Run Class-B tests on itself (LP CPU regs/CSR, LP RAM March, LP image\n       CRC, LP WDT). Establishes \"can I trust the supervisor?\"\n   * - Host supervision\n     - Issue challenges/checkpoints; schedule host audits; check answers and\n       reports\n   * - Diagnostic schedule\n     - Post-boot then periodic runtime cadence sized to the FTTI budget\n   * - Safe-state policy\n     - On wrong/late answer, failed host diagnostic, or failed companion BIST: force\n       safe state. Host must not own this decision\n   * - Protocol authority\n     - Sequence numbers, timeouts, message validity; reject malformed host\n       replies",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:host_responsibilities_hp",
+    "title": "Host Responsibilities (HP)",
+    "section": "host_responsibilities_hp",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 25 75\n\n   * - Role\n     - Responsibility\n   * - Application\n     - Product features (connectivity, UI, control loops, etc.)\n   * - Host agent\n     - Auto-start when LP companion is present; answer challenges inside the\n       window; no manual user intervention\n   * - Diagnostic collaboration\n     - On companion trigger: quiesce as needed, execute the requested\n       diagnostic, report results for companion judgment\n   * - Reporting only\n     - May log PASS/FAIL for tests; must **not** self-declare global safety or\n       suppress companion safe-state",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:critical_software_placement",
+    "title": "Critical Software Placement",
+    "section": "critical_software_placement",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 30 70\n\n   * - Placement\n     - What belongs there\n   * - Must run on companion\n     - Supervision, audit schedule, WDT/safe-state, and any function that must\n       work when HP is broken\n   * - May run on host\n     - Normal application, including safety-related logic that is supervised\n       (checkpoints / Q&A) rather than trusted alone\n   * - Companion or dual-channel\n     - Any function with a hard integrity claim that a crashed QM OS must not be\n       able to violate alone\n\n.. _hd-architecture:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:layering",
+    "title": "Layering",
+    "section": "layering",
+    "body": ".. blockdiag::\n   :scale: 100%\n   :caption: Host Diagnostics Layers\n   :align: center\n\n   blockdiag {\n       \"Companion BIST\" -> \"Q&A Issuer\";\n       \"Q&A Issuer\" -> \"Protocol\";\n       \"Diagnostic Scheduler\" -> \"Protocol\";\n       \"Protocol\" -> \"Host Agent\";\n       \"Host Agent\" -> \"Quiesce / Exclude\";\n       \"Quiesce / Exclude\" -> \"ESP-IDF\";\n       \"Quiesce / Exclude\" -> \"Zephyr\";\n       \"Quiesce / Exclude\" -> \"NuttX\";\n       \"Q&A Issuer\" -> \"LP WDT / Safe State\";\n       \"Diagnostic Scheduler\" -> \"LP WDT / Safe State\";\n\n       \"Companion BIST\" [shape = roundedbox];\n       \"Q&A Issuer\" [shape = box];\n       \"Diagnostic Scheduler\" [shape = box];\n       \"Protocol\" [shape = box];\n       \"Host Agent\" [shape = box];\n       \"Quiesce / Exclude\" [shape = box];\n       \"LP WDT / Safe State\" [shape = box];\n       \"ESP-IDF\" [shape = roundedbox];\n       \"Zephyr\" [shape = roundedbox];\n       \"NuttX\" [shape = roundedbox];\n\n       group {\n           label = \"Safety Companion\";\n           \"Companion BIST\"; \"Q&A Issuer\"; \"Diagnostic Scheduler\";\n           \"LP WDT / Safe State\";\n       }\n       group {\n           label = \"Supervision Protocol (shared)\";\n           \"Protocol\";\n       }\n       group {\n           label = \"Host Agent Package\";\n           \"Host Agent\"; \"Quiesce / Exclude\";\n       }\n       group {\n           label = \"QM Host OS\";\n           \"ESP-IDF\"; \"Zephyr\"; \"NuttX\";\n       }\n   }\n\n.. _hd-protocol:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:supervision_protocol",
+    "title": "Supervision Protocol",
+    "section": "supervision_protocol",
+    "body": "The supervision protocol uses typed messages, sequence numbers, and explicit\ntimeouts to carry companion-to-agent commands and agent-to-companion responses.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:frame_layout",
+    "title": "Frame Layout",
+    "section": "frame_layout",
+    "body": "Two frame shapes exist on the wire:\n\n**AGENT_READY (1 word):**\n\nA single magic word ``0xCAFECAFE`` (``BIST_HD_AGENT_READY_MAGIC``). HP sends\nthis to LP once at agent start to signal that the host is ready for supervision.\n\n**Typed multi-word frame (4 words):**\n\nAll other message types use a 4-word frame:\n\n.. list-table:: Wire frame layout\n   :header-rows: 1\n   :widths: 15 85\n\n   * - Word\n     - Content\n   * - word0\n     - ``[TAG:8 = 0xB5][type:8][audit_id:8][nwords:8 = 4]``\n   * - word1\n     - ``[seq:16 in low bits]``\n   * - word2\n     - Payload: challenge value, answer, status bitmask, or checkpoint id\n   * - word3\n     - ``deadline_ticks``: window end in microseconds (0 if unused)\n\nThe tag byte ``0xB5`` distinguishes typed frames from stray data. Transports\nuse ``bist_hd_frame_nwords()`` on ``word0`` to determine how many words to\nread: 1 for ``AGENT_READY``, 4 for tagged frames, 0 for invalid.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:message_types",
+    "title": "Message Types",
+    "section": "message_types",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 22 10 38 30\n\n   * - Message\n     - Direction\n     - Purpose\n     - Status\n   * - ``AGENT_READY`` (1)\n     - HP to LP\n     - Host agent started; ready for supervision\n     - Implemented\n   * - ``CHALLENGE`` (2)\n     - LP to HP\n     - Challenge value + sequence + window deadline\n     - Implemented\n   * - ``ANSWER`` (3)\n     - HP to LP\n     - ``f(challenge, seq)`` + matching sequence\n     - Implemented\n   * - ``DIAG_REQ`` (4)\n     - LP to HP\n     - Request a host-catalog diagnostic (``audit_id`` selects which)\n     - Defined, not handled\n   * - ``DIAG_RSP`` (5)\n     - HP to LP\n     - Pass/fail + diagnostic id + sequence\n     - Defined, not handled\n   * - ``CHECKPOINT`` (6)\n     - HP to LP\n     - Alive / deadline / logical checkpoint\n     - Defined, not handled\n   * - ``SAFE_STATE_NOTIFY`` (7)\n     - LP to HP\n     - Companion already acting; informational only\n     - Companion sends; agent ignores\n   * - ``LP_STATUS`` (8)\n     - LP to HP\n     - LP BIST result bitmask (``BIST_HD_BIT_POSTBOOT`` or\n       ``BIST_HD_BIT_RUNTIME`` flag set)\n     - Implemented",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:sequence_number_rules",
+    "title": "Sequence Number Rules",
+    "section": "sequence_number_rules",
+    "body": "- 16-bit sequence in the low bits of word1.\n- **Companion side:** monotonic, skips zero. ``bist_hd_seq_check()`` requires an\n  exact match between the expected and actual sequence.\n- **Agent side:** ``bist_hd_seq_is_stale()`` uses unsigned 16-bit wrap-aware\n  distance. Incoming is stale when it is not strictly ahead of the last accepted\n  sequence in the forward half of the space (``BIST_HD_SEQ_HALF_RANGE =\n  0x8000``). The agent drops stale or duplicate challenges.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:timeouts",
+    "title": "Timeouts",
+    "section": "timeouts",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 35 30\n\n   * - Timeout\n     - Kconfig / source\n     - Default\n   * - Agent ready wait\n     - ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US``\n     - 1 000 000 us (1 s)\n   * - Challenge window\n     - ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``\n     - 10 000 us (10 ms)\n   * - Agent send\n     - Hardcoded in ``bist_hd_agent_start()``\n     - 10 000 ms\n   * - Diagnostic response\n     - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``\n     - 50 000 us (defined, not referenced in code)\n   * - Generic tick compare\n     - ``bist_hd_timeout_expired()``\n     - Unsigned wrap-safe comparison\n\n``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US`` is defined in Kconfig but not yet\nreferenced by the companion or agent. It will be used once ``DIAG_REQ`` /\n``DIAG_RSP`` handling is implemented.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:challenge_algorithm",
+    "title": "Challenge Algorithm",
+    "section": "challenge_algorithm",
+    "body": "The Q&A answer function is:\n\n.. code-block:: none\n\n   f(challenge, seq) = CRC32(LE32(challenge) || LE16(seq) || LE32(key))\n\nwhere:\n\n- ``challenge`` is a pseudo-random value generated by the companion (xorshift32\n  seeded from the LP free-running tick counter).\n- ``seq`` is the current 16-bit sequence number.\n- ``key`` resolves in order: compile-time ``BIST_HD_CHALLENGE_KEY`` (set via\n  ``target_compile_definitions``), then ``CONFIG_ESP_BIST_HD_CHALLENGE_KEY``\n  (Kconfig), then the default ``0xA5A5A5A5``. The compile-time path exists\n  because the two ends of the wire do not always share one Kconfig namespace.\n\nThe CRC-32 uses polynomial ``0x04C11DB7`` reflected. The function is\n``bist_hd_challenge_answer()`` in ``src/bist/bist_hd_challenge.c``.\n\n.. _hd-lifecycle:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:boot_and_init_bist_hd_companion_init",
+    "title": "Boot and Init (``bist_hd_companion_init``)",
+    "section": "boot_and_init_bist_hd_companion_init",
+    "body": ".. blockdiag::\n   :scale: 100%\n   :caption: Companion Init Sequence\n   :align: center\n\n   blockdiag {\n       \"Mailbox Init\" -> \"Wait AGENT_READY\";\n       \"Wait AGENT_READY\" -> \"Ready OK?\";\n       \"Ready OK?\" -> \"Post-boot BIST\" [label = \"yes\"];\n       \"Ready OK?\" -> \"Safe State\" [label = \"timeout / bad frame\"];\n       \"Post-boot BIST\" -> \"BIST Pass?\";\n       \"BIST Pass?\" -> \"Report LP_STATUS\" [label = \"yes\"];\n       \"BIST Pass?\" -> \"Safe State\" [label = \"no\"];\n       \"Report LP_STATUS\" -> \"Arm LP WDT\";\n\n       \"Mailbox Init\" [shape = roundedbox];\n       \"Wait AGENT_READY\" [shape = box];\n       \"Ready OK?\" [shape = diamond];\n       \"Post-boot BIST\" [shape = box];\n       \"BIST Pass?\" [shape = diamond];\n       \"Report LP_STATUS\" [shape = box];\n       \"Arm LP WDT\" [shape = roundedbox];\n       \"Safe State\" [shape = box];\n   }\n\nOrdered steps:\n\n#. ``bist_hd_comp_port_init()`` -- mailbox hardware.\n#. (Optional) ``bist_cpu_stack_overflow_init()`` if stack test enabled.\n#. Block on ``bist_hd_comp_port_recv()`` until ``AGENT_READY`` arrives or\n   ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US`` expires.\n#. Run post-boot LP BIST (CPU regs, CPU CSR, RAM March-X + Abraham full, flash\n   CRC -- depending on Kconfig). OR the ``BIST_HD_BIT_POSTBOOT`` flag into the\n   result bitmask.\n#. Send ``LP_STATUS`` with the post-boot bitmask.\n#. Verify that all expected bits are set. If not: ``bist_hd_safe_state()``.\n#. **Arm LP WDT** (``lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US)``). The WDT is\n   armed **only after** post-boot BIST passes; a pre-init failure never arms it.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:runtime_loop_bist_hd_companion_loop",
+    "title": "Runtime Loop (``bist_hd_companion_loop``)",
+    "section": "runtime_loop_bist_hd_companion_loop",
+    "body": "Each iteration:\n\n#. If already in safe state: return immediately (no WDT feed).\n#. ``lp_wdt_feed()`` -- feed the watchdog.\n#. Run runtime LP BIST (CPU regs, CPU CSR, RAM March-A + Abraham, stack check).\n   OR the ``BIST_HD_BIT_RUNTIME`` flag.\n#. Send ``LP_STATUS`` with the runtime bitmask.\n#. Verify expected runtime bits. If not: ``bist_hd_safe_state()``.\n#. If ``CONFIG_ESP_BIST_HD_AUDIT_QA``: run Q&A challenge -- send ``CHALLENGE``,\n   recv ``ANSWER`` within ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``, verify seq\n   + value + elapsed time. If any check fails: ``bist_hd_safe_state()``.\n\nThe application-side LP main loop calls ``bist_hd_companion_loop()`` with a\ndelay between iterations (e.g. ``bist_hd_comp_port_delay_us(10000)``).",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:agent_worker_bist_hd_agent_start",
+    "title": "Agent Worker (``bist_hd_agent_start``)",
+    "section": "agent_worker_bist_hd_agent_start",
+    "body": "On the HP side, ``bist_hd_agent_start()`` performs a one-shot setup:\n\n#. ``bist_hd_platform_init()`` -- create the LP-status queue.\n#. ``bist_hd_transport_init()`` -- open the mailbox (IDF / Zephyr mbox /\n   NuttX ``/dev/lp_mailbox``).\n#. ``bist_hd_transport_flush()`` -- discard mailbox state left over from a\n   previous HP session. The LP companion keeps running across an HP reset, so\n   pending words or frames that predate ``AGENT_READY`` must be dropped. IDF\n   drains with a bounded non-blocking receive loop, Zephyr purges its RX\n   message queue, and NuttX defers to a byte-level header resync inside\n   ``bist_hd_transport_recv()`` because the driver lacks non-blocking reads.\n#. Send ``AGENT_READY`` to the companion.\n#. Start a high-priority worker thread (FreeRTOS task / Zephyr cooperative\n   thread / NuttX ``SCHED_FIFO`` pthread).\n\nThe worker thread runs an infinite receive loop:\n\n#. Block on ``bist_hd_transport_recv()`` (indefinite timeout).\n#. If ``LP_STATUS``: push the bitmask into the platform queue so the\n   application can retrieve it via ``bist_hd_agent_wait_lp_status()``.\n#. If ``CHALLENGE``: check for stale or duplicate sequence numbers\n   (``bist_hd_seq_is_stale()``); if fresh, compute the answer via\n   ``bist_hd_challenge_answer()`` and send ``ANSWER`` back to the companion.\n#. All other message types are silently dropped in this revision\n   (``DIAG_REQ``, ``CHECKPOINT``, and ``SAFE_STATE_NOTIFY`` handling is\n   deferred).\n\nOn receive errors the worker yields for 1 ms to avoid spinning on a\nhigh-priority thread.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:lp_bist_status_bitmask",
+    "title": "LP BIST Status Bitmask",
+    "section": "lp_bist_status_bitmask",
+    "body": "The companion reports results as a bitmask via ``LP_STATUS`` messages:\n\n.. list-table::\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Bit\n     - Value\n     - Meaning (bit set = test passed)\n   * - ``BIST_HD_BIT_CPU_REG``\n     - ``1 << 0``\n     - CPU register test passed\n   * - ``BIST_HD_BIT_CPU_CSR``\n     - ``1 << 1``\n     - CPU CSR test passed\n   * - ``BIST_HD_BIT_RAM_A``\n     - ``1 << 2``\n     - RAM March-A test passed (runtime)\n   * - ``BIST_HD_BIT_RAM_X``\n     - ``1 << 3``\n     - RAM March-X test passed (post-boot)\n   * - ``BIST_HD_BIT_FLASH``\n     - ``1 << 4``\n     - Flash CRC test passed\n   * - ``BIST_HD_BIT_STACK``\n     - ``1 << 5``\n     - Stack overflow check passed\n   * - ``BIST_HD_BIT_ABRAHAM``\n     - ``1 << 6``\n     - Abraham time-division test passed\n   * - ``BIST_HD_BIT_RUNTIME``\n     - ``1 << 30``\n     - Runtime phase flag\n   * - ``BIST_HD_BIT_POSTBOOT``\n     - ``1 << 31``\n     - Post-boot phase flag",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:safe_state_and_lp_wdt",
+    "title": "Safe State and LP WDT",
+    "section": "safe_state_and_lp_wdt",
+    "body": "``bist_hd_safe_state()`` is a weak function. The default implementation:\n\n#. Latches ``s_in_safe_state = 1`` (once latched, subsequent loop iterations are\n   no-ops with no WDT feed).\n#. Sends a best-effort ``SAFE_STATE_NOTIFY`` to HP.\n\nBecause the loop stops feeding the LP WDT, the watchdog fires\n(``WDT_STAGE_ACTION_RESET_SYSTEM``) and resets the entire chip. This is the\n**fail-closed** mechanism.\n\nTriggers for safe state:\n\n- Wrong or late Q&A answer.\n- Post-boot or runtime LP BIST failure.\n- Protocol / FFI violation (bad sequence, corrupted frame).\n- Transport failure during init or runtime.\n- ``AGENT_READY`` timeout or wrong frame type during init.\n\nApplications may override the weak ``bist_hd_safe_state()`` to drive\nproduct-specific cut-offs (GPIO, relay, power) before the WDT reset. See\n:ref:`hd-safe-state-override`.\n\n.. _hd-audit-catalog:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:host_audit_catalog_and_implementation_status",
+    "title": "Host Audit Catalog and Implementation Status",
+    "section": "host_audit_catalog_and_implementation_status",
+    "body": "The companion schedules host audits from the catalog below. Product integration\nenables the required subset via Kconfig.\n\nThe **Status** column distinguishes delivered mechanisms from declared\ninterfaces: a ``Declared`` audit has a protocol enum value and a Kconfig symbol\nbut no wired runtime path in this revision.\n\n.. list-table::\n   :header-rows: 1\n   :widths: 20 20 35 25\n\n   * - Audit\n     - What it detects\n     - Who executes\n     - Status\n   * - Q&A challenge / window\n     - Stuck host, wrong path, compute faults\n     - Companion issues; host answers\n     - **Implemented** (``BIST_HD_AUDIT_QA``)\n   * - Alive / deadline / logical checkpoints\n     - Missed tasks, late work, wrong sequence\n     - Companion checks; host reports checkpoints\n     - Declared (``BIST_HD_AUDIT_CHECKPOINT``); stub returns -1\n   * - Host RAM March\n     - DRAM bit faults\n     - Host (quiesce) under companion trigger\n     - Declared (``BIST_HD_AUDIT_RAM``); STL exists, HP region not wired\n   * - Host flash / image CRC\n     - Corrupted or wrong firmware\n     - Host computes CRC; companion checks golden\n     - Declared (``BIST_HD_AUDIT_FLASH``); golden injection not wired\n   * - Host CPU register test\n     - HP reg stuck-at / coupling\n     - Host under companion trigger\n     - Declared (``BIST_HD_AUDIT_CPU``)\n   * - Host CSR / PMP-PMA config audit\n     - Bad privilege / memory protection config\n     - Host under trigger; companion checks config\n     - Declared (``BIST_HD_AUDIT_CSR``)\n   * - Stack overflow / canary / watermark\n     - Stack smash, stack pressure\n     - Host periodic + companion demand\n     - Declared (``BIST_HD_AUDIT_STACK``)\n   * - Clock / crystal drift\n     - Wrong time base (breaks FTTI)\n     - Companion time-slot and/or host measure\n     - Declared (``BIST_HD_AUDIT_CLOCK``)\n   * - Host WDT path check\n     - Soft WDT not armed / not fed correctly\n     - Companion observes feed/ack pattern\n     - Declared (``BIST_HD_AUDIT_WDT``)\n   * - PC / program-flow sample\n     - PC in unexpected region\n     - Host under trigger\n     - Declared (``BIST_HD_AUDIT_PC``)\n   * - Interrupt latency / storm bound\n     - Host not servicing within budget\n     - Companion timestamps challenge IRQ response\n     - Declared (``BIST_HD_AUDIT_IRQ_LATENCY``)\n   * - Peripheral / GPIO plausibility\n     - Hazard outputs in illegal state\n     - Companion reads or host reports via callback\n     - Declared (``BIST_HD_AUDIT_GPIO``); requires app callback\n   * - ADC / supply plausibility\n     - Brownout, sensor nonsense\n     - Host or companion ADC\n     - Declared (``BIST_HD_AUDIT_ADC``); requires app callback\n   * - Config / NVM / partition integrity\n     - Bad calibration, wrong partition table\n     - Host CRC under schedule\n     - Declared (``BIST_HD_AUDIT_CONFIG_NVM``)\n   * - IPC / shared-mem integrity\n     - Corrupted HP-LP channel\n     - Companion validates seq/CRC of protocol\n     - Declared (``BIST_HD_AUDIT_IPC``)\n   * - Secure-boot / image authenticity\n     - Untrusted boot\n     - Host reports secure-boot state\n     - Declared (``BIST_HD_AUDIT_SECURE_BOOT``); requires app callback\n   * - Dual-channel output compare\n     - HP commanded actuate does not match safe intent\n     - Companion compares or owns cut-off\n     - Declared (``BIST_HD_AUDIT_DUAL_CHANNEL``); requires app callback\n\n.. _hd-configuration:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:configuration_reference",
+    "title": "Configuration Reference",
+    "section": "configuration_reference",
+    "body": "All Host Diagnostics options are in ``src/bist/Kconfig`` under the\n``Host Diagnostics`` menu.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:master_enable",
+    "title": "Master Enable",
+    "section": "master_enable",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 40 10 10 40\n\n   * - Option\n     - Type\n     - Default\n     - Description\n   * - ``CONFIG_ESP_BIST_HOST_DIAGNOSTICS``\n     - bool\n     - n\n     - Master enable for companion supervision and the HP agent",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:audit_selectors",
+    "title": "Audit Selectors",
+    "section": "audit_selectors",
+    "body": "Each option enables one entry in the host-audit catalog. Enabling an audit that\ndepends on an STL test (e.g. ``ESP_BIST_HD_AUDIT_RAM`` selects\n``ESP_BIST_MEMORY_RAM_TEST``) automatically pulls in the corresponding STL\nmodule.\n\n.. list-table::\n   :header-rows: 1\n   :widths: 50 50\n\n   * - Option\n     - Audit\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_QA``\n     - Q&A challenge / window\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT``\n     - Alive / deadline / logical checkpoints\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_RAM``\n     - Host RAM March (selects ``ESP_BIST_MEMORY_RAM_TEST``)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_FLASH``\n     - Host flash CRC (selects ``ESP_BIST_MEMORY_FLASH_TEST``)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_CPU``\n     - Host CPU register test (selects ``ESP_BIST_CPU_REG_TEST``)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_CSR``\n     - Host CSR audit (selects ``ESP_BIST_CPU_CSR_REG_TEST``)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_STACK``\n     - Stack overflow / canary (selects ``ESP_BIST_STACK_TEST``)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_CLOCK``\n     - Clock / crystal drift\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_WDT``\n     - Host WDT path check\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_PC``\n     - PC / program-flow sample\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY``\n     - Interrupt latency / storm bound\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_GPIO``\n     - GPIO plausibility (requires app callback)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_ADC``\n     - ADC plausibility (requires app callback)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_CONFIG_NVM``\n     - Config / NVM integrity\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_IPC``\n     - IPC / shared-mem integrity\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_SECURE_BOOT``\n     - Secure-boot status (requires app callback)\n   * - ``CONFIG_ESP_BIST_HD_AUDIT_DUAL_CHANNEL``\n     - Dual-channel output compare (requires app callback)",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:timing_parameters",
+    "title": "Timing Parameters",
+    "section": "timing_parameters",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 45 10 15 30\n\n   * - Option\n     - Type\n     - Default\n     - Description\n   * - ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``\n     - int\n     - 10000\n     - Max time for host to answer a Q&A challenge (us)\n   * - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``\n     - int\n     - 50000\n     - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us); defined, not referenced\n   * - ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US``\n     - int\n     - 1000000\n     - Companion wait for ``AGENT_READY`` before safe state (us)\n   * - ``CONFIG_ESP_BIST_HD_CHALLENGE_KEY``\n     - hex\n     - 0xA5A5A5A5\n     - Secret key mixed into ``bist_hd_challenge_answer()``; override per\n       product",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:agent_thread_task",
+    "title": "Agent Thread / Task",
+    "section": "agent_thread_task",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 45 10 10 35\n\n   * - Option\n     - Type\n     - Default\n     - Description\n   * - ``CONFIG_ESP_BIST_HD_AGENT_TASK_STACK``\n     - int\n     - 3072\n     - Agent stack size (bytes); all OSes\n   * - ``CONFIG_ESP_BIST_HD_AGENT_TASK_PRIO``\n     - int\n     - 23\n     - FreeRTOS priority (ESP-IDF only)\n   * - ``CONFIG_ESP_BIST_HD_AGENT_THREAD_COOP_PRIO``\n     - int\n     - 1\n     - ``K_PRIO_COOP()`` index (Zephyr only)\n   * - ``CONFIG_ESP_BIST_HD_AGENT_TASK_PRIO_NUTTX``\n     - int\n     - 200\n     - ``SCHED_FIFO`` priority (NuttX only)\n\n.. _hd-integration-guide:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:esp_idf",
+    "title": "ESP-IDF",
+    "section": "esp_idf",
+    "body": "**Required Kconfig** (``sdkconfig.defaults``):\n\n.. code-block:: none\n\n   CONFIG_ULP_COPROC_ENABLED=y\n   CONFIG_ULP_COPROC_TYPE_LP_CORE=y\n   CONFIG_ULP_COPROC_RESERVE_MEM=16240\n   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y\n   CONFIG_ESP_BIST_HD_AUDIT_QA=y\n\nPlus the LP BIST test options (``CONFIG_ESP_BIST_CPU_REG_TEST``,\n``CONFIG_ESP_BIST_CPU_CSR_REG_TEST``, ``CONFIG_ESP_BIST_MEMORY_RAM_TEST``,\n``CONFIG_ESP_BIST_MEMORY_FLASH_TEST``, ``CONFIG_ESP_BIST_STACK_TEST``).\n\n**Build wiring:**\n\nThe HP application registers ``esp-bist`` as a component (it is the repo root\n``CMakeLists.txt``). The LP sub-project is added via ``ulp_add_project()`` in\nthe application ``main/CMakeLists.txt``:\n\n.. code-block:: cmake\n\n   idf_component_register(SRCS ${app_sources}\n                          REQUIRES ulp esp-bist\n                          WHOLE_ARCHIVE)\n   ulp_add_project(\"ulp_bist_sample\" \"${CMAKE_CURRENT_LIST_DIR}/ulp/\")\n\nInside ``ulp/CMakeLists.txt``, the LP main links the BIST library:\n\n.. code-block:: cmake\n\n   add_subdirectory(${BIST_PATH}/src/bist ${CMAKE_CURRENT_BINARY_DIR}/bist)\n   target_link_libraries(${ULP_APP_NAME} PRIVATE bist_esp)\n\n**LP entry point** (``ulp/main.c``):\n\n.. code-block:: c\n\n   #include \"bist_hd_companion.h\"\n   #include \"bist_hd_comp_port.h\"\n\n   #define RUNTIME_INTERVAL_US 10000\n\n   int main(void)\n   {\n       if (bist_hd_companion_init() != 0) {\n           return 0;\n       }\n       while (1) {\n           bist_hd_companion_loop();\n           bist_hd_comp_port_delay_us(RUNTIME_INTERVAL_US);\n       }\n   }\n\n**HP integration** (``main.c``):\n\n.. code-block:: c\n\n   #include \"bist_hd_agent.h\"\n   #include \"bist_hd_protocol.h\"\n\n   /* After loading and starting the LP core: */\n   vTaskDelay(pdMS_TO_TICKS(100));   /* mailbox settle */\n\n   if (bist_hd_agent_start() != 0) {\n       /* handle error */\n   }\n\n   uint32_t status;\n   /* Wait for post-boot LP BIST status */\n   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_POSTBOOT, 10000);\n   /* Wait for runtime LP BIST status (repeat in a loop) */\n   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_RUNTIME, 10000);\n\nSee ``samples/idf/`` for the complete working sample.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:zephyr",
+    "title": "Zephyr",
+    "section": "zephyr",
+    "body": "Zephyr uses sysbuild with a dual-image layout (hpcore + lpcore).\n\n**Required Kconfig** (HP ``prj.conf``):\n\n.. code-block:: none\n\n   CONFIG_MBOX=y\n   CONFIG_ESP32_ULP_COPROC_ENABLED=y\n   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y\n   CONFIG_ESP_BIST_HD_AUDIT_QA=y\n\nLP ``remote/prj.conf`` additionally sets the BIST test options and timing:\n\n.. code-block:: none\n\n   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y\n   CONFIG_ESP_BIST_HD_AUDIT_QA=y\n   CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US=5000000\n\n**Sysbuild:**\n\n``sysbuild.cmake`` adds the LP remote project:\n\n.. code-block:: cmake\n\n   ExternalZephyrProject_Add(\n       APPLICATION zephyr_bist_remote\n       SOURCE_DIR ${APP_DIR}/remote\n       BOARD ${SB_CONFIG_ULP_REMOTE_BOARD}\n   )\n   sysbuild_add_dependencies(FLASH zephyr_bist_remote ${DEFAULT_IMAGE})\n\n``Kconfig.sysbuild`` maps boards to lpcore variants:\n\n.. code-block:: none\n\n   config ULP_REMOTE_BOARD\n       string\n       default \"esp32c5_devkitc/esp32c5/lpcore\" if $(BOARD) = \"esp32c5_devkitc\"\n       default \"esp32c6_devkitc/esp32c6/lpcore\" if $(BOARD) = \"esp32c6_devkitc\"\n\n**Devicetree overlays:**\n\nHP overlay (e.g. ``boards/esp32c6_devkitc_esp32c6_hpcore.overlay``):\n\n.. code-block:: dts\n\n   / {\n       chosen {\n           zephyr,ipc_shm = &ipc_shm;\n           zephyr,ipc = &mbox0;\n       };\n       mbox-consumer {\n           compatible = \"vnd,mbox-consumer\";\n           mboxes = <&mbox0 0>, <&mbox0 1>;\n           mbox-names = \"tx\", \"rx\";\n       };\n   };\n   &mbox0 {\n       shared-memory-size = <0x20>;\n   };\n\nLP overlay has identical nodes with **tx/rx channels swapped**:\n``mboxes = <&mbox0 1>, <&mbox0 0>``.\n\n**HP integration** (``src/main.c``):\n\n.. code-block:: c\n\n   k_msleep(200);  /* LP boot settle */\n   bist_hd_agent_start();\n   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_POSTBOOT, 10000);\n\nSee ``samples/zephyr/`` for the complete working sample.",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:nuttx",
+    "title": "NuttX",
+    "section": "nuttx",
+    "body": "**Required Kconfig** (config fragment):\n\n.. code-block:: none\n\n   CONFIG_ESPRESSIF_LP_MAILBOX=y\n   CONFIG_ESPRESSIF_LP_UART=y\n   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y\n   CONFIG_ESP_BIST_HD_AUDIT_QA=y\n\n**ULP image build:**\n\n``CMakeLists.txt`` conditionally includes the ULP build when\n``CONFIG_ESPRESSIF_USE_LP_CORE`` is set, using NuttX ``esp_ulp.cmake``. The\nBIST library is added to ``ULP_APP_C_SRCS`` via ``nuttx.cmake`` or\n``nuttx.mk``.\n\n**HP integration** (``nuttx_bist_main.c``):\n\n.. code-block:: c\n\n   /* Load LP firmware */\n   int ulp_fd = open(\"/dev/ulp\", O_WRONLY);\n   write(ulp_fd, nuttx_bist_bin, nuttx_bist_bin_len);\n   close(ulp_fd);\n\n   sleep(1);  /* mailbox settle */\n\n   bist_hd_agent_start();\n   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_POSTBOOT, 10000);\n\nThe agent transport opens ``/dev/lp_mailbox`` internally (provided by\n``CONFIG_ESPRESSIF_LP_MAILBOX``).\n\nSee ``samples/nuttx/nuttx_bist/`` for the complete working sample.\n\n.. _hd-safe-state-override:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:overriding_safe_state",
+    "title": "Overriding Safe State",
+    "section": "overriding_safe_state",
+    "body": "``bist_hd_safe_state()`` is declared ``__attribute__((weak))``. To drive a\nproduct-specific cut-off before the LP WDT fires, provide a strong definition:\n\n.. code-block:: c\n\n   void bist_hd_safe_state(void)\n   {\n       /* De-energize hazard outputs, open relay, etc. */\n       gpio_set_level(HAZARD_CUT_PIN, 0);\n       /* Then let the LP WDT reset the system. */\n   }\n\n.. _hd-verification:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:off_target_unit_tests",
+    "title": "Off-Target Unit Tests",
+    "section": "off_target_unit_tests",
+    "body": "**Protocol / challenge unit test** (``tests/unit/hd_protocol/``):\n\nValidates encode/decode round-trip, CRC-32, and the challenge answer function.\nRuns host-native via ``cmake`` + ``ctest``; no device required.\n\n**Companion verdict matrix** (``tests/unit/hd_companion/``):\n\nDrives the real ``bist_hd_companion.c`` state machine against a scripted fake\nagent. 13 scenarios cover the judgment logic without hardware:\n\n.. list-table::\n   :header-rows: 1\n   :widths: 35 65\n\n   * - Scenario\n     - What it verifies\n   * - ``ready``\n     - Normal ``AGENT_READY`` handshake accepted\n   * - ``no_ready``\n     - Timeout when no ``AGENT_READY`` arrives\n   * - ``ready_wrong_type``\n     - Companion rejects non-``AGENT_READY`` frame during init\n   * - ``postboot_fail``\n     - Post-boot BIST failure triggers safe state\n   * - ``qa_pass``\n     - Correct Q&A answer accepted\n   * - ``qa_wrong_value``\n     - Wrong answer value triggers safe state\n   * - ``qa_wrong_seq``\n     - Wrong sequence number triggers safe state\n   * - ``qa_wrong_type``\n     - Non-``ANSWER`` response triggers safe state\n   * - ``qa_silent``\n     - No response (timeout) triggers safe state\n   * - ``qa_late``\n     - Answer arrives after window expires\n   * - ``safe_state_latched``\n     - Once in safe state, no further WDT feeds or challenges\n   * - ``runtime_fail``\n     - Runtime BIST failure triggers safe state",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:on_target_fail_closed_tests",
+    "title": "On-Target Fail-Closed Tests",
+    "section": "on_target_fail_closed_tests",
+    "body": "**ESP-IDF** (``tests/integration/hd_idf/``):\n\nThe test application makes the host misbehave; the companion enters safe state;\nthe LP WDT resets the chip. Two configurations:\n\n- ``hd_key_mismatch``: HP is built with ``BIST_HD_CHALLENGE_KEY=0x5A5A5A5A``\n  (a key the LP companion does not share), so the production answer path\n  computes a value the companion rejects.\n- ``hd_starved_agent``: HP withholds its agent past the challenge window\n  (``CONFIG_BIST_HD_TEST_STARVE_AGENT``). The library creates the agent\n  unpinned, so the app holds every HP core above the agent priority; on a\n  multi-core target, starving one core alone would let the agent answer from\n  another.\n\nThe pytest (``pytest_device_hd_idf.py``) asserts:\n\n#. ``test_HD_agent_ready:PASS``\n#. ``test_BIST_postboot:PASS``\n#. ``test_HD_fail_closed_armed:PASS``\n#. ``CPU has been reset by WDT``\n\nTargets: ESP32-C5, ESP32-C6, ESP32-P4.\n\n**Zephyr** (``tests/integration/hd_zephyr/``):\n\nTwister test cases:\n\n- ``bist.hd.selftest`` -- happy path via ztest.\n- ``bist.hd.reset_cause`` -- starvation triggers reboot; second boot checks\n  ``hwinfo`` for ``RESET_WATCHDOG``.\n- ``bist.hd.key_mismatch`` -- HP key mismatch causes WDT reset.\n- ``bist.hd.starved_agent`` -- starvation causes WDT reset (console harness).\n\nPlatforms: ESP32-C5, ESP32-C6.\n\n**Fail-closed stimulus lives in the test application, not in the library.** The\nshipped library contains no test-only branches: a fail-closed build and a\nproduct build differ only in the test app's code and Kconfig. If a\n``CONFIG_*_INJECT_*`` option or an ``inject_fault`` hook reappears under\n``src/bist/``, the gate no longer proves anything about the shipped library.\n\nThe LP companion image is identical in the samples and in the test apps: it is\nthe element under test, so it is always built exactly as a product would build\nit. Every difference is on the HP side.\n\n.. _hd-references:",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:internal",
+    "title": "Internal",
+    "section": "internal",
+    "body": "- :doc:`software_architecture` -- standalone-centric architecture overview\n- :doc:`module_design_and_coding` -- STL algorithm design (CPU, RAM, flash,\n  stack, clock, etc.)\n- :doc:`software_safety_requirements` -- IEC 60730 mapping for the library\n- ``src/bist/include/bist_hd_protocol.h`` -- shared protocol header\n- ``src/bist/bist_hd_challenge.c`` -- Q&A answer function\n- ``src/bist/companion/bist_hd_companion.c`` -- companion state machine\n- ``src/bist/host/bist_hd_agent.c`` -- agent worker loop\n- ``src/bist/Kconfig`` -- Host Diagnostics configuration (lines 189-377)\n- ``samples/idf/`` -- IDF sample (agent/companion, Q&A), happy path\n- ``samples/zephyr/`` -- Zephyr sample, happy path\n- ``samples/nuttx/nuttx_bist/`` -- NuttX sample\n- ``tests/integration/hd_idf/`` -- IDF fail-closed validation\n- ``tests/integration/hd_zephyr/`` -- Zephyr fail-closed validation\n- ``tests/unit/hd_companion/`` -- off-target companion verdict matrix\n- ``tests/unit/hd_protocol/`` -- protocol and challenge unit tests",
+    "source_file": "docs/en/host_diagnostics.rst",
+    "content_type": "doc"
+  },
+  {
+    "id": "doc:host_diagnostics.rst:external",
+    "title": "External",
+    "section": "external",
+    "body": "- IEC 60730-1 Annex H -- Class B control themes (program sequence, time-slot,\n  variable/invariable memory)\n- IEC 61508 -- independent and diverse channels, diagnostic coverage (when\n  industrial SIL claims are in scope; used for independence vocabulary)\n- ISO 26262 -- FFI and mixed-criticality framing (when automotive claims are in\n  scope; used for independence vocabulary)",
+    "source_file": "docs/en/host_diagnostics.rst",
     "content_type": "doc"
   },
   {
     "id": "doc:index.rst:esp_bist_documentation",
     "title": "ESP-BIST Documentation",
     "section": "esp_bist_documentation",
-    "body": "The BIST library is a cmake library with a set of routines designed to verify the integrity and proper operation of the hardware components in Espressif's SoCs. The library includes tests for the CPU registers, configuration and status registers (CSRs), interrupt handling and execution, volatile memory, non-volatile memory, cpu stack, program counter (PC), clock sources and safety related peripherals.\n\nThis documentation provides a comprehensive overview of ESP-BIST, including its software safety requirements, risk assessment, architecture, module design and coding, validation methods, test traceability, coverage analysis, tool qualification, safety case summary, application guidance, and API reference. It also details the project's conformity with IEC 60335-1 Annex R and IEC 60730-1 Annex H (class B) standards.\n\n.. list-table:: Revision History\n   :header-rows: 1\n   :widths: 15 15 70\n\n   * - Version\n     - Date\n     - Description\n   * - v1.0.0\n     - Jan 23, 2026\n     - Initial release\n\n.. only:: html\n\n    To switch to a different SoC target, choose target from the dropdown in the upper left.\n\n.. toctree::\n    :maxdepth: 1\n\n    Get Started <get_started>\n    Software Safety Requirements <software_safety_requirements>\n    Risk Assessment <risk_assessment>\n    Software Architecture <software_architecture>\n    Module Design and Coding <module_design_and_coding>\n    Software Validation <software_validation>\n    Test Traceability Matrix <test_traceability_matrix>\n    Coverage Analysis <coverage_analysis>\n    Tool Qualification <tool_qualification>\n    Safety Case Summary <safety_case_summary>\n    Application Guide <application_guide>\n    API Reference <api>\n    MCP Server <mcp_server>",
+    "body": "The BIST library is a cmake library with a set of routines designed to verify the integrity and proper operation of the hardware components in Espressif's SoCs. The library includes tests for the CPU registers, configuration and status registers (CSRs), interrupt handling and execution, volatile memory, non-volatile memory, cpu stack, program counter (PC), clock sources and safety related peripherals.\n\nThis documentation provides a comprehensive overview of ESP-BIST, including its software safety requirements, risk assessment, architecture, module design and coding, validation methods, test traceability, coverage analysis, tool qualification, safety case summary, application guidance, and API reference. It also details the project's conformity with IEC 60335-1 Annex R and IEC 60730-1 Annex H (class B) standards.\n\n.. list-table:: Revision History\n   :header-rows: 1\n   :widths: 15 15 70\n\n   * - Version\n     - Date\n     - Description\n   * - v1.0.0\n     - Jan 23, 2026\n     - Initial release\n\n.. only:: html\n\n    To switch to a different SoC target, choose target from the dropdown in the upper left.\n\n.. toctree::\n    :maxdepth: 1\n\n    Get Started <get_started>\n    Software Safety Requirements <software_safety_requirements>\n    Risk Assessment <risk_assessment>\n    Software Architecture <software_architecture>\n    Module Design and Coding <module_design_and_coding>\n    Software Validation <software_validation>\n    Test Traceability Matrix <test_traceability_matrix>\n    Coverage Analysis <coverage_analysis>\n    Tool Qualification <tool_qualification>\n    Safety Case Summary <safety_case_summary>\n    Application Guide <application_guide>\n    Host Diagnostics <host_diagnostics>\n    API Reference <api>\n    MCP Server <mcp_server>",
     "source_file": "docs/en/index.rst",
     "content_type": "doc"
   },
@@ -1323,7 +1619,7 @@
     "id": "doc:software_architecture.rst:architecture_overview_and_layering",
     "title": "Architecture Overview and Layering",
     "section": "architecture_overview_and_layering",
-    "body": "The ESP-BIST standalone firmware uses a three-layer architecture:\n\n- **Application layer** \u2014 Integrates BIST tests and fail-safe logic (e.g., ``samples/standalone/main.c``). Runs post-boot tests, registers watchdog and crystal failure callbacks, initializes stack overflow detection, and runs runtime tests in the main loop.\n- **BIST library layer** (``src/bist/``) \u2014 Core safety test routines and driver wrappers:\n\n  - Core modules ``core/cpu/``, ``core/interrupt/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``\n  - Driver layer ``drivers/`` for watchdog, XT WDT, GPIO, timer\n  - Public API headers ``src/bist/include/`` and ``src/bist/core/include/`` expose test functions and error codes\n- **SoC and HAL layer** (``soc/{IDF_TARGET_PATH_NAME}/``, ``components/``) \u2014 Startup code, vector table, linker script, minimal HAL stubs, and memory layout control.",
+    "body": "This chapter describes the **standalone** bare-metal architecture\n(``samples/standalone``). For the LP-companion plus HP-agent supervision\narchitecture (ESP-IDF, Zephyr, NuttX), see :doc:`host_diagnostics`.\n\nThe ESP-BIST standalone firmware uses a three-layer architecture:\n\n- **Application layer** \u2014 Integrates BIST tests and fail-safe logic (e.g., ``samples/standalone/main.c``). Runs post-boot tests, registers watchdog and crystal failure callbacks, initializes stack overflow detection, and runs runtime tests in the main loop.\n- **BIST library layer** (``src/bist/``) \u2014 Core safety test routines and driver wrappers:\n\n  - Core modules ``core/cpu/``, ``core/interrupt/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``\n  - Driver layer ``drivers/`` for watchdog, XT WDT, GPIO, timer\n  - Public API headers ``src/bist/include/`` and ``src/bist/core/include/`` expose test functions and error codes\n- **SoC and HAL layer** (``soc/{IDF_TARGET_PATH_NAME}/``, ``components/``) \u2014 Startup code, vector table, linker script, minimal HAL stubs, and memory layout control.",
     "source_file": "docs/en/software_architecture.rst",
     "content_type": "doc"
   },
@@ -2576,10 +2872,10 @@
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:esp_bist_zephyr_lp_core_self_test_sample",
-    "title": "ESP-BIST Zephyr LP Core Self-Test Sample",
-    "section": "esp_bist_zephyr_lp_core_self_test_sample",
-    "body": "This sample demonstrates running [ESP-BIST](../../README.md) safety tests on the\nESP32 Low-Power (LP) core under Zephyr RTOS, with results validated on the\nHigh-Performance (HP) core using the `ztest` framework.",
+    "id": "doc:README.md:esp_bist_zephyr_host_diagnostics_sample",
+    "title": "ESP-BIST Zephyr Host Diagnostics Sample",
+    "section": "esp_bist_zephyr_host_diagnostics_sample",
+    "body": "This sample demonstrates [ESP-BIST](../../README.md) Host Diagnostics on Zephyr:\nthe ESP32 Low-Power (LP) core runs the safety companion, and the\nHigh-Performance (HP) core runs the host agent and prints what the companion\nreports. It mirrors [`samples/idf`](../idf) so both platforms read the same way.\n\nIt is deliberately the happy path only, so it works as a starting point for your\nown application. The assertions and the fail-closed validation live in\n[`tests/integration/hd_zephyr`](../../tests/integration/hd_zephyr).\n\nHost Diagnostics is companion supervision of a Quality-Managed host OS, not a\nSafety OS. The LP core is on the same die as the HP core, so it is **not** a\nsafety island or a fully independent industrial safety channel; see\n[`HOST_DIAGNOSTICS_ARCHITECTURE.md`](../../HOST_DIAGNOSTICS_ARCHITECTURE.md) \u00a78.3.",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
@@ -2587,15 +2883,15 @@
     "id": "doc:README.md:overview",
     "title": "Overview",
     "section": "overview",
-    "body": "The sample is a **sysbuild** multi-image application with two firmware images:\n\n| Image | Core | Role |\n|-------|------|------|\n| `zephyr_bist` (main) | HP core | Receives test results via mailbox, runs `ztest` assertions |\n| `zephyr_bist_remote` | LP core | Executes ESP-BIST tests, reports results via mailbox |",
+    "body": "The sample is a **sysbuild** multi-image application with two firmware images:\n\n| Image | Core | Role |\n|-------|------|------|\n| `zephyr_bist` (main) | HP core | Host agent: answers audits, prints companion status |\n| `zephyr_bist_remote` | LP core | Safety companion: LP self-BIST, host audit schedule, safe state |",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:intercore_handshake",
-    "title": "Intercore handshake",
-    "section": "intercore_handshake",
-    "body": "The HP and LP cores synchronise through the hardware mailbox (`mbox`):\n\n1. Both cores boot independently after reset.\n2. The LP core registers its mailbox RX callback and **waits** for a\n   `BIST_MSG_READY` message from the HP core.\n3. The HP core registers its mailbox RX callback and sends `BIST_MSG_READY`.\n4. The LP core receives the ready signal, executes tests, and sends results back.\n\nThis handshake ensures no results are lost regardless of boot timing or\n`CONFIG_BOOT_DELAY` values used by CI tooling.",
+    "id": "doc:README.md:supervision_loop",
+    "title": "Supervision loop",
+    "section": "supervision_loop",
+    "body": "1. Both cores boot independently after reset.\n2. The LP companion initialises the mailbox and **waits** for `AGENT_READY`.\n3. The HP agent starts, sends `AGENT_READY`, and starts its high-priority\n   worker thread.\n4. The companion runs post-boot LP BIST, reports `LP_STATUS`, and arms the LP\n   watchdog.\n5. Each runtime round the companion re-runs LP BIST, reports `LP_STATUS`, and\n   (with `CONFIG_ESP_BIST_HD_AUDIT_QA`) issues one Q&A challenge that the agent\n   must answer correctly inside `CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US`.\n6. Any failed audit puts the companion in safe state: it stops feeding the LP\n   watchdog, which resets the chip.\n\nFrames travel over the Espressif `mbox` shared-memory window plus doorbell\ninterrupt, so the overlays reserve one 4-word frame per direction\n(`shared-memory-size = <0x20>`).",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
@@ -2603,7 +2899,7 @@
     "id": "doc:README.md:test_phases",
     "title": "Test phases",
     "section": "test_phases",
-    "body": "The LP core runs tests in two phases:\n\n**Post-boot** (runs once after handshake):\n- CPU register test\n- RAM March-X test\n- RAM Abraham full test\n- Flash CRC integrity test\n\n**Runtime** (runs periodically every 500 ms):\n- CPU register test\n- RAM March-A test\n- RAM Abraham test (one partition pair per round)\n- Stack overflow check\n\nResults are encoded as a `uint32_t` bitmask:\n\n| Bit | Meaning |\n|-----|---------|\n| 0 | CPU register test passed |\n| 1 | CPU CSR register test passed |\n| 2 | RAM March-A test passed |\n| 3 | RAM March-X test passed |\n| 4 | Flash CRC test passed |\n| 5 | Stack overflow check passed |\n| 6 | RAM Abraham test passed |\n| 30 | Runtime flag (distinguishes runtime from post-boot) |\n| 31 | Done sentinel |\n\nLP builds default `CONFIG_ESP_BIST_RAM_PARTITION_SIZE` to **256 words** (1 KiB partitions, 2 KiB backup buffer) to fit within the ~16 KiB LP SRAM.",
+    "body": "**Post-boot** (runs once, before the LP watchdog is armed):\n- CPU register test\n- RAM March-X test\n- RAM Abraham full test\n- Flash CRC integrity test\n\n**Runtime** (every `CONFIG_ESP_BIST_RUNTIME_TEST_INTERVAL_MS`):\n- CPU register test\n- RAM March-A test\n- RAM Abraham test (one partition pair per round)\n- Stack overflow check\n- Host Q&A challenge\n\nResults are encoded as a `uint32_t` bitmask (see `bist_hd_protocol.h`):\n\n| Bit | Meaning |\n|-----|---------|\n| 0 | CPU register test passed |\n| 1 | CPU CSR register test passed |\n| 2 | RAM March-A test passed |\n| 3 | RAM March-X test passed |\n| 4 | Flash CRC test passed |\n| 5 | Stack overflow check passed |\n| 6 | RAM Abraham test passed |\n| 30 | Runtime round |\n| 31 | Post-boot round |\n\nThe LP image sets `CONFIG_ESP_BIST_RAM_PARTITION_SIZE=64` (512 B partitions,\n512 B backup buffer) so the companion fits in the ~16 KiB LP SRAM.",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
@@ -2643,15 +2939,15 @@
     "id": "doc:README.md:running",
     "title": "Running",
     "section": "running",
-    "body": "After flashing, the device resets and the test suite runs automatically. Connect\nto the HP core serial port (typically `/dev/ttyUSB0` at 115200 baud) to see the\n`ztest` output:\n\n```\n*** Booting Zephyr OS build v4.4.0 ***\nRunning TESTSUITE bist_lp\n===================================================================\nSTART - test_postboot_cpu_reg\n PASS - test_postboot_cpu_reg in 0.001 seconds\n===================================================================\nSTART - test_postboot_flash_crc\n PASS - test_postboot_flash_crc in 0.001 seconds\n===================================================================\nSTART - test_postboot_ram_abraham\n PASS - test_postboot_ram_abraham in 0.001 seconds\n===================================================================\nSTART - test_postboot_ram_march_x\n PASS - test_postboot_ram_march_x in 0.001 seconds\n===================================================================\nSTART - test_runtime_cpu_reg\n PASS - test_runtime_cpu_reg in 0.001 seconds\n===================================================================\nSTART - test_runtime_ram_abraham\n PASS - test_runtime_ram_abraham in 0.001 seconds\n===================================================================\nSTART - test_runtime_ram_march_a\n PASS - test_runtime_ram_march_a in 0.001 seconds\n===================================================================\nSTART - test_runtime_stack_check\n PASS - test_runtime_stack_check in 0.001 seconds\n===================================================================\nTESTSUITE bist_lp succeeded\n```\n\nThe LP core serial port (typically `/dev/ttyUSB1`) shows the BIST execution log:\n\n```\n[LP BIST] Waiting for HP core ready signal...\n[LP BIST] HP core ready, starting tests\n[LP BIST] === Post-boot tests ===\n[LP BIST] CPU reg test... PASS (0)\n[LP BIST] RAM March-X test... PASS (0)\n[LP BIST] RAM Abraham full test... PASS (0)\n[LP BIST] Flash CRC test... PASS (0)\n[LP BIST] === Runtime tests (periodic) ===\n[LP BIST] CPU reg test... PASS (0)\n[LP BIST] RAM March-A test... PASS (0)\n[LP BIST] RAM Abraham test... PASS (0)\n[LP BIST] Stack overflow check... PASS (0)\n```",
+    "body": "After flashing, the device resets and the sample runs automatically. Connect to\nthe HP core serial port (typically `/dev/ttyUSB0` at 115200 baud):\n\n```\n*** Booting Zephyr OS build v4.4.0 ***\nHost Diagnostic Agent started\ntest_HD_agent_ready:PASS\n=== Post-boot BIST results ===\ntest_BIST_cpu_reg:PASS\ntest_BIST_ram_march_x:PASS\ntest_BIST_ram_abraham:PASS\ntest_BIST_flash_crc:PASS\n--- Runtime loop 1/5 ---\n=== Runtime BIST results ===\ntest_BIST_runtime_cpu_reg:PASS\ntest_BIST_runtime_ram_march_a:PASS\ntest_BIST_runtime_ram_abraham:PASS\ntest_BIST_runtime_stack_check:PASS\n...\ntest_HD_challenge:PASS\nBIST_RESULT:PASS\n```\n\nCompleting all five loops is itself the Q&A evidence: the companion issues one\nchallenge per round and stops reporting once it enters safe state, so a wrong or\nlate answer would end the output early.\n\n`sample.yaml` wraps this in a twister console test so CI keeps the sample honest:\n\n```bash\nwest twister -p esp32c6_devkitc/esp32c6/hpcore \\\n    -T /path/to/esp-bist/samples/zephyr \\\n    --device-testing --flash-before \\\n    --device-serial /dev/ttyUSB0 --west-flash --west-runner esp32\n```",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
   {
-    "id": "doc:README.md:running_with_twister",
-    "title": "Running with Twister",
-    "section": "running_with_twister",
-    "body": "```bash\nwest twister -p esp32c6_devkitc/esp32c6/hpcore \\\n    -T /path/to/esp-bist/samples/zephyr \\\n    --device-testing --flash-before \\\n    --device-serial /dev/ttyUSB0 --west-flash --west-runner esp32 \\\n```",
+    "id": "doc:README.md:validating_fail_closed_behaviour",
+    "title": "Validating fail-closed behaviour",
+    "section": "validating_fail_closed_behaviour",
+    "body": "Making the host misbehave \u2014 answering with the wrong key, or missing the\nchallenge window \u2014 belongs to\n[`tests/integration/hd_zephyr`](../../tests/integration/hd_zephyr), together with\nthe ztest assertions on the companion's verdict. Keeping it out of here means a\nfail-closed build and a product build differ only in that test app; nothing in\n`src/bist/` or in this sample has a test branch.",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   },
@@ -2659,7 +2955,7 @@
     "id": "doc:README.md:project_structure",
     "title": "Project structure",
     "section": "project_structure",
-    "body": "```\nsamples/zephyr/\n\u251c\u2500\u2500 CMakeLists.txt            # HP core build\n\u251c\u2500\u2500 Kconfig.sysbuild          # Auto-selects LP core board\n\u251c\u2500\u2500 prj.conf                  # HP core config (ztest, mbox, ULP)\n\u251c\u2500\u2500 sysbuild.cmake            # Adds LP core as external project\n\u251c\u2500\u2500 testcase.yaml             # Twister test definition\n\u251c\u2500\u2500 src/\n\u2502   \u2514\u2500\u2500 main.c                # HP core: mbox RX + ztest assertions\n\u251c\u2500\u2500 boards/\n\u2502   \u251c\u2500\u2500 esp32c5_devkitc_esp32c5_hpcore.overlay\n\u2502   \u2514\u2500\u2500 esp32c6_devkitc_esp32c6_hpcore.overlay\n\u2514\u2500\u2500 remote/                   # LP core application\n    \u251c\u2500\u2500 CMakeLists.txt\n    \u251c\u2500\u2500 prj.conf              # LP core config (ESP-BIST tests)\n    \u251c\u2500\u2500 src/\n    \u2502   \u2514\u2500\u2500 main.c            # LP core: handshake + BIST tests\n    \u2514\u2500\u2500 boards/\n        \u251c\u2500\u2500 esp32c5_devkitc_esp32c5_lpcore.overlay\n        \u2514\u2500\u2500 esp32c6_devkitc_esp32c6_lpcore.overlay\n```",
+    "body": "```\nsamples/zephyr/\n\u251c\u2500\u2500 CMakeLists.txt            # HP core build\n\u251c\u2500\u2500 Kconfig.sysbuild          # Auto-selects LP core board\n\u251c\u2500\u2500 prj.conf                  # HP core config (mbox, ULP, Host Diagnostics)\n\u251c\u2500\u2500 sysbuild.cmake            # Adds LP core as external project\n\u251c\u2500\u2500 sample.yaml               # Twister console smoke test\n\u251c\u2500\u2500 src/\n\u2502   \u2514\u2500\u2500 main.c                # HP core: host agent + status reporting\n\u251c\u2500\u2500 boards/\n\u2502   \u251c\u2500\u2500 esp32c5_devkitc_esp32c5_hpcore.overlay\n\u2502   \u2514\u2500\u2500 esp32c6_devkitc_esp32c6_hpcore.overlay\n\u2514\u2500\u2500 remote/                   # LP core application\n    \u251c\u2500\u2500 CMakeLists.txt\n    \u251c\u2500\u2500 prj.conf              # LP core config (ESP-BIST + companion)\n    \u251c\u2500\u2500 src/\n    \u2502   \u2514\u2500\u2500 main.c            # LP core: companion init + runtime loop\n    \u2514\u2500\u2500 boards/\n        \u251c\u2500\u2500 esp32c5_devkitc_esp32c5_lpcore.overlay\n        \u2514\u2500\u2500 esp32c6_devkitc_esp32c6_lpcore.overlay\n```",
     "source_file": "samples/zephyr/README.md",
     "content_type": "doc"
   }

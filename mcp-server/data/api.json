@@ -100,6 +100,335 @@
     ]
   },
   {
+    "function": "bist_hd_challenge_answer",
+    "signature": "uint32_t bist_hd_challenge_answer(uint32_t challenge, uint16_t seq)",
+    "module": "unknown",
+    "description": "Compute the expected challenge answer.",
+    "params": [
+      {
+        "name": "challenge",
+        "description": "Companion-issued challenge word"
+      },
+      {
+        "name": "seq",
+        "description": "Protocol sequence number mixed into the digest"
+      }
+    ],
+    "returns": "f(challenge, seq)",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_challenge.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_crc32_update",
+    "signature": "uint32_t bist_hd_crc32_update(const uint8_t *data, size_t len, uint32_t crc)",
+    "module": "unknown",
+    "description": "Incremental CRC-32 update.",
+    "params": [
+      {
+        "name": "data",
+        "description": "Input bytes"
+      },
+      {
+        "name": "len",
+        "description": "Length in bytes"
+      },
+      {
+        "name": "crc",
+        "description": "Previous CRC (0 to start a new digest)"
+      }
+    ],
+    "returns": "Updated CRC-32",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_crc.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_crc32",
+    "signature": "uint32_t bist_hd_crc32(const uint8_t *data, size_t len)",
+    "module": "unknown",
+    "description": "CRC-32 of a contiguous buffer (initial crc = 0).",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_crc.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_msg_encode",
+    "signature": "int bist_hd_msg_encode(const bist_hd_msg_t *msg, uint32_t *words, size_t max_words,\n                       size_t *out_nwords)",
+    "module": "unknown",
+    "description": "Host-audit catalog identifiers (equal rank; product enables a subset).",
+    "params": [],
+    "returns": "0 on success, -1 on invalid args / buffer too small",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": [
+      "CONFIG_NVM"
+    ]
+  },
+  {
+    "function": "bist_hd_msg_decode",
+    "signature": "int bist_hd_msg_decode(const uint32_t *words, size_t nwords, bist_hd_msg_t *msg)",
+    "module": "unknown",
+    "description": "Decode mailbox words into a message.",
+    "params": [],
+    "returns": "0 on success, -1 on invalid frame",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_frame_nwords",
+    "signature": "size_t bist_hd_frame_nwords(uint32_t word0)",
+    "module": "unknown",
+    "description": "Frame length implied by its first word.",
+    "params": [],
+    "returns": "Word count of the frame, or 0 if @p word0 starts no valid frame",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_seq_check",
+    "signature": "bool bist_hd_seq_check(uint16_t expected, uint16_t actual)",
+    "module": "unknown",
+    "description": "Return true if @p actual equals @p expected.",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_seq_is_stale",
+    "signature": "bool bist_hd_seq_is_stale(uint16_t last_accepted, uint16_t incoming)",
+    "module": "unknown",
+    "description": "Return true if @p incoming is stale or a duplicate of @p last_accepted.",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_timeout_expired",
+    "signature": "bool bist_hd_timeout_expired(uint32_t now_ticks, uint32_t deadline_ticks)",
+    "module": "unknown",
+    "description": "Return true if @p now_ticks is at or past @p deadline_ticks.",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_hd_audit_id_t",
+    "signature": "typedef enum { ... } bist_hd_audit_id_t",
+    "module": "core",
+    "description": "Host-audit catalog identifiers (equal rank; product enables a subset).",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_HD_AUDIT_QA",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_CHECKPOINT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_RAM",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_FLASH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_CPU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_CSR",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_STACK",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_CLOCK",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_WDT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_PC",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_IRQ_LATENCY",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_GPIO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_ADC",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_CONFIG_NVM",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_IPC",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_SECURE_BOOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_DUAL_CHANNEL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_AUDIT_COUNT",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_hd_msg_type_t",
+    "signature": "typedef enum { ... } bist_hd_msg_type_t",
+    "module": "core",
+    "description": "Typed Host Diagnostics message kinds.",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/include/bist_hd_protocol.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_HD_MSG_AGENT_READY",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_CHALLENGE",
+        "value": 2,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_ANSWER",
+        "value": 3,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_DIAG_REQ",
+        "value": 4,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_DIAG_RSP",
+        "value": 5,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_CHECKPOINT",
+        "value": 6,
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_SAFE_STATE_NOTIFY",
+        "value": 7,
+        "description": ""
+      },
+      {
+        "name": "LP",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "result",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "bitmask",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "in",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "payload",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "POSTBOOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "RUNTIME",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "flag",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "set",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_HD_MSG_LP_STATUS",
+        "value": 8,
+        "description": ""
+      }
+    ]
+  },
+  {
     "function": "bist_metrics",
     "signature": "",
     "module": "core",
