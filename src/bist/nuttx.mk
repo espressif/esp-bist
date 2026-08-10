@@ -37,6 +37,7 @@ ifeq ($(CONFIG_ESP_BIST_MEMORY_RAM_TEST),y)
 ULP_APP_C_SRCS += $(BIST_DIR)/core/memory/bist_ram.c
 endif
 ifeq ($(CONFIG_ESP_BIST_MEMORY_FLASH_TEST),y)
+ULP_APP_C_SRCS += $(BIST_DIR)/bist_hd_crc.c
 ULP_APP_C_SRCS += $(BIST_DIR)/core/memory/bist_flash.c
 endif
 

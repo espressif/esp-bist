@@ -1,4 +1,4 @@
-#  Copyright (c) 2025 Espressif Systems (Shanghai) Co., Ltd.
+#  Copyright (c) 2025-2026 Espressif Systems (Shanghai) Co., Ltd.
 
 #  This file is part of Espressif's BIST (Built-In Self Test) Library.
 #  BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License
@@ -17,26 +17,21 @@ message("Building Espressif's Built-In Self Test (BIST) Library for ${SOC_TARGET
 
 get_filename_component(_sdkconfig_dir ${SDKCONFIG_HEADER} DIRECTORY)
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_stl.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_hd.cmake)
+
 # --- Source selection ---
 
 set(bist_src
     drivers/lp_wdt.c
 )
 
-if(CONFIG_ESP_BIST_CPU_REG_TEST)
-    list(APPEND bist_src core/cpu/bist_cpu_regs.c)
-endif()
-if(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
-    list(APPEND bist_src core/cpu/bist_cpu_csr_regs.c)
-endif()
-if(CONFIG_ESP_BIST_STACK_TEST)
-    list(APPEND bist_src core/cpu/bist_cpu_stack.c)
-endif()
-if(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
-    list(APPEND bist_src core/memory/bist_ram.c)
-endif()
-if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
-    list(APPEND bist_src core/memory/bist_flash.c)
+bist_collect_sources(_bist_srcs)
+list(APPEND bist_src ${_bist_srcs})
+
+if(CONFIG_ESP_BIST_HOST_DIAGNOSTICS)
+    bist_hd_collect_lp_sources("idf" _bist_hd_lp_srcs _bist_hd_lp_incs)
+    list(APPEND bist_src ${_bist_hd_lp_srcs})
 endif()
 
 # --- Library ---
@@ -82,20 +77,19 @@ target_compile_options(bist_esp
     "-Wno-declaration-after-statement"
 )
 
+bist_include_dirs(_bist_incs)
+set(_bist_esp_public_incs
+    ${_bist_incs}
+    ${_sdkconfig_dir}
+    ../soc/${SOC_TARGET}/include
+)
+if(CONFIG_ESP_BIST_HOST_DIAGNOSTICS)
+    list(APPEND _bist_esp_public_incs ${_bist_hd_lp_incs})
+endif()
+
 target_include_directories(bist_esp
     PUBLIC
-    ulp_include
-    ${_sdkconfig_dir}
-    include
-    core/include
-    core/cpu/include
-    core/memory/include
-    core/clock/include
-    core/wdt/include
-    core/io/include
-    core/interrupt/include
-    drivers/include
-    ../soc/${SOC_TARGET}/include
+    ${_bist_esp_public_incs}
     ${IDF_PATH}/components/riscv/include
     ${IDF_PATH}/components/esp_common/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}

@@ -16,38 +16,20 @@ if(NOT CHIP_SERIES)
   string(REPLACE "\"" "" CHIP_SERIES "${CONFIG_ESPRESSIF_CHIP_SERIES}")
 endif()
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_stl.cmake)
+
 list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/drivers/lp_wdt.c")
 
-if(CONFIG_ESP_BIST_CPU_REG_TEST)
-  list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/core/cpu/bist_cpu_regs.c")
-endif()
-if(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
-  list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/core/cpu/bist_cpu_csr_regs.c")
-endif()
-if(CONFIG_ESP_BIST_STACK_TEST)
-  list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/core/cpu/bist_cpu_stack.c")
-endif()
-if(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
-  list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/core/memory/bist_ram.c")
-endif()
-if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
-  list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/core/memory/bist_flash.c")
-endif()
+bist_collect_sources(_bist_srcs)
+foreach(_src IN LISTS _bist_srcs)
+  list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/${_src}")
+endforeach()
 
-list(
-  APPEND
-  ULP_APP_INCLUDES
-  "${BIST_DIR}/ulp_include"
-  "${BIST_DIR}/include"
-  "${BIST_DIR}/core/include"
-  "${BIST_DIR}/core/cpu/include"
-  "${BIST_DIR}/core/memory/include"
-  "${BIST_DIR}/core/clock/include"
-  "${BIST_DIR}/core/wdt/include"
-  "${BIST_DIR}/core/io/include"
-  "${BIST_DIR}/core/interrupt/include"
-  "${BIST_DIR}/drivers/include"
-  "${ESP_BIST_ROOT}/src/soc/${CHIP_SERIES}/include")
+bist_include_dirs(_bist_incs)
+foreach(_inc IN LISTS _bist_incs)
+  list(APPEND ULP_APP_INCLUDES "${BIST_DIR}/${_inc}")
+endforeach()
+list(APPEND ULP_APP_INCLUDES "${ESP_BIST_ROOT}/src/soc/${CHIP_SERIES}/include")
 
 string(TOUPPER "${CHIP_SERIES}" _bist_soc_upper)
 list(APPEND ULP_EXTRA_DEFINES NUTTX_ESP_BIST_MODULE
