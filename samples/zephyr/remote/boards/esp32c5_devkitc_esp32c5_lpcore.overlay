@@ -19,7 +19,8 @@
 
 &mbox0 {
 	status = "okay";
-	shared-memory-size = <0x8>;
+	/* One Host Diagnostics frame (4 words) per direction. */
+	shared-memory-size = <0x20>;
 };
 
 &lp_uart {

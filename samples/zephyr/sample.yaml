@@ -1,0 +1,31 @@
+sample:
+  name: ESP-BIST Host Diagnostics
+  description: >
+    LP-core Class B self-tests supervised from a Zephyr HP application, using
+    the Host Diagnostic Agent and its LP companion.
+common:
+  sysbuild: true
+  integration_platforms:
+    - esp32c5_devkitc/esp32c5/hpcore
+    - esp32c6_devkitc/esp32c6/hpcore
+  platform_allow:
+    - esp32c5_devkitc/esp32c5/hpcore
+    - esp32c6_devkitc/esp32c6/hpcore
+  tags:
+    - bist
+    - safety
+tests:
+  # Smoke test for the sample as shipped. The companion verdict is asserted in
+  # tests/integration/hd_zephyr; here we only confirm the sample runs and
+  # reports, so it stays a starting point rather than a test suite.
+  sample.bist.host_diagnostics:
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "test_HD_agent_ready:PASS"
+        - "test_BIST_cpu_reg:PASS"
+        - "test_BIST_runtime_cpu_reg:PASS"
+        - "Runtime loop 5/5"
+        - "BIST_RESULT:PASS"
