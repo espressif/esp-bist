@@ -187,7 +187,7 @@ config ESP_BIST_METRICS
       execution time, CPU cycles, and instruction counts.
 
 menu "Host Diagnostics"
-    depends on IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE
+    depends on IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE || NUTTX_ESP_BIST_MODULE
 
 config ESP_BIST_HOST_DIAGNOSTICS
     bool "Enable Host Diagnostics"

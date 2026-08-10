@@ -17,6 +17,7 @@ if(NOT CHIP_SERIES)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_stl.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_hd.cmake)
 
 list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/drivers/lp_wdt.c")
 
@@ -24,6 +25,16 @@ bist_collect_sources(_bist_srcs)
 foreach(_src IN LISTS _bist_srcs)
   list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/${_src}")
 endforeach()
+
+if(CONFIG_ESP_BIST_HOST_DIAGNOSTICS)
+  bist_hd_collect_lp_sources("nuttx" _bist_hd_lp_srcs _bist_hd_lp_incs)
+  foreach(_src IN LISTS _bist_hd_lp_srcs)
+    list(APPEND ULP_APP_C_SRCS "${BIST_DIR}/${_src}")
+  endforeach()
+  foreach(_inc IN LISTS _bist_hd_lp_incs)
+    list(APPEND ULP_APP_INCLUDES "${BIST_DIR}/${_inc}")
+  endforeach()
+endif()
 
 bist_include_dirs(_bist_incs)
 foreach(_inc IN LISTS _bist_incs)
