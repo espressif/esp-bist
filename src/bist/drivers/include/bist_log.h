@@ -23,9 +23,9 @@
  * - **HP core (standalone / IDF application):** maps to `ESP_EARLY_LOGx` so
  *   logging works before the full ESP-IDF log subsystem is initialized.
  * - **LP core / Zephyr:** maps to `printk()` with a `[level][tag]` prefix.
- *   Debug and verbose levels are compiled out to reduce LP firmware size.
+ *   Debug is compiled out unless `CONFIG_ESP_BIST_LP_DEBUG_LOG` is set.
  * - **LP core / IDF (ULP, `IS_ULP_COCPU`):** maps to `lp_core_printf()`
- *   with a `[level][tag]` prefix.
+ *   with a `[level][tag]` prefix. Same debug gating as Zephyr.
  *
  * Include this header instead of `esp_log.h` in BIST sources so the same
  * logging calls work on both cores and frameworks.
@@ -39,6 +39,10 @@
 #include "ulp_lp_core_print.h"
 #else
 #include "esp_log.h"
+#endif
+
+#if defined(IS_ULP_COCPU) || defined(__ZEPHYR__)
+#include "sdkconfig.h"
 #endif
 
 #undef ESP_LOGE
@@ -66,8 +70,13 @@
 /** @brief Log an info message on the LP core (Zephyr) */
 #define ESP_LOGI(tag, format, ...) printk("[I][%s] " format "\r\n", tag, ##__VA_ARGS__)
 
-/** @brief Debug logging disabled on LP core */
+#if defined(CONFIG_ESP_BIST_LP_DEBUG_LOG) && CONFIG_ESP_BIST_LP_DEBUG_LOG
+/** @brief Log a debug message on the LP core (Zephyr) */
+#define ESP_LOGD(tag, format, ...) printk("[D][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Debug logging disabled on LP core unless CONFIG_ESP_BIST_LP_DEBUG_LOG */
 #define ESP_LOGD(tag, format, ...)
+#endif
 
 /** @brief Verbose logging disabled on LP core */
 #define ESP_LOGV(tag, format, ...)
@@ -83,8 +92,13 @@
 /** @brief Log an info message on the LP core */
 #define ESP_LOGI(tag, format, ...) lp_core_printf("[I][%s] " format "\r\n", tag, ##__VA_ARGS__)
 
-/** @brief Debug logging disabled on LP core */
+#if defined(CONFIG_ESP_BIST_LP_DEBUG_LOG) && CONFIG_ESP_BIST_LP_DEBUG_LOG
+/** @brief Log a debug message on the LP core */
+#define ESP_LOGD(tag, format, ...) lp_core_printf("[D][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Debug logging disabled on LP core unless CONFIG_ESP_BIST_LP_DEBUG_LOG */
 #define ESP_LOGD(tag, format, ...)
+#endif
 
 /** @brief Verbose logging disabled on LP core */
 #define ESP_LOGV(tag, format, ...)

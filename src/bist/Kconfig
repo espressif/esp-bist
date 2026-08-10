@@ -114,6 +114,13 @@ config ESP_BIST_WDT_TIMEOUT_US
       timeout via lp_wdt_init(). On HP core / standalone builds, this configures
       the main watchdog timer (MWDT).
 
+config ESP_BIST_LP_DEBUG_LOG
+    bool "Enable LP-core debug logging (ESP_LOGD)"
+    depends on ESP_BIST && (IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE)
+    help
+      Compile in ESP_LOGD output on the LP core. Disabled by default to keep
+      LP firmware small (~16 KiB SRAM).
+
 config BIST_FLASH_TEST_CHUNK_SIZE
     hex "Flash Test Chunk Size"
     depends on ESP_BIST && ESP_BIST_MEMORY_FLASH_TEST
@@ -178,3 +185,191 @@ config ESP_BIST_METRICS
     help
       Enable the collection of performance metrics during BIST operations, such as
       execution time, CPU cycles, and instruction counts.
+
+menu "Host Diagnostics"
+    depends on IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE
+
+config ESP_BIST_HOST_DIAGNOSTICS
+    bool "Enable Host Diagnostics"
+    help
+      Enable companion supervision of a QM host OS via the Host Diagnostics
+      agent. The LP companion schedules host audits and
+      owns safe-state decisions; the host only collaborates.
+
+menu "Host Diagnostics Audits"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+
+config ESP_BIST_HD_AUDIT_QA
+    bool "Q&A challenge / window"
+    default y
+    help
+      Companion issues a challenge; host must answer f(challenge, seq) inside
+      the configured window.
+
+config ESP_BIST_HD_AUDIT_CHECKPOINT
+    bool "Alive / deadline / logical checkpoints"
+    help
+      Host reports checkpoints; companion tracks set, order, and deadlines.
+
+config ESP_BIST_HD_AUDIT_RAM
+    bool "Host RAM March"
+    select ESP_BIST_MEMORY_RAM_TEST
+    help
+      Host runs March tests on an HP DRAM region under companion trigger.
+      Requires HP linker symbols for the test region and safe stack (later).
+
+config ESP_BIST_HD_AUDIT_FLASH
+    bool "Host flash / image CRC"
+    select ESP_BIST_MEMORY_FLASH_TEST
+    help
+      Host computes CRC of HP .flash.text on DIAG_REQ; companion compares
+      against a build-injected golden. Host PASS alone is never trusted.
+      Not wired yet (challenge-only Host Diagnostics).
+
+config ESP_BIST_HD_AUDIT_CPU
+    bool "Host CPU register test"
+    select ESP_BIST_CPU_REG_TEST
+    help
+      Host runs CPU general-purpose register tests under companion trigger.
+
+config ESP_BIST_HD_AUDIT_CSR
+    bool "Host CSR / PMP-PMA config audit"
+    select ESP_BIST_CPU_CSR_REG_TEST
+    help
+      Host runs CSR (and related config) diagnostics under companion trigger.
+
+config ESP_BIST_HD_AUDIT_STACK
+    bool "Stack overflow / canary / watermark"
+    select ESP_BIST_STACK_TEST
+    help
+      Host stack integrity check, companion-demandable.
+
+config ESP_BIST_HD_AUDIT_CLOCK
+    bool "Clock / crystal drift"
+    help
+      Clock monitoring for the host time base (FTTI integrity). May use
+      companion independent time-slot and/or host measurement.
+
+config ESP_BIST_HD_AUDIT_WDT
+    bool "Host WDT path check"
+    help
+      Host reports armed/feed counters; companion checks the pattern.
+
+config ESP_BIST_HD_AUDIT_PC
+    bool "PC / program-flow sample"
+    help
+      Host program-counter / program-flow sample under companion trigger.
+
+config ESP_BIST_HD_AUDIT_IRQ_LATENCY
+    bool "Interrupt latency / storm bound"
+    help
+      Companion measures challenge-to-answer latency against a budget.
+
+config ESP_BIST_HD_AUDIT_GPIO
+    bool "Peripheral / GPIO plausibility"
+    help
+      Critical GPIO plausibility via companion read or host report.
+      If enabled without an app callback where required, fails NOT_CONFIGURED.
+
+config ESP_BIST_HD_AUDIT_ADC
+    bool "ADC / supply plausibility"
+    help
+      Analog / supply plausibility via host or companion ADC when available.
+      If enabled without an app callback where required, fails NOT_CONFIGURED.
+
+config ESP_BIST_HD_AUDIT_CONFIG_NVM
+    bool "Config / NVM / partition integrity"
+    help
+      Host CRC over configured regions; golden from build or provisioning.
+
+config ESP_BIST_HD_AUDIT_IPC
+    bool "IPC / shared-mem integrity"
+    help
+      Protocol sequence/CRC enforcement and optional explicit IPC self-check.
+
+config ESP_BIST_HD_AUDIT_SECURE_BOOT
+    bool "Secure-boot / image authenticity status"
+    help
+      Host reports secure-boot state; companion may gate supervision on it.
+
+config ESP_BIST_HD_AUDIT_DUAL_CHANNEL
+    bool "Dual-channel output compare"
+    help
+      App-registered compare/cut-off callbacks; library invokes only.
+
+endmenu # Host Diagnostics Audits
+
+config ESP_BIST_HD_CHALLENGE_WINDOW_US
+    int "Challenge response window (us)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 10000
+    range 100 10000000
+    help
+      Maximum time allowed for the host to answer a Q&A challenge.
+      Sized from the product FTTI budget.
+
+config ESP_BIST_HD_DIAG_TIMEOUT_US
+    int "Diagnostic response timeout (us)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 50000
+    range 100 60000000
+    help
+      Maximum time allowed for the host to complete a companion-triggered
+      diagnostic (DIAG_REQ → DIAG_RSP).
+
+config ESP_BIST_HD_AGENT_READY_TIMEOUT_US
+    int "Agent ready timeout (us)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 1000000
+    range 1000 60000000
+    help
+      Maximum time the companion waits for AGENT_READY after its own BIST before
+      entering safe state.
+
+config ESP_BIST_HD_AGENT_TASK_STACK
+    int "Host Diagnostic Agent stack size (bytes)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 3072
+    range 1024 16384
+    help
+      Stack for the high-priority HP thread/task that answers companion
+      audits. Sized for the deepest enabled audit handler.
+
+config ESP_BIST_HD_AGENT_TASK_PRIO
+    int "Host Diagnostic Agent task priority"
+    depends on ESP_BIST_HOST_DIAGNOSTICS && IDF_ESP_BIST_COMPONENT
+    default 24
+    range 1 24
+    help
+      FreeRTOS priority for the HP agent task. Must outrank application
+      threads that could otherwise miss the challenge window.
+
+config ESP_BIST_HD_AGENT_THREAD_COOP_PRIO
+    int "Host Diagnostic Agent cooperative priority"
+    depends on ESP_BIST_HOST_DIAGNOSTICS && ZEPHYR_ESP_BIST_MODULE
+    default 0
+    range 0 15
+    help
+      Cooperative priority index for the HP agent thread, passed to
+      K_PRIO_COOP(). Lower values rank higher, and the agent must outrank
+      application threads that could otherwise miss the challenge window.
+      Must be below CONFIG_NUM_COOP_PRIORITIES.
+
+config ESP_BIST_HD_AGENT_TASK_PRIO_NUTTX
+    int "Host Diagnostic Agent task priority (NuttX)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS && NUTTX_ESP_BIST_MODULE
+    default 254
+    range 1 255
+    help
+      NuttX SCHED_FIFO priority for the HP agent pthread. Must outrank
+      application threads that could otherwise miss the challenge window.
+
+config ESP_BIST_HD_CHALLENGE_KEY
+    hex "Challenge response key"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 0xA5A5A5A5
+    help
+      Secret key mixed into bist_hd_challenge_answer(challenge, seq).
+      Default is for development only; override per product.
+
+endmenu # Host Diagnostics

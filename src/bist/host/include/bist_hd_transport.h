@@ -1,0 +1,45 @@
+/*
+ * Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ *
+ * Host Diagnostics transport API (HP side). OS-specific implementation
+ * lives in host/idf (Zephyr deferred).
+ */
+
+#pragma once
+
+#include "bist_hd_protocol.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief Initialize the HP↔LP transport (mailbox).
+ *
+ * @return 0 on success, negative errno-style value on failure
+ */
+int bist_hd_transport_init(void);
+
+/**
+ * @brief Send an encoded Host Diagnostics message.
+ *
+ * @param msg Message to send
+ * @param timeout_ms Timeout in milliseconds (-1 = wait forever)
+ * @return 0 on success, negative errno-style value on failure
+ */
+int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms);
+
+/**
+ * @brief Receive and decode a Host Diagnostics message.
+ *
+ * @param msg Output message
+ * @param timeout_ms Timeout in milliseconds (-1 = wait forever)
+ * @return 0 on success, negative errno-style value on failure
+ */
+int bist_hd_transport_recv(bist_hd_msg_t *msg, int32_t timeout_ms);
+
+#ifdef __cplusplus
+}
+#endif
