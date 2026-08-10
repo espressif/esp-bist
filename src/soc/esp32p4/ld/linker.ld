@@ -466,7 +466,7 @@ SECTIONS
   } >sram
 
   _sram_end = ORIGIN(sram) + LENGTH(sram);
-  _bist_ram_test_size = _sram_end - _bist_ram_test_start;
+  _bist_ram_test_end = _sram_end;
   _stack_top = _sram_end;
 
   _image_ram_start = _iram_start;

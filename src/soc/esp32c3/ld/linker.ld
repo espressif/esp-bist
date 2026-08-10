@@ -573,7 +573,7 @@ SECTIONS
   } >dram0_0_seg
 
   _dram0_end = ORIGIN(dram0_0_seg) + LENGTH(dram0_0_seg);
-  _bist_ram_test_size = _dram0_end - _bist_ram_test_start;
+  _bist_ram_test_end = _dram0_end;
   _stack_top = _dram0_end;
 
   /* Provide total SRAM usage, including IRAM and DRAM */

@@ -141,7 +141,7 @@ SECTIONS
 
 #include <zephyr/linker/ram-end.ld>
 
-    _bist_ram_test_size = _image_ram_end - _bist_ram_test_start;
+    _bist_ram_test_end = _image_ram_end;
 
     .dram0.safe_ram (NOLOAD):
     {

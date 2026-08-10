@@ -27,7 +27,16 @@
 #define MARCH_STACK_SIZE 256
 
 extern uint32_t _bist_ram_test_start;
-extern uint32_t _bist_ram_test_size;
+extern uint32_t _bist_ram_test_end;
+
+/*
+ * Size is computed from the boundary symbols to avoid GP-relative relocation
+ * overflow on RV32 LP with a large under-test region (GPREL is ±2KiB).
+ */
+static uint32_t bist_ram_test_words(void)
+{
+    return ((uint32_t)&_bist_ram_test_end - (uint32_t)&_bist_ram_test_start) / 4u;
+}
 
 // Buffer to backup and restore two partitions (2 x 1024 bytes) for Abraham
 volatile uint32_t __attribute__((section(".dram0.safe_ram"))) backup_chunk[2 * BIST_ESP_RAM_BACKUP_CHUNK_SIZE];
@@ -79,7 +88,7 @@ static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    volatile uint32_t dram_test_size = bist_ram_test_words();
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
@@ -132,7 +141,7 @@ static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    volatile uint32_t dram_test_size = bist_ram_test_words();
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
@@ -233,7 +242,7 @@ static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
 {
     bool test_passed = true;
     volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    volatile uint32_t dram_test_size = bist_ram_test_words();
 
     size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
                             / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
@@ -476,7 +485,7 @@ static void abraham_advance_pair(size_t num_partitions)
 bist_esp_err_t bist_ram_test_abraham(void)
 {
     bist_esp_err_t result = run_on_safe_stack(abraham_impl);
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    volatile uint32_t dram_test_size = bist_ram_test_words();
     size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
                             / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
     abraham_advance_pair(num_partitions);
@@ -491,7 +500,7 @@ void bist_ram_test_abraham_reset(void)
 
 bist_esp_err_t bist_ram_test_abraham_full(void)
 {
-    volatile uint32_t dram_test_size = (uint32_t)&_bist_ram_test_size / 4;
+    volatile uint32_t dram_test_size = bist_ram_test_words();
     size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
                             / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
     size_t total_pairs = (num_partitions <= 1)
