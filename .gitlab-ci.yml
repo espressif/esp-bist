@@ -98,6 +98,15 @@ stages:
   - esp32p4
   - esp32h4
 
+.device_injection_socs: &device_injection_socs
+  - esp32c3
+  - esp32c5
+  - esp32c6
+  - esp32c61
+  - esp32h2
+  - esp32p4
+  - esp32h4
+
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
   before_script:
@@ -763,6 +772,39 @@ test_samples:
     - .test_samples_template
   <<: *test_device_matrix
 
+.test_device_injection_matrix: &test_device_injection_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *device_injection_socs
+
+test_device_injection:
+  extends:
+    - .test_device_template
+  <<: *test_device_injection_matrix
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2_arm
+  script:
+    - |
+      if [ ! -d "tests/${SOC_TARGET}" ]; then
+        echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
+        exit 1
+      fi
+      for TEST_APP in $TEST_APPS; do
+        if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
+          rm -rf "tests/$TEST_APP/build"
+          mv "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" "tests/$TEST_APP/build"
+        fi
+      done
+    - ESPPORT=/dev/serial_ports/ttyUSB-esp32 python3 scripts/run_device_tests.py --target $SOC_TARGET --injection
+  tags: [$SOC_TARGET, "arm"]
+  needs:
+    - job: build_mcuboot
+      artifacts: true
+    - job: build_tests
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
+
 .test_metrics_template:
   stage: Test Device
   timeout: 2h
@@ -966,6 +1008,8 @@ test_zephyr_device:
     - job: test_qemu_remote
       optional: true
     - job: test_device
+      optional: true
+    - job: test_device_injection
       optional: true
     - job: test_metrics
       optional: true
