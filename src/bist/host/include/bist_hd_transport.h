@@ -23,6 +23,17 @@ extern "C" {
 int bist_hd_transport_init(void);
 
 /**
+ * @brief Discard receive state left over from a previous HP session.
+ *
+ * The LP companion keeps running across an HP reset and the mailbox keeps its
+ * pending state, so whatever is already in the pipe predates this session and
+ * would be consumed as part of the next frame. Call once after
+ * bist_hd_transport_init() and before AGENT_READY: the companion only talks
+ * after AGENT_READY, so nothing legitimate can be lost here.
+ */
+void bist_hd_transport_flush(void);
+
+/**
  * @brief Send an encoded Host Diagnostics message.
  *
  * @param msg Message to send

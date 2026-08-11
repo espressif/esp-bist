@@ -13,6 +13,9 @@
 #include "freertos/task.h"
 #include "lp_core_mailbox.h"
 
+/* Twice the deepest frame; the mailbox can hold at most one frame pending. */
+#define LP_MAILBOX_FLUSH_MAX (2u * BIST_HD_WIRE_WORDS_MAX)
+
 static lp_mailbox_t s_mailbox;
 static int s_inited;
 
@@ -38,6 +41,22 @@ int bist_hd_transport_init(void)
     }
     s_inited = 1;
     return 0;
+}
+
+void bist_hd_transport_flush(void)
+{
+    lp_message_t raw;
+    unsigned int i;
+
+    if (!s_inited) {
+        return;
+    }
+
+    for (i = 0; i < LP_MAILBOX_FLUSH_MAX; i++) {
+        if (lp_core_mailbox_receive(s_mailbox, &raw, 0) != ESP_OK) {
+            return;
+        }
+    }
 }
 
 int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)

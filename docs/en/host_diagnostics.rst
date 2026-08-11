@@ -533,6 +533,12 @@ On the HP side, ``bist_hd_agent_start()`` performs a one-shot setup:
 #. ``bist_hd_platform_init()`` -- create the LP-status queue.
 #. ``bist_hd_transport_init()`` -- open the mailbox (IDF / Zephyr mbox /
    NuttX ``/dev/lp_mailbox``).
+#. ``bist_hd_transport_flush()`` -- discard mailbox state left over from a
+   previous HP session. The LP companion keeps running across an HP reset, so
+   pending words or frames that predate ``AGENT_READY`` must be dropped. IDF
+   drains with a bounded non-blocking receive loop, Zephyr purges its RX
+   message queue, and NuttX defers to a byte-level header resync inside
+   ``bist_hd_transport_recv()`` because the driver lacks non-blocking reads.
 #. Send ``AGENT_READY`` to the companion.
 #. Start a high-priority worker thread (FreeRTOS task / Zephyr cooperative
    thread / NuttX ``SCHED_FIFO`` pthread).

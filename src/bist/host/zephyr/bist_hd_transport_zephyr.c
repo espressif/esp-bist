@@ -107,6 +107,15 @@ int bist_hd_transport_init(void)
 	return 0;
 }
 
+void bist_hd_transport_flush(void)
+{
+	/* Whole frames cross the mbox, so nothing can shift by a word here; what
+	 * can happen is inheriting a frame the companion queued for the previous
+	 * HP session.
+	 */
+	k_msgq_purge(&s_rx_q);
+}
+
 int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)
 {
 	uint32_t words[BIST_HD_WIRE_WORDS_MAX];

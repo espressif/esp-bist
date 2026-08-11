@@ -79,6 +79,8 @@ int bist_hd_agent_start(void)
         return -1;
     }
 
+    bist_hd_transport_flush();
+
     ready.type = BIST_HD_MSG_AGENT_READY;
     if (bist_hd_transport_send(&ready, 10000) != 0) {
         return -1;
