@@ -91,6 +91,7 @@ RUN : \
     && $IDF_PATH/install.sh --enable-test-specific --enable-ci \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install required --targets=all \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install cmake \
+    && $IDF_PATH/tools/idf_tools.py --non-interactive install openocd-esp32 \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install-python-env \
     && $IDF_PATH/tools/idf_tools.py --non-interactive export --prefer-system \
     && rm -rf $IDF_TOOLS_PATH/dist \
@@ -107,6 +108,7 @@ ENV PIP_PACKAGES="\
     kconfiglib \
     imgtool==2.3.0 \
     pre-commit \
+    pexpect \
 "
 RUN . /opt/esp/python_env/idf6.0_py3.10_env/bin/activate \
     && python3 -m pip install $PIP_PACKAGES
