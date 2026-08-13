@@ -3,6 +3,25 @@ import queue
 
 from tests.idf_targets import pytestmark  # noqa: F401
 
+# pcTestFunctions is a local array copied onto the stack via memcpy, so it is not
+# reachable by name. Its offset within the frame is target dependent: ESP32-P4
+# holds a fifth entry (TCM region) and places the array at $sp + 12, while the
+# other SoCs place it at $sp. Locate the first element by matching the known
+# pointer pair instead of assuming a fixed offset.
+LOCATE_PC_TEST_ARRAY = '''
+        set $slot = 0
+        set $i = 0
+        while $i < 12
+            set $addr = (unsigned int)$sp + $i * 4
+            if $slot == 0 && *(unsigned int *)$addr == (unsigned int)&pcTestFunction0
+                if *(unsigned int *)($addr + 4) == (unsigned int)&pcTestFunction1
+                    set $slot = $addr
+                end
+            end
+            set $i = $i + 1
+        end
+'''
+
 
 def test_pc_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
@@ -41,21 +60,19 @@ def test_pc_error_no_wdt(qemu_debug_instance, gdb_instance, target):
     #connect to remote server
     target remote :1234
 
-    # Break at the PC verification loop entry.
-    # pcTestFunctions is a local array optimized onto the stack via memcpy;
-    # it is not accessible by name. At this breakpoint $sp points to the
-    # first element of the array. We flip bit 2 of the function pointer to
-    # simulate a stuck-at fault on PC bit 2: the CPU jumps to an offset
-    # within the function body (skipping the lui that loads the address
-    # constant), so the called code returns a wrong value and the
+    # Break at the PC verification loop entry, then flip bit 2 of the first
+    # function pointer to simulate a stuck-at fault on PC bit 2: the CPU jumps
+    # to an offset within the function body (skipping the lui that loads the
+    # address constant), so the called code returns a wrong value and the
     # verification detects the mismatch.
     tb bist_verify_pc_test
     commands
-        set *(int*)$sp = *(int*)$sp ^ 4
+{locate}
+        set *(int*)$slot = *(int*)$slot ^ 4
         continue
     end
     continue
-    '''
+    '''.format(locate=LOCATE_PC_TEST_ARRAY)
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
     try:
@@ -82,19 +99,18 @@ def test_pc_error_wdt(qemu_debug_instance, gdb_instance, target):
     #connect to remote server
     target remote :1234
 
-    # Break at the PC verification loop entry.
-    # pcTestFunctions is a local array optimized onto the stack via memcpy;
-    # it is not accessible by name. At this breakpoint $sp points to the
-    # first element of the array, so we corrupt it through the stack pointer.
-    # Setting the pointer to 0 causes an instruction access fault that the
-    # firmware cannot recover from, so the WDT fires and resets the CPU.
+    # Break at the PC verification loop entry, then zero the first function
+    # pointer. The resulting jump to address 0 raises an instruction access
+    # fault that the firmware cannot recover from, so the WDT fires and resets
+    # the CPU.
     tb bist_verify_pc_test
     commands
-        set *(int*)$sp = 0
+{locate}
+        set *(int*)$slot = 0
         continue
     end
     continue
-    '''
+    '''.format(locate=LOCATE_PC_TEST_ARRAY)
     gdb_process = gdb_instance.attach(script)
     time.sleep(5) # Wait for GDB to attach and run the script
     try:
