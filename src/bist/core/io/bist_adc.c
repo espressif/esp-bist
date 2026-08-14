@@ -53,7 +53,7 @@ bist_esp_err_t bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)
 {
     adc_oneshot_unit_handle_t adc_handle = NULL;
     int io_num = 0;
-    int raw = 0;
+    volatile int raw = 0;
     bist_esp_err_t ret = BIST_ESP_ADC_TEST_ERR;
 
     adc_oneshot_unit_init_cfg_t init_config = {
@@ -81,13 +81,14 @@ bist_esp_err_t bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)
 
     ets_delay_us(10000);
 
-    if (adc_oneshot_read(adc_handle, channel, &raw) != ESP_OK) {
+    if (adc_oneshot_read(adc_handle, channel, (int *)&raw) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read ADC%d channel %d", unit + 1, channel);
         goto cleanup;
     }
 
     ESP_LOGI(TAG, "ADC%d channel %d low raw: %d", unit + 1, channel, raw);
 
+    BIST_ADD_LABEL("bist_adc_low_check");
     if (raw > BIST_ADC_TOLERANCE) {
         ESP_LOGE(TAG, "ADC%d channel %d low test failed, raw: %d, expected: 0",
                  unit + 1, channel, raw);
@@ -106,7 +107,7 @@ bist_esp_err_t bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)
 {
     adc_oneshot_unit_handle_t adc_handle = NULL;
     int io_num = 0;
-    int raw = 0;
+    volatile int raw = 0;
     bist_esp_err_t ret = BIST_ESP_ADC_TEST_ERR;
 
     adc_oneshot_unit_init_cfg_t init_config = {
@@ -134,13 +135,14 @@ bist_esp_err_t bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)
 
     ets_delay_us(10000);
 
-    if (adc_oneshot_read(adc_handle, channel, &raw) != ESP_OK) {
+    if (adc_oneshot_read(adc_handle, channel, (int *)&raw) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read ADC%d channel %d", unit + 1, channel);
         goto cleanup;
     }
 
     ESP_LOGI(TAG, "ADC%d channel %d high raw: %d", unit + 1, channel, raw);
 
+    BIST_ADD_LABEL("bist_adc_high_check");
     if (raw < BIST_ADC_HIGH_VAL - BIST_ADC_TOLERANCE) {
         ESP_LOGE(TAG, "ADC%d channel %d high test failed, raw: %d, expected: %d",
                  unit + 1, channel, raw, BIST_ADC_HIGH_VAL);
@@ -171,7 +173,7 @@ bist_esp_err_t bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)
 
     adc_oneshot_unit_handle_t adc_handle = NULL;
     int io_num = 0;
-    int raw = 0;
+    volatile int raw = 0;
     bist_esp_err_t ret = BIST_ESP_ADC_TEST_ERR;
 
     adc_oneshot_unit_init_cfg_t init_config = {
@@ -196,13 +198,14 @@ bist_esp_err_t bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)
 
     ets_delay_us(10000);
 
-    if (adc_oneshot_read(adc_handle, channel, &raw) != ESP_OK) {
+    if (adc_oneshot_read(adc_handle, channel, (int *)&raw) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read ADC%d channel %d", unit + 1, channel);
         goto cleanup;
     }
 
     ESP_LOGD(TAG, "ADC%d channel %d reference raw: %d", unit + 1, channel, raw);
 
+    BIST_ADD_LABEL("bist_adc_reference_check");
     if (raw < (BIST_ADC_REFERENCE - BIST_ADC_TOLERANCE) || raw > (BIST_ADC_REFERENCE + BIST_ADC_TOLERANCE)) {
         ESP_LOGE(TAG, "ADC%d channel %d reference test failed, raw stuck low: %d, expected: %d",
                  unit + 1, channel, raw, BIST_ADC_REFERENCE);
