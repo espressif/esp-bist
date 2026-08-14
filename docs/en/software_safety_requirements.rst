@@ -269,7 +269,7 @@ Code and data are mapped to specific regions:
 - ``.rodata`` and ``.flash.rodata`` (read-only data) to DROM
 - ``.data`` and ``.bss`` (initialized/uninitialized data) to DRAM
 - Stack and heap boundaries are explicitly defined
-- Special sections for test routines (e.g., ``.pc_test_X`` for PC test functions) are mapped to IRAM, Flash, or RTC/LP IRAM to exercise specific address bits
+- Special sections for test routines (e.g., ``.pc_test_X`` for PC test functions) are mapped to IRAM, Flash, RTC/LP IRAM or TCM to exercise specific address bits
 - A dedicated region for CRC checksums is reserved in flash for integrity validation
 
 Safety-Related Mapping

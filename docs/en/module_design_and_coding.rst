@@ -864,13 +864,16 @@ Program Counter Test
         Check2 -> Call3 [label = "Yes"];
         Call3 -> Check3;
         Check3 -> Error [label = "No"];
-        Check3 -> Success [label = "Yes"];
+        Check3 -> Call4 [label = "Yes"];
+        Call4 -> Check4;
+        Check4 -> Error [label = "No"];
+        Check4 -> Success [label = "Yes"];
         Success -> End;
         Error -> End;
 
         Start [label = "Start", shape = roundedbox];
-        Init [label = "Init array of 4 PC test functions"];
-        Loop [label = "countPcTest=0..3", shape = diamond];
+        Init [label = "Init array of 5 PC test functions"];
+        Loop [label = "countPcTest=0..4", shape = diamond];
         Call0 [label = "Call pcTestFunction0"];
         Check0 [label = "Return == func0?", shape = diamond];
         Call1 [label = "Call pcTestFunction1"];
@@ -879,12 +882,14 @@ Program Counter Test
         Check2 [label = "Return == func2?", shape = diamond];
         Call3 [label = "Call pcTestFunction3"];
         Check3 [label = "Return == func3?", shape = diamond];
+        Call4 [label = "Call pcTestFunction4"];
+        Check4 [label = "Return == func4?", shape = diamond];
         Error [label = "Return BIST_ESP_PC_TEST_ERR"];
         Success [label = "Return BIST_ESP_OK"];
         End [label = "End"];
     }
 
-This diagram shows the concrete implementation of the program counter integrity test. Each function is placed in a specific memory region by the linker script to exercise different PC register bits: ``pc_test_0`` at the end of IRAM, ``pc_test_1`` and ``pc_test_2`` in Flash with a 64KB gap to invert bits [3:15], and ``pc_test_3`` in RTC memory. The test verifies that each function returns its own address, detecting stuck-at faults in the PC register.
+This diagram shows the concrete implementation of the program counter integrity test. Each function is placed in a specific memory region by the linker script to exercise different PC register bits: ``pc_test_0`` and ``pc_test_1`` in IRAM (bits [2:17]), ``pc_test_2`` in Flash (bits 19/20/21/25), ``pc_test_3`` in RTC memory (bit 28), and ``pc_test_4`` in TCM (bits [2:7], ESP32-P4 only). The test verifies that each function returns its own address, detecting stuck-at faults in the PC register.
 
 Module API
 ^^^^^^^^^^
