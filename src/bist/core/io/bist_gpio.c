@@ -12,8 +12,9 @@ static bist_esp_err_t bist_gpio_set_and_check_level(gpio_num_t gpio_num, int set
         return BIST_ESP_IO_TEST_ERR;
     }
 
-    int level = gpio_get_level(gpio_num);
+    volatile int level = gpio_get_level(gpio_num);
 
+    BIST_ADD_LABEL("bist_gpio_output_check");
     if (level != set_level) {
         ESP_LOGE(TAG, "GPIO %d output test failed, expected level: %d, got: %d", gpio_num, set_level, level);
         return BIST_ESP_IO_TEST_ERR;
@@ -72,7 +73,10 @@ bist_esp_err_t bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)
         return BIST_ESP_IO_TEST_ERR;
     }
 
-    if (gpio_get_level(gpio_num) != expected_level) {
+    volatile int level = gpio_get_level(gpio_num);
+
+    BIST_ADD_LABEL("bist_gpio_input_check");
+    if (level != expected_level) {
         ESP_LOGE(TAG, "GPIO input test failed for GPIO %d, expected level: %d", gpio_num, expected_level);
         return BIST_ESP_IO_TEST_ERR;
     }

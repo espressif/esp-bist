@@ -22,6 +22,7 @@
 #include "rom/ets_sys.h"
 #include "bist_conf.h"
 #include "bist_clock_math.h"
+#include "bist_esp_types.h"
 
 #if SOC_XT_WDT_SUPPORTED
 #include "esp_xt_wdt.h"
@@ -56,6 +57,7 @@ bist_esp_err_t bist_ext_crystal_fail_test(void)
 
     ets_delay_us(2000);
 
+    BIST_ADD_LABEL("bist_ext_crystal_check");
     if (test_failed) {
         test_failed = false;
         return BIST_ESP_CLOCK_TEST_ERR;
@@ -88,12 +90,13 @@ bist_esp_err_t bist_main_crystal_test(void)
      * Derive actual XTAL frequency from the calibration result:
      */
     uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);
-    float deviation = xtal_deviation_percent(xtal_freq, expected_xtal_freq);
+    volatile float deviation = xtal_deviation_percent(xtal_freq, expected_xtal_freq);
 
     /*
      * Check if the calculated XTAL frequency is within
      * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT
      */
+    BIST_ADD_LABEL("bist_main_crystal_check");
     if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {
         return BIST_ESP_CLOCK_TEST_ERR;
     }
