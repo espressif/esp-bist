@@ -169,7 +169,7 @@ def parse_c_header(filepath: Path) -> list[dict]:
         r"((?:(?:static\s+|inline\s+|extern\s+|__attribute__\s*\([^)]*\)\s+)*"
         r"(?:(?:unsigned\s+|signed\s+|const\s+|volatile\s+|struct\s+|enum\s+)*"
         r"[a-zA-Z_]\w*(?:\s*\*)*)\s+"
-        r"([a-zA-Z_]\w*)\s*\((?:[^()]*|\([^()]*\))*\)))\s*;",
+        r"([a-zA-Z_]\w*)\s*\([^()]*(?:\([^()]*\)[^()]*)*\)))\s*;",
         re.DOTALL,
     )
 

@@ -19,7 +19,7 @@
   },
   {
     "function_name": "bist_cpu_stack_overflow_init",
-    "body": "bist_esp_err_t bist_cpu_stack_overflow_init(void)\n{\n    /*\n     * Fill the entire protection region with the sentinel pattern.\n     * A single-word sentinel can fall in an unwritten gap between\n     * stack frames (saved regs + padding occupy ~32 bytes per 160-byte\n     * frame), making single-point detection unreliable. Filling the\n     * full region guarantees at least one word lands in a zeroed buffer.\n     */\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p <= end; p++) {\n        *p = STACK_PROTECTION_PATTERN;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "body": "bist_esp_err_t bist_cpu_stack_overflow_init(void)\n{\n    /*\n     * Fill the entire protection region with the sentinel pattern.\n     * A single-word sentinel can fall in an unwritten gap between\n     * stack frames (saved regs + padding occupy ~32 bytes per 160-byte\n     * frame), making single-point detection unreliable. Filling the\n     * full region guarantees at least one word lands in a zeroed buffer.\n     */\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p < end; p++) {\n        *p = STACK_PROTECTION_PATTERN;\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/cpu/bist_cpu_stack.c",
     "line_start": 42,
     "line_end": 58,
@@ -28,7 +28,7 @@
   },
   {
     "function_name": "bist_cpu_stack_overflow_check",
-    "body": "bist_esp_err_t bist_cpu_stack_overflow_check(void)\n{\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p <= end; p++) {\n        if (*p != STACK_PROTECTION_PATTERN) {\n            handle_stack_overflow();\n            return BIST_ESP_STACK_TEST_OVERFLOW;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
+    "body": "bist_esp_err_t bist_cpu_stack_overflow_check(void)\n{\n    uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;\n    uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;\n    for (; p < end; p++) {\n        if (*p != STACK_PROTECTION_PATTERN) {\n            handle_stack_overflow();\n            return BIST_ESP_STACK_TEST_OVERFLOW;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/cpu/bist_cpu_stack.c",
     "line_start": 60,
     "line_end": 72,
@@ -237,8 +237,8 @@
     "function_name": "test_callback",
     "body": "static void test_callback(void *arg)\n{\n    test_failed = true;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 32,
-    "line_end": 35,
+    "line_start": 33,
+    "line_end": 36,
     "module": "clock",
     "content_type": "source"
   },
@@ -246,17 +246,17 @@
     "function_name": "bist_ext_crystal_fail_test",
     "body": "bist_esp_err_t bist_ext_crystal_fail_test(void)\n{\n#if SOC_XT_WDT_SUPPORTED\n    esp_err_t err;\n\n    esp_xt_wdt_config_t cfg = {\n        .timeout = 200,\n        .auto_backup_clk_enable = false,\n    };\n\n    esp_xt_wdt_register_callback(test_callback, NULL);\n\n    err = esp_xt_wdt_init(&cfg);\n    if (err != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to initialize external watchdog timer\");\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    ets_delay_us(2000);\n\n    if (test_failed) {\n        test_failed = false;\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n#else\n    /* SoCs without XT WDT have no hardware to detect 32k crystal\n     * failure; skip this test and report OK. */\n    ESP_LOGD(TAG, \"SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.\");\n#endif\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 38,
-    "line_end": 70,
+    "line_start": 39,
+    "line_end": 71,
     "module": "clock",
     "content_type": "source"
   },
   {
     "function_name": "bist_main_crystal_test",
-    "body": "bist_esp_err_t bist_main_crystal_test(void)\n{\n    uint32_t xtal_freq_mhz = rtc_clk_xtal_freq_get();\n    uint32_t expected_xtal_freq = xtal_freq_mhz * MHZ;\n\n    /*\n     * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).\n     * If the main XTAL drifts, the returned value shifts proportionally.\n     */\n    uint32_t cal_val = rtc_clk_cal(CLK_CAL_32K_XTAL, 500);\n    if (cal_val == 0) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    /*\n     * Derive actual XTAL frequency from the calibration result:\n     */\n    uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);\n    float deviation = fabs((float)(int)(xtal_freq - expected_xtal_freq)) / expected_xtal_freq * 100;\n\n    /*\n     * Check if the calculated XTAL frequency is within\n     * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT\n     */\n    if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "body": "bist_esp_err_t bist_main_crystal_test(void)\n{\n    uint32_t xtal_freq_mhz = rtc_clk_xtal_freq_get();\n    uint32_t expected_xtal_freq = xtal_freq_mhz * MHZ;\n\n    /*\n     * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).\n     * If the main XTAL drifts, the returned value shifts proportionally.\n     */\n    uint32_t cal_val = rtc_clk_cal(CLK_CAL_32K_XTAL, 500);\n    if (cal_val == 0) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    /*\n     * Derive actual XTAL frequency from the calibration result:\n     */\n    uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);\n    float deviation = xtal_deviation_percent(xtal_freq, expected_xtal_freq);\n\n    /*\n     * Check if the calculated XTAL frequency is within\n     * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT\n     */\n    if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 72,
-    "line_end": 101,
+    "line_start": 73,
+    "line_end": 102,
     "module": "clock",
     "content_type": "source"
   },
@@ -703,10 +703,10 @@
   },
   {
     "function_name": "wdt_init_windowed",
-    "body": "int wdt_init_windowed(uint32_t underflow_timeout_us)\n{\n    if (underflow_timeout_us == 0) {\n        ESP_LOGE(TAG, \"Underflow timeout cannot be 0\");\n        return -1;\n    }\n\n    wdt_ctx.is_windowed = true;\n    wdt_ctx.underflow_timeout = underflow_timeout_us;\n\n    /* Initialize esp_timer library first (idempotent - safe to call multiple times) */\n    esp_err_t ret = esp_timer_init();\n    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {\n        ESP_LOGE(TAG, \"Failed to initialize esp_timer: %d\", ret);\n        return -1;\n    }\n\n    /* Create timer with proper arguments */\n    const esp_timer_create_args_t periodic_timer_args = {\n        .callback = wdt_windowed_underflow_callback,\n        .arg = NULL,\n        .dispatch_method = ESP_TIMER_ISR,\n        .name = \"wdt_windowed\",\n        .skip_unhandled_events = false,\n    };\n    ret = esp_timer_create(&periodic_timer_args, &periodic_timer);\n    if (ret != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to create periodic timer: %d\", ret);\n        return -1;\n    }\n\n    ESP_LOGI(TAG, \"WDT windowed mode initialized\");\n\n    /* Initialize window as open to allow first feed */\n    wdt_ctx.window_open_flag = true;\n\n    /* Start the timer */\n    ret = esp_timer_start_once(periodic_timer, wdt_ctx.underflow_timeout);\n    if (ret != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to start windowed timer: %d\", ret);\n        return -1;\n    }\n\n    return 0;\n}",
+    "body": "int wdt_init_windowed(uint32_t underflow_timeout_us)\n{\n    if(underflow_timeout_us == 0) {\n        ESP_LOGE(TAG, \"Underflow timeout cannot be 0\");\n        return -1;\n    }\n\n    /* Initialize esp_timer library first (idempotent - safe to call multiple times) */\n    esp_err_t ret = esp_timer_init();\n    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {\n        ESP_LOGE(TAG, \"Failed to initialize esp_timer: %d\", ret);\n        return -1;\n    }\n\n    /* Create timer with proper arguments */\n    const esp_timer_create_args_t periodic_timer_args = {\n        .callback = wdt_windowed_underflow_callback,\n        .arg = NULL,\n        .dispatch_method = ESP_TIMER_ISR,\n        .name = \"wdt_windowed\",\n        .skip_unhandled_events = false,\n    };\n    ret = esp_timer_create(&periodic_timer_args, &periodic_timer);\n    if (ret != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to create periodic timer: %d\", ret);\n        return -1;\n    }\n\n    /* Start the timer */\n    ret = esp_timer_start_once(periodic_timer, underflow_timeout_us);\n    if (ret != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to start windowed timer: %d\", ret);\n        esp_timer_delete(periodic_timer);\n        periodic_timer = NULL;\n        return -1;\n    }\n\n    /* Commit windowed-mode state only after all fallible steps succeed,\n     * so an early failure does not leave wdt_feed thinking we are in\n     * windowed mode and permanently disabling itself on the next call. */\n    wdt_ctx.is_windowed = true;\n    wdt_ctx.underflow_timeout = underflow_timeout_us;\n    wdt_ctx.window_open_flag = true;\n\n    ESP_LOGI(TAG, \"WDT windowed mode initialized\");\n\n    return 0;\n}",
     "file": "src/bist/drivers/wdt.c",
-    "line_start": 186,
-    "line_end": 230,
+    "line_start": 201,
+    "line_end": 248,
     "module": "drivers",
     "content_type": "source"
   },
