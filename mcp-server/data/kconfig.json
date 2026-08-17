@@ -140,6 +140,16 @@
     "prompt": "WDT Timeout (us)"
   },
   {
+    "name": "ESP_BIST_LP_DEBUG_LOG",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST && (IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE)",
+    "help": "Compile in ESP_LOGD output on the LP core. Disabled by default to keep\nLP firmware small (~16 KiB SRAM).",
+    "menu": "",
+    "range": "",
+    "prompt": "Enable LP-core debug logging (ESP_LOGD)"
+  },
+  {
     "name": "BIST_FLASH_TEST_CHUNK_SIZE",
     "type": "hex",
     "default": "0x1000",
@@ -214,9 +224,269 @@
     "type": "bool",
     "default": "y",
     "depends_on": "ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE && !NUTTX_ESP_BIST_MODULE",
-    "help": "Enable the collection of performance metrics during BIST operations, such as\nexecution time, CPU cycles, and instruction counts.",
+    "help": "Enable the collection of performance metrics during BIST operations, such as\nexecution time, CPU cycles, and instruction counts.\n\ndepends on IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE || NUTTX_ESP_BIST_MODULE",
     "menu": "",
     "range": "",
     "prompt": "BIST Metrics Collection"
+  },
+  {
+    "name": "ESP_BIST_HOST_DIAGNOSTICS",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Enable companion supervision of a QM host OS via the Host Diagnostics\nagent. The LP companion schedules host audits and\nowns safe-state decisions; the host only collaborates.\n\ndepends on ESP_BIST_HOST_DIAGNOSTICS",
+    "menu": "Host Diagnostics",
+    "range": "",
+    "prompt": "Enable Host Diagnostics"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_QA",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Companion issues a challenge; host must answer f(challenge, seq) inside\nthe configured window.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Q&A challenge / window"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CHECKPOINT",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host reports checkpoints; companion tracks set, order, and deadlines.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Alive / deadline / logical checkpoints"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_RAM",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host runs March tests on an HP DRAM region under companion trigger.\nRequires HP linker symbols for the test region and safe stack (later).",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host RAM March"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_FLASH",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host computes CRC of HP .flash.text on DIAG_REQ; companion compares\nagainst a build-injected golden. Host PASS alone is never trusted.\nNot wired yet (challenge-only Host Diagnostics).",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host flash / image CRC"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CPU",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host runs CPU general-purpose register tests under companion trigger.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host CPU register test"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CSR",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host runs CSR (and related config) diagnostics under companion trigger.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host CSR / PMP-PMA config audit"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_STACK",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host stack integrity check, companion-demandable.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Stack overflow / canary / watermark"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CLOCK",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Clock monitoring for the host time base (FTTI integrity). May use\ncompanion independent time-slot and/or host measurement.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Clock / crystal drift"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_WDT",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host reports armed/feed counters; companion checks the pattern.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host WDT path check"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_PC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host program-counter / program-flow sample under companion trigger.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "PC / program-flow sample"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_IRQ_LATENCY",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Companion measures challenge-to-answer latency against a budget.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Interrupt latency / storm bound"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_GPIO",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Critical GPIO plausibility via companion read or host report.\nIf enabled without an app callback where required, fails NOT_CONFIGURED.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Peripheral / GPIO plausibility"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_ADC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Analog / supply plausibility via host or companion ADC when available.\nIf enabled without an app callback where required, fails NOT_CONFIGURED.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "ADC / supply plausibility"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CONFIG_NVM",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host CRC over configured regions; golden from build or provisioning.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Config / NVM / partition integrity"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_IPC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Protocol sequence/CRC enforcement and optional explicit IPC self-check.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "IPC / shared-mem integrity"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_SECURE_BOOT",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host reports secure-boot state; companion may gate supervision on it.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Secure-boot / image authenticity status"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_DUAL_CHANNEL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "App-registered compare/cut-off callbacks; library invokes only.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Dual-channel output compare"
+  },
+  {
+    "name": "ESP_BIST_HD_CHALLENGE_WINDOW_US",
+    "type": "int",
+    "default": "10000",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Maximum time allowed for the host to answer a Q&A challenge.\nSized from the product FTTI budget.",
+    "menu": "Host Diagnostics Audits",
+    "range": "100 10000000",
+    "prompt": "Challenge response window (us)"
+  },
+  {
+    "name": "ESP_BIST_HD_DIAG_TIMEOUT_US",
+    "type": "int",
+    "default": "50000",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Maximum time allowed for the host to complete a companion-triggered\ndiagnostic (DIAG_REQ \u2192 DIAG_RSP).",
+    "menu": "Host Diagnostics Audits",
+    "range": "100 60000000",
+    "prompt": "Diagnostic response timeout (us)"
+  },
+  {
+    "name": "ESP_BIST_HD_AGENT_READY_TIMEOUT_US",
+    "type": "int",
+    "default": "1000000",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Maximum time the companion waits for AGENT_READY after its own BIST before\nentering safe state.",
+    "menu": "Host Diagnostics Audits",
+    "range": "1000 60000000",
+    "prompt": "Agent ready timeout (us)"
+  },
+  {
+    "name": "ESP_BIST_HD_AGENT_TASK_STACK",
+    "type": "int",
+    "default": "3072",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Stack for the high-priority HP thread/task that answers companion\naudits. Sized for the deepest enabled audit handler.",
+    "menu": "Host Diagnostics Audits",
+    "range": "1024 16384",
+    "prompt": "Host Diagnostic Agent stack size (bytes)"
+  },
+  {
+    "name": "ESP_BIST_HD_AGENT_TASK_PRIO",
+    "type": "int",
+    "default": "24",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS && IDF_ESP_BIST_COMPONENT",
+    "help": "FreeRTOS priority for the HP agent task. Must outrank application\nthreads that could otherwise miss the challenge window.",
+    "menu": "Host Diagnostics Audits",
+    "range": "1 24",
+    "prompt": "Host Diagnostic Agent task priority"
+  },
+  {
+    "name": "ESP_BIST_HD_AGENT_THREAD_COOP_PRIO",
+    "type": "int",
+    "default": "0",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS && ZEPHYR_ESP_BIST_MODULE",
+    "help": "Cooperative priority index for the HP agent thread, passed to\nK_PRIO_COOP(). Lower values rank higher, and the agent must outrank\napplication threads that could otherwise miss the challenge window.\nMust be below CONFIG_NUM_COOP_PRIORITIES.",
+    "menu": "Host Diagnostics Audits",
+    "range": "0 15",
+    "prompt": "Host Diagnostic Agent cooperative priority"
+  },
+  {
+    "name": "ESP_BIST_HD_AGENT_TASK_PRIO_NUTTX",
+    "type": "int",
+    "default": "254",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS && NUTTX_ESP_BIST_MODULE",
+    "help": "NuttX SCHED_FIFO priority for the HP agent pthread. Must outrank\napplication threads that could otherwise miss the challenge window.",
+    "menu": "Host Diagnostics Audits",
+    "range": "1 255",
+    "prompt": "Host Diagnostic Agent task priority (NuttX)"
+  },
+  {
+    "name": "ESP_BIST_HD_CHALLENGE_KEY",
+    "type": "hex",
+    "default": "0xA5A5A5A5",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Secret key mixed into bist_hd_challenge_answer(challenge, seq).\nDefault is for development only; override per product.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Challenge response key"
   }
 ]

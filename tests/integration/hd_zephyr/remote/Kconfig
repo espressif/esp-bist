@@ -1,0 +1,8 @@
+config ESP_BIST_RUNTIME_TEST_INTERVAL_MS
+	int "Runtime test interval (ms)"
+	default 500
+	help
+	  Interval in milliseconds between periodic runtime BIST test rounds
+	  on the LP core.
+
+source "Kconfig.zephyr"

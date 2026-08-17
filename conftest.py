@@ -12,6 +12,8 @@ Fixtures:
         qemu_instance: Provides a running QEMU instance for testing.
         qemu_debug_instance: Provides a running QEMU instance in debug mode (with GDB support).
         gdb_instance: Provides a GDB debugger instance for debugging.
+        config / build_dir: ESP-IDF-style multi-config binary resolution
+            (build_<target>_<config> → build_<target> → build_<config> → build).
 
 Command-line Options:
         --executable: Name of the executable file (without extension) to be tested/debugged.
@@ -19,11 +21,15 @@ Command-line Options:
 QEMU uses the same ``target`` as idf-ci (``@pytest.mark.parametrize`` / ``tests/idf_targets.py``), not a separate CLI flag.
 """
 
-import pytest
+from __future__ import annotations
+
+import logging
 import os
+import queue
 import subprocess
 import threading
-import queue
+
+import pytest
 
 class QEMU_RISCV(object):
     def __init__(self, directory=None, executable=None, target="esp32c3"):
@@ -162,4 +168,46 @@ def pytest_addoption(parser):
         "--executable",
         action="store",
         help="Name of the executable (without file extension). "
+    )
+
+
+@pytest.fixture
+def config(request: pytest.FixtureRequest) -> str | None:
+    """sdkconfig.ci.<config> name from @pytest.mark.parametrize('config', ...)."""
+    return getattr(request, 'param', None)
+
+
+@pytest.fixture
+def build_dir(request: pytest.FixtureRequest, app_path: str, target: str | None, config: str | None) -> str:
+    """
+    Resolve a local build directory the same way ESP-IDF examples do:
+
+    1. build_<target>_<config>
+    2. build_<target>
+    3. build_<config>
+    4. build
+    """
+    check_dirs: list[str] = []
+    build_dir_arg = request.config.getoption('build_dir', None)
+    if build_dir_arg and '{target}' not in str(build_dir_arg) and '{config}' not in str(build_dir_arg):
+        check_dirs.append(build_dir_arg)
+
+    if target is not None and config is not None:
+        check_dirs.append(f'build_{target}_{config}')
+    if target is not None:
+        check_dirs.append(f'build_{target}')
+    if config is not None:
+        check_dirs.append(f'build_{config}')
+    check_dirs.append('build')
+
+    for check_dir in check_dirs:
+        binary_path = os.path.join(app_path, check_dir)
+        if os.path.isdir(binary_path):
+            logging.info('found valid binary path: %s', binary_path)
+            return check_dir
+        logging.warning('checking binary path: %s... missing... try another place', binary_path)
+
+    raise ValueError(
+        f'no build dir valid. Please build the binary via "idf.py -B {check_dirs[0]} build" '
+        f'and run pytest again'
     )

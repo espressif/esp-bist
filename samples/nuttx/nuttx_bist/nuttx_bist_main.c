@@ -6,8 +6,11 @@
  *
  * HP-core side of the ESP-BIST NuttX sample.
  *
- * Loads the LP core firmware, signals start over /dev/lp_mailbox, then
- * receives post-boot and runtime BIST result bitmasks from the LP core.
+ * Loads the LP companion firmware and starts the Host Diagnostic Agent.
+ * The companion runs LP BIST and reports status bitmasks; the agent
+ * queues them for this app to print. With CONFIG_ESP_BIST_HD_AUDIT_QA,
+ * the companion also issues Q&A challenges that the agent answers on
+ * the worker path.
  ****************************************************************************/
 
 /****************************************************************************
@@ -18,19 +21,20 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include "bist_protocol.h"
+#include "bist_hd_agent.h"
+#include "bist_hd_protocol.h"
 #include "ulp/ulp/ulp_code.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RUNTIME_LOOPS 10
+#define MAILBOX_TIMEOUT_MS  10000
+#define RUNTIME_LOOPS       10
 
 /****************************************************************************
  * Private Functions
@@ -40,26 +44,30 @@ static void print_postboot_results(uint32_t result)
 {
   printf("=== Post-boot BIST results ===\n");
   printf("test_BIST_cpu_reg:%s\n",
-         (result & BIST_BIT_CPU_REG) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_CPU_REG) ? "PASS" : "FAIL");
   printf("test_BIST_cpu_csr:%s\n",
-         (result & BIST_BIT_CPU_CSR) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_CPU_CSR) ? "PASS" : "FAIL");
   printf("test_BIST_ram_march_x:%s\n",
-         (result & BIST_BIT_RAM_X) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_RAM_X) ? "PASS" : "FAIL");
+  printf("test_BIST_ram_abraham:%s\n",
+         (result & BIST_HD_BIT_ABRAHAM) ? "PASS" : "FAIL");
   printf("test_BIST_flash_crc:%s\n",
-         (result & BIST_BIT_FLASH) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_FLASH) ? "PASS" : "FAIL");
 }
 
 static void print_runtime_results(uint32_t result)
 {
   printf("=== Runtime BIST results ===\n");
   printf("test_BIST_runtime_cpu_reg:%s\n",
-         (result & BIST_BIT_CPU_REG) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_CPU_REG) ? "PASS" : "FAIL");
   printf("test_BIST_runtime_cpu_csr:%s\n",
-         (result & BIST_BIT_CPU_CSR) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_CPU_CSR) ? "PASS" : "FAIL");
   printf("test_BIST_runtime_ram_march_a:%s\n",
-         (result & BIST_BIT_RAM_A) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_RAM_A) ? "PASS" : "FAIL");
+  printf("test_BIST_runtime_ram_abraham:%s\n",
+         (result & BIST_HD_BIT_ABRAHAM) ? "PASS" : "FAIL");
   printf("test_BIST_runtime_stack_check:%s\n",
-         (result & BIST_BIT_STACK) ? "PASS" : "FAIL");
+         (result & BIST_HD_BIT_STACK) ? "PASS" : "FAIL");
 }
 
 /****************************************************************************
@@ -68,14 +76,12 @@ static void print_runtime_results(uint32_t result)
 
 int main(int argc, FAR char *argv[])
 {
-  int ulp_fd;
-  int mb_fd;
-  int lp_uart_fd;
-  uint32_t ready = BIST_MSG_READY;
-  uint32_t postboot = 0;
-  uint32_t runtime = 0;
+  uint32_t status;
   bool all_pass = true;
-  int i;
+  bool runtime_ok = true;
+  int ulp_fd;
+  int lp_uart_fd;
+  int err;
 
   UNUSED(argc);
   UNUSED(argv);
@@ -92,7 +98,6 @@ int main(int argc, FAR char *argv[])
       printf("Failed to initialize LP-UART: %d\n", errno);
       return -1;
     }
-
 
   ulp_fd = open("/dev/ulp", O_WRONLY);
   if (ulp_fd < 0)
@@ -115,65 +120,73 @@ int main(int argc, FAR char *argv[])
 
   sleep(1);
 
-  mb_fd = open("/dev/lp_mailbox", O_RDWR);
-  if (mb_fd < 0)
+  err = bist_hd_agent_start();
+  if (err != 0)
     {
-      printf("Failed to open LP Mailbox: %d\n", errno);
+      printf("Failed to start Host Diagnostic Agent: %d\n", err);
+      printf("test_HD_agent_ready:FAIL\n");
       return -1;
     }
 
-  if (write(mb_fd, &ready, 4) != 4)
-    {
-      printf("Failed to signal HP ready: %d\n", errno);
-      close(mb_fd);
-      return -1;
-    }
+  printf("Host Diagnostic Agent started\n");
+  printf("test_HD_agent_ready:PASS\n");
 
-  if (read(mb_fd, &postboot, 4) == 4 && (postboot & BIST_BIT_POSTBOOT))
+  err = bist_hd_agent_wait_lp_status(&status,
+                                      BIST_HD_BIT_POSTBOOT,
+                                      MAILBOX_TIMEOUT_MS);
+  if (err == 0)
     {
-      print_postboot_results(postboot);
-      if ((postboot & BIST_POSTBOOT_ALL_PASS) != BIST_POSTBOOT_ALL_PASS)
-        {
-          all_pass = false;
-        }
+      print_postboot_results(status);
     }
   else
     {
-      printf("test_BIST_postboot:FAIL (mailbox read)\n");
+      printf("test_BIST_postboot:TIMEOUT\n");
       all_pass = false;
     }
 
-  for (i = 1; i <= RUNTIME_LOOPS; i++)
+  for (int i = 1; i <= RUNTIME_LOOPS; i++)
     {
-      if (read(mb_fd, &runtime, 4) != 4)
+      err = bist_hd_agent_wait_lp_status(&status,
+                                          BIST_HD_BIT_RUNTIME,
+                                          MAILBOX_TIMEOUT_MS);
+      if (err != 0)
         {
-          printf("test_BIST_runtime:FAIL (mailbox read, loop %d)\n", i);
+          printf("test_BIST_runtime:TIMEOUT (loop %d)\n", i);
           all_pass = false;
+          runtime_ok = false;
           break;
         }
 
       printf("--- Runtime loop %d/%d ---\n", i, RUNTIME_LOOPS);
-      print_runtime_results(runtime);
-      if ((runtime & BIST_RUNTIME_ALL_PASS) != BIST_RUNTIME_ALL_PASS)
+      print_runtime_results(status);
+      if ((status & BIST_HD_RUNTIME_ALL_PASS) != BIST_HD_RUNTIME_ALL_PASS)
         {
           all_pass = false;
         }
     }
 
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
+  /* Completing all runtime loops proves Q&A rounds passed; a runtime test
+   * failure does not invalidate Q&A, so only loop completion matters. */
+
+  if (runtime_ok)
+    {
+      printf("test_HD_challenge:PASS\n");
+    }
+  else
+    {
+      printf("test_HD_challenge:FAIL\n");
+    }
+#endif
+
   printf("BIST_RESULT:%s\n", all_pass ? "PASS" : "FAIL");
 
-  /* Keep acknowledging LP runtime messages so synchronous LP send does not
-   * block forever and trip the LP WDT.
-   */
+  /* Agent task keeps receiving companion messages. Park main. */
 
   while (1)
     {
-      if (read(mb_fd, &runtime, 4) != 4)
-        {
-          break;
-        }
+      sleep(1);
     }
 
-  close(mb_fd);
   return all_pass ? 0 : 1;
 }

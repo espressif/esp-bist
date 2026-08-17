@@ -1,0 +1,3 @@
+# Fail-closed: the host answers with a key the companion does not share, so
+# every answer is wrong and the companion must enter safe state.
+CONFIG_BIST_HD_TEST_KEY_MISMATCH=y

@@ -42,60 +42,36 @@ include(${BIST_ROOT_DIR}/cmake/kconfig.cmake)
 
 message("Building Espressif's Built-In Self Test (BIST) Library for ${SOC_TARGET}")
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_stl.cmake)
+
+# ESP-IDF leaves SOC_ADC_SUPPORTED unset for ESP32-H4 and ships no adc_ll.h for
+# it, so neither the oneshot driver nor the ADC plausibility tests can be built.
+if(SOC_TARGET STREQUAL "esp32h4")
+    set(BIST_SOC_ADC_SUPPORTED FALSE)
+else()
+    set(BIST_SOC_ADC_SUPPORTED TRUE)
+endif()
+
 set(bist_src
     drivers/wdt.c
     drivers/gpio.c
     drivers/esp_timer.c
     )
-if(NOT SOC_TARGET STREQUAL "esp32h4")
+if(BIST_SOC_ADC_SUPPORTED)
     list(APPEND bist_src drivers/adc_oneshot.c)
 endif()
 if(SOC_TARGET STREQUAL "esp32c3")
     list(APPEND bist_src drivers/xt_wdt.c)
 endif()
-if(CONFIG_ESP_BIST_CPU_REG_TEST)
-    list(APPEND bist_src core/cpu/bist_cpu_regs.c)
+
+bist_collect_sources(_bist_srcs)
+if(NOT BIST_SOC_ADC_SUPPORTED)
+    list(REMOVE_ITEM _bist_srcs "core/io/bist_adc.c")
 endif()
-if(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
-    list(APPEND bist_src core/cpu/bist_cpu_csr_regs.c)
-endif()
-if(CONFIG_ESP_BIST_STACK_TEST)
-    list(APPEND bist_src core/cpu/bist_cpu_stack.c)
-endif()
-if(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
-    list(APPEND bist_src core/memory/bist_ram.c)
-endif()
-if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
-    list(APPEND bist_src core/memory/bist_flash.c)
-endif()
-if(CONFIG_ESP_BIST_CLOCK_TEST)
-    list(APPEND bist_src core/clock/bist_clock_fail.c)
-endif()
-if(CONFIG_ESP_BIST_GPIO_TEST)
-    list(APPEND bist_src core/io/bist_gpio.c)
-endif()
-if(CONFIG_ESP_BIST_ADC_TEST)
-if(NOT SOC_TARGET STREQUAL "esp32h4")
-    list(APPEND bist_src core/io/bist_adc.c)
-endif()
-endif()
-if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST)
-    list(APPEND bist_src core/cpu/bist_pc.c)
-endif()
-if(CONFIG_ESP_BIST_WATCHDOG_TEST)
-    list(APPEND bist_src core/wdt/bist_wdt.c)
-endif()
-if(CONFIG_ESP_BIST_INTERRUPT_TEST)
-    list(APPEND 
-         bist_src
-         core/interrupt/bist_interrupt.c
-         core/interrupt/bist_interrupt_sw.c
-         )
-endif()
+list(APPEND bist_src ${_bist_srcs})
 
 set(idf_srcs
     ${IDF_PATH}/components/log/src/log.c
-    # ${IDF_PATH}/components/log/log_noos.c
     ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
     ${IDF_PATH}/components/hal/systimer_hal.c
     ${IDF_PATH}/components/esp_hal_timg/timer_hal.c

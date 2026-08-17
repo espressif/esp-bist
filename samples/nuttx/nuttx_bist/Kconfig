@@ -8,6 +8,8 @@ config NUTTX_ESP_BIST_MODULE
 	---help---
 		Internal symbol. Indicates ESP-BIST is integrated as a NuttX LP-core module.
 
+orsource "../../../src/bist/Kconfig"
+
 config ESP_NUTTX_BIST
 	tristate "ESP-BIST LP-core example"
 	default n
@@ -25,21 +27,5 @@ config ESP_NUTTX_BIST_PROGNAME
 	---help---
 		This is the name of the program that will be used when the NSH ELF
 		program is installed.
-
-config ESP_NUTTX_BIST_PRIORITY
-	int "Task priority"
-	default 100
-
-config ESP_NUTTX_BIST_STACKSIZE
-	int "Stack size"
-	default DEFAULT_TASK_STACKSIZE
-
-config ESP_BIST_RUNTIME_TEST_INTERVAL_US
-	int "Runtime test interval (us)"
-	default 10000
-	range 1 10000000
-	---help---
-		Interval in microseconds between periodic runtime BIST test rounds
-		on the LP core (passed to ulp_lp_core_delay_us()).
 
 endif

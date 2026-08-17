@@ -37,6 +37,7 @@ ifeq ($(CONFIG_ESP_BIST_MEMORY_RAM_TEST),y)
 ULP_APP_C_SRCS += $(BIST_DIR)/core/memory/bist_ram.c
 endif
 ifeq ($(CONFIG_ESP_BIST_MEMORY_FLASH_TEST),y)
+ULP_APP_C_SRCS += $(BIST_DIR)/bist_hd_crc.c
 ULP_APP_C_SRCS += $(BIST_DIR)/core/memory/bist_flash.c
 endif
 
@@ -54,6 +55,15 @@ ULP_APP_INCLUDES += \
 	$(BIST_DIR)/core/interrupt/include/ \
 	$(BIST_DIR)/drivers/include/ \
 	$(ESP_BIST_ROOT)/src/soc/$(CHIP_SERIES)/include/
+
+ifeq ($(CONFIG_ESP_BIST_HOST_DIAGNOSTICS),y)
+ULP_APP_C_SRCS += $(BIST_DIR)/bist_hd_protocol.c
+ULP_APP_C_SRCS += $(BIST_DIR)/bist_hd_challenge.c
+ULP_APP_C_SRCS += $(BIST_DIR)/companion/bist_hd_companion.c
+ULP_APP_C_SRCS += $(BIST_DIR)/companion/nuttx/bist_hd_comp_port_nuttx.c
+ULP_APP_INCLUDES += \
+	$(BIST_DIR)/companion/include/
+endif
 
 ULP_CUSTOM_SECTIONS_LD = $(ESP_BIST_ROOT)/src/soc/$(CHIP_SERIES)/ld/nuttx.ld
 

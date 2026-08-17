@@ -1,0 +1,60 @@
+common:
+  sysbuild: true
+  integration_platforms:
+    - esp32c5_devkitc/esp32c5/hpcore
+    - esp32c6_devkitc/esp32c6/hpcore
+  platform_allow:
+    - esp32c5_devkitc/esp32c5/hpcore
+    - esp32c6_devkitc/esp32c6/hpcore
+  tags:
+    - bist
+    - safety
+tests:
+  # Companion verdict on a well-behaved host: post-boot and runtime bitmasks
+  # plus repeated Q&A rounds. samples/zephyr runs the same integration without
+  # the assertions.
+  bist.hd.selftest:
+    harness: ztest
+  # Fail-closed Host Diagnostics. Both faults come from this app rather than
+  # from a branch in src/bist: the host either starves its own agent or is built
+  # with a challenge key the LP image does not share. The companion enters safe
+  # state and starves the LP watchdog, so the chip resets.
+  #
+  # reset_cause reboots the ztest suite into itself and names the reset cause.
+  # Only starvation can be armed for a single boot, which is why this scenario
+  # cannot use the key mismatch: a build-time key is wrong on every boot. The
+  # console variants below keep the black-box view of the same reaction,
+  # observing the reboot without help from the firmware under test.
+  bist.hd.reset_cause:
+    harness: ztest
+    expect_reboot: true
+    timeout: 120
+    extra_configs:
+      - CONFIG_HWINFO=y
+      - CONFIG_BIST_HD_TEST_STARVE_AGENT=y
+  # The last regex matches the boot banner printed after the reset; ordered
+  # matching keeps it from being satisfied by the first boot.
+  bist.hd.key_mismatch:
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "test_HD_agent_ready:PASS"
+        - "test_HD_fail_closed_armed:PASS"
+        - "Booting Zephyr OS build"
+    extra_configs:
+      - CONFIG_ZTEST=n
+      - CONFIG_ESP_BIST_HD_CHALLENGE_KEY=0x5A5A5A5A
+  bist.hd.starved_agent:
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "test_HD_agent_ready:PASS"
+        - "test_HD_fail_closed_armed:PASS"
+        - "Booting Zephyr OS build"
+    extra_configs:
+      - CONFIG_ZTEST=n
+      - CONFIG_BIST_HD_TEST_STARVE_AGENT=y

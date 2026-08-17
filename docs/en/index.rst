@@ -34,5 +34,6 @@ This documentation provides a comprehensive overview of ESP-BIST, including its 
     Tool Qualification <tool_qualification>
     Safety Case Summary <safety_case_summary>
     Application Guide <application_guide>
+    Host Diagnostics <host_diagnostics>
     API Reference <api>
     MCP Server <mcp_server>
