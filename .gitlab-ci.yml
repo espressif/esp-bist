@@ -159,6 +159,32 @@ mcp_data_drift:
       fi
     - echo "mcp-server/data/ is in sync with source content."
 
+pre_commit:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        # Make sure the MR's base commit is fetched even on a shallow clone,
+        # so pre-commit can diff against it below.
+        GIT_FETCH_EXTRA_FLAGS: --prune --quiet --no-tags $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    - when: always
+  script:
+    - pip install --quiet pre-commit
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
+        echo "Running pre-commit on files changed in the merge request"
+        pre-commit run --from-ref "$CI_MERGE_REQUEST_DIFF_BASE_SHA" --to-ref "$CI_COMMIT_SHA"
+      elif git rev-parse --verify -q HEAD~1 > /dev/null; then
+        echo "Running pre-commit on files changed in commit $CI_COMMIT_SHA"
+        pre-commit run --from-ref HEAD~1 --to-ref HEAD
+      else
+        echo "No parent commit available, skipping pre-commit"
+        exit 0
+      fi
+
 # Host-native Host Diagnostics protocol / challenge unit tests (no DUT / IDF).
 test_hd_protocol_unit:
   stage: Lint
@@ -235,7 +261,6 @@ build_mcuboot:
 
 build_qemu_remote:
   stage: Build
-  before_script: []
   timeout: 2h
   variables:
     QEMU_BRANCH: 'feature/esp32h4'

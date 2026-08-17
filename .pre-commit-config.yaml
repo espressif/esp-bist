@@ -11,6 +11,7 @@ repos:
       - id: mixed-line-ending
         args: ['-f=lf']
       - id: check-yaml
+        args: ['--allow-multiple-documents']
       - id: check-json
       - id: check-merge-conflict
       - id: check-case-conflict
