@@ -2827,7 +2827,7 @@
     "id": "doc:README.md:analog_i_o",
     "title": "Analog I/O",
     "section": "analog_i_o",
-    "body": "The analog I/O (ADC) test routines verify the correct operation of ADC input channels. \n\nTolerance is controlled by `CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION` (default: 1%).",
+    "body": "The analog I/O (ADC) test routines verify the correct operation of ADC input channels.\n\nTolerance is controlled by `CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION` (default: 1%).",
     "source_file": "src/bist/README.md",
     "content_type": "doc"
   },
