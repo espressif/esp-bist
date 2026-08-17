@@ -6,10 +6,6 @@ tools/
 *.dump
 *.ctu-info
 
-# Host unit-test binaries built by tests/host/Makefile
-tests/host/test_*
-!tests/host/test_*.c
-
 # Sphinx documentation
 docs/_build/
 docs/extensions/_build/

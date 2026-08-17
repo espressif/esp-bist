@@ -221,6 +221,18 @@ test_hd_companion_unit:
     - cmake --build build/hd_companion_test
     - ctest --test-dir build/hd_companion_test --output-on-failure
 
+test_clock_math_unit:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - when: always
+  script:
+    - cmake -S tests/unit/clock_math -B build/clock_math_test
+    - cmake --build build/clock_math_test
+    - ctest --test-dir build/clock_math_test --output-on-failure
+
 build_docker_image:
   before_script: []
   image: espressif/dind:1
@@ -244,15 +256,6 @@ build_docker_image:
         - .devcontainer/Dockerfile
       when: manual
   tags: [ "dind", "shiny" ]
-
-host_unit_tests:
-  stage: Build
-  before_script: []
-  script:
-    - make -C tests/host check
-  rules:
-    - when: always
-  tags: [build]
 
 build_mcuboot:
   stage: Build
