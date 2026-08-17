@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with BIST library. If not, see
  * <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
- 
+
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -37,7 +37,7 @@ void *_sbrk(int incr)
     unsigned char *prev = cur;
     if (cur + incr > &_heap_end) {
         ESP_LOGE("heap", "Heap out of memory");
-        return (void *)-1;
+        return (void *) -1;
     }
     cur += incr;
     return prev;
@@ -74,7 +74,7 @@ off_t _lseek_r(struct _reent *r, int fd, off_t offset, int whence)
     (void)fd;
     (void)offset;
     (void)whence;
-    return (off_t)-1;
+    return (off_t) -1;
 }
 
 int _close_r(struct _reent *r, int fd)

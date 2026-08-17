@@ -203,7 +203,7 @@ SECTIONS
      * before map_rom_segments has set up the flash (IROM) mapping. */
     *libc.a:libc_a-memcpy.*(.text .text.* .literal .literal.*)
     *libc.a:libc_a-memset.*(.text .text.* .literal .literal.*)
-    
+
     *libbist_esp.a:*(.text .text.*)
 
     /* Align to 8 so pcTestFunction0 has bit 2 = 0; the GDB fault-injection
