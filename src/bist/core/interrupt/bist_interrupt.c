@@ -47,8 +47,8 @@ static void bist_hw_interrupt_check_ratio(void)
 {
     uint32_t expected = 2 * hw_interrupt_count_2;
     uint32_t diff = (hw_interrupt_count_1 > expected)
-                        ? (hw_interrupt_count_1 - expected)
-                        : (expected - hw_interrupt_count_1);
+                    ? (hw_interrupt_count_1 - expected)
+                    : (expected - hw_interrupt_count_1);
     if (diff > 1U) {
         hw_interrupt_test_failed = true;
     }
@@ -134,7 +134,6 @@ static bist_esp_err_t bist_hw_timer_start(bist_hw_timer_t *timer)
     return BIST_ESP_OK;
 }
 
-
 static void bist_hw_timer_deinit(bist_hw_timer_t *timer)
 {
     const uint32_t cpu_intr_mask = 1U << timer->cpu_intr;
@@ -167,14 +166,14 @@ static bist_esp_err_t bist_hardware_interrupt_test_init(void)
     hw_interrupt_count_2 = 0;
     hw_interrupt_test_failed = false;
 
-    hw_timers[0] = (bist_hw_timer_t){
+    hw_timers[0] = (bist_hw_timer_t) {
         .group_id = 0,
         .cpu_intr = BIST_HW_TIMER_CPU_INTR_0,
         .timer_id = 0,
         .intr_source = soc_timg_gptimer_signals[0][0].irq_id,
         .period_us = BIST_HARDWARE_INTERRUPT_PERIOD_US_1,
     };
-    hw_timers[1] = (bist_hw_timer_t){
+    hw_timers[1] = (bist_hw_timer_t) {
         .group_id = 1,
         .cpu_intr = BIST_HW_TIMER_CPU_INTR_1,
         .timer_id = 0,
@@ -197,7 +196,6 @@ static bist_esp_err_t bist_hardware_interrupt_test_init(void)
 
     return BIST_ESP_OK;
 }
-
 
 bist_esp_err_t bist_hardware_interrupt_test(void)
 {

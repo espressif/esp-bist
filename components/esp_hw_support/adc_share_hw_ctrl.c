@@ -38,10 +38,8 @@
 #include "esp_efuse_rtc_calib.h"
 #endif
 
-
 ESP_LOG_ATTR_TAG(TAG, "adc_share_hw_ctrl");
 // extern portMUX_TYPE rtc_spinlock;
-
 
 #if SOC_ADC_CALIBRATION_V1_SUPPORTED
 /*---------------------------------------------------------------
@@ -72,7 +70,7 @@ void adc_calc_hw_calibration_code(adc_unit_t adc_n, adc_atten_t atten)
     uint32_t init_code = 0;
 
     if ((version >= ESP_EFUSE_ADC_CALIB_VER_MIN) &&
-        (version <= ESP_EFUSE_ADC_CALIB_VER_MAX)) {
+            (version <= ESP_EFUSE_ADC_CALIB_VER_MAX)) {
         // Guarantee the calibration version before calling efuse function
         init_code = esp_efuse_rtc_calib_get_init_code(version, adc_n, atten);
     }
@@ -108,7 +106,7 @@ void adc_load_hw_calibration_chan_compens(adc_unit_t adc_n, adc_channel_t chan, 
 {
     int version = esp_efuse_rtc_calib_get_ver();
     if ((version >= ESP_EFUSE_ADC_CALIB_VER_MIN) &&
-        (version <= ESP_EFUSE_ADC_CALIB_VER_MAX)) {
+            (version <= ESP_EFUSE_ADC_CALIB_VER_MAX)) {
         // Guarantee the calibration version before calling efuse function
         s_adc_cali_chan_compens[chan][atten] = esp_efuse_rtc_calib_get_chan_compens(version, adc_n, chan, atten);
     }
@@ -121,7 +119,6 @@ int IRAM_ATTR adc_get_hw_calibration_chan_compens(adc_unit_t adc_n, adc_channel_
 }
 #endif  // SOC_ADC_CALIB_CHAN_COMPENS_SUPPORTED
 #endif //#if SOC_ADC_CALIBRATION_V1_SUPPORTED
-
 
 /*---------------------------------------------------------------
             ADC Hardware Locks

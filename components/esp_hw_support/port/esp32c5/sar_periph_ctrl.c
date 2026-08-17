@@ -88,7 +88,6 @@ static void s_sar_power_release(void)
     modem_clock_module_disable(PERIPH_MODEM_ADC_COMMON_FE_MODULE);
 }
 
-
 /*------------------------------------------------------------------------------
 * PWDET Power
 *----------------------------------------------------------------------------*/
@@ -101,7 +100,6 @@ void sar_periph_ctrl_pwdet_power_release(void)
 {
     s_sar_power_release();
 }
-
 
 /*------------------------------------------------------------------------------
 * ADC Power

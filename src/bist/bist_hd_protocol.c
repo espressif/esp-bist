@@ -73,7 +73,7 @@ int bist_hd_msg_decode(const uint32_t *words, size_t nwords, bist_hd_msg_t *msg)
     hdr_nwords = BIST_HD_HDR_GET_NWORDS(words[0]);
 
     if (tag != BIST_HD_WIRE_TAG || hdr_nwords < BIST_HD_WIRE_TYPED_WORDS ||
-        hdr_nwords > BIST_HD_WIRE_WORDS_MAX || nwords < hdr_nwords || type == 0u) {
+            hdr_nwords > BIST_HD_WIRE_WORDS_MAX || nwords < hdr_nwords || type == 0u) {
         return -1;
     }
 
@@ -95,7 +95,7 @@ size_t bist_hd_frame_nwords(uint32_t word0)
 
     hdr_nwords = BIST_HD_HDR_GET_NWORDS(word0);
     if (BIST_HD_HDR_GET_TAG(word0) != BIST_HD_WIRE_TAG ||
-        hdr_nwords < BIST_HD_WIRE_TYPED_WORDS || hdr_nwords > BIST_HD_WIRE_WORDS_MAX) {
+            hdr_nwords < BIST_HD_WIRE_TYPED_WORDS || hdr_nwords > BIST_HD_WIRE_WORDS_MAX) {
         return 0u;
     }
     return hdr_nwords;

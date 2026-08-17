@@ -10,7 +10,10 @@
 #if defined(SOC_TARGET_ESP32H4)
 #warning "ADC is not supported for ESP32-H4!"
 
-int main() {return 0;}
+int main()
+{
+    return 0;
+}
 #else
 
 void setUp(void)

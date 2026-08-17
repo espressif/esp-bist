@@ -13,7 +13,6 @@
  * <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
 
-
 #include <stdint.h>
 #include <string.h>
 #include "hal/cache_hal.h"
@@ -32,7 +31,7 @@ extern uint32_t _stack_top, _stack_overflow_protection_start;
 static const char *TAG = "loader";
 
 void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t app_drom_size,
-    uint32_t app_irom_start, uint32_t app_irom_vaddr, uint32_t app_irom_size)
+                      uint32_t app_irom_start, uint32_t app_irom_vaddr, uint32_t app_irom_size)
 {
     uint32_t app_irom_start_aligned = app_irom_start & MMU_FLASH_MASK;
     uint32_t app_irom_vaddr_aligned = app_irom_vaddr & MMU_FLASH_MASK;
@@ -95,7 +94,7 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
     uint32_t actual_mapped_len = 0;
 
     ESP_EARLY_LOGI(TAG, "RTC segment: paddr=0x%1X, vaddr=0x%1X, size=0x%1X", app_rtc_start, app_rtc_vaddr,
-        app_rtc_size);
+                   app_rtc_size);
 
     cache_hal_disable(CACHE_LEVEL, CACHE_TYPE_ALL);
 
@@ -108,7 +107,7 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
      */
 
     mmu_hal_map_region(0, MMU_TARGET_FLASH0, SOC_DROM_LOW, app_rtc_start_aligned, size_after_paddr_aligned,
-        &actual_mapped_len);
+                       &actual_mapped_len);
 
     cache_bus_mask_t bus_mask = cache_ll_l1_get_bus(0, app_rtc_vaddr_aligned, app_rtc_size);
     cache_ll_l1_enable_bus(0, bus_mask);

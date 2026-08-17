@@ -36,7 +36,6 @@
 static systimer_hal_context_t systimer_hal;
 uint64_t timestamp_id[2] = { UINT64_MAX, UINT64_MAX };
 
-
 #ifndef NDEBUG
 // Enable built-in checks in queue.h in debug builds
 #define INVARIANTS
@@ -52,8 +51,8 @@ typedef enum {
 
 struct esp_timer {
     uint64_t alarm;
-    uint64_t period:56;
-    flags_t flags:8;
+    uint64_t period: 56;
+    flags_t flags: 8;
     union {
         esp_timer_cb_t callback;
         uint32_t event_id;
@@ -70,9 +69,8 @@ __attribute__((unused)) static const char* TAG = "esp_timer";
 
 // lists of currently armed timers for two dispatch methods: ISR and TASK
 static LIST_HEAD(esp_timer_list, esp_timer) s_timers[ESP_TIMER_MAX] = {
-    [0 ... (ESP_TIMER_MAX - 1)] = LIST_HEAD_INITIALIZER(s_timers)
+    [0 ...(ESP_TIMER_MAX - 1)] = LIST_HEAD_INITIALIZER(s_timers)
 };
-
 
 esp_err_t esp_timer_create(const esp_timer_create_args_t* args,
                            esp_timer_handle_t* out_handle)
@@ -156,7 +154,7 @@ esp_err_t IRAM_ATTR esp_timer_start_once(esp_timer_handle_t timer, uint64_t time
     esp_err_t err;
 
     /* Check if the timer is armed once the list is locked.
-     * Otherwise another task may arm the timer inbetween the check
+     * Otherwise another task may arm the timer in between the check
      * and us locking the list, resulting in us inserting the
      * timer to s_timers a second time. This will create a loop
      * in s_timers. */
@@ -292,7 +290,6 @@ static IRAM_ATTR bool timer_armed(esp_timer_handle_t timer)
     return timer->alarm > 0;
 }
 
-
 static IRAM_ATTR bool timer_process_alarm(esp_timer_dispatch_t dispatch_method)
 {
     bool processed = false;
@@ -340,7 +337,8 @@ static IRAM_ATTR bool timer_process_alarm(esp_timer_dispatch_t dispatch_method)
     return processed;
 }
 
-static void IRAM_ATTR esp_timer_impl_try_to_set_next_alarm(void) {
+static void IRAM_ATTR esp_timer_impl_try_to_set_next_alarm(void)
+{
     unsigned now_alarm_idx;  // ISR is called due to this current alarm
     unsigned next_alarm_idx; // The following alarm after now_alarm_idx
     if (timestamp_id[0] < timestamp_id[1]) {
@@ -399,7 +397,6 @@ esp_err_t esp_timer_init(void)
     esp_cpu_intr_set_handler(ETS_INTERNAL_TIMER0_INTR_NO, timer_alarm_isr, NULL);
 
     systimer_hal_enable_alarm_int(&systimer_hal, SYSTIMER_ALARM_ESPTIMER);
-
 
     esp_cpu_intr_enable(1 << ETS_INTERNAL_TIMER0_INTR_NO);
 
@@ -476,7 +473,6 @@ esp_err_t IRAM_ATTR esp_timer_get_expiry_time(esp_timer_handle_t timer, uint64_t
         /* Return error for periodic timers */
         return ESP_ERR_NOT_SUPPORTED;
     }
-
 
     *expiry = timer->alarm;
 

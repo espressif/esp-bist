@@ -79,7 +79,7 @@ void __start(void)
 
     map_rtc_segment(_app_rtc_start, _app_rtc_vaddr, _app_rtc_size);
 
-    map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr,_app_irom_size);
+    map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr, _app_irom_size);
 
     soc_reset_reason_t reset_reason = esp_rom_get_reset_reason(0);
 

@@ -83,7 +83,6 @@ static void post_boot_tests(void)
 {
     bist_esp_err_t test_err = BIST_ESP_OK;
 
-
     test_err = bist_ext_crystal_fail_test();
     if (test_err == BIST_ESP_CLOCK_TEST_ERR) {
         ESP_LOGE(TAG, "External crystal fail test failed");

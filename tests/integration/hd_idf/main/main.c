@@ -87,7 +87,7 @@ static void lp_core_init(void)
     };
 
     ESP_ERROR_CHECK(ulp_lp_core_load_binary(ulp_hd_idf_test_bin_start,
-                    (ulp_hd_idf_test_bin_end - ulp_hd_idf_test_bin_start)));
+                                            (ulp_hd_idf_test_bin_end - ulp_hd_idf_test_bin_start)));
 
     ESP_ERROR_CHECK(ulp_lp_core_run(&cfg));
 }

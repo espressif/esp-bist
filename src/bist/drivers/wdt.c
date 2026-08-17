@@ -122,7 +122,7 @@ void wdt_feed(void)
         return;
     }
 
-    if(wdt_ctx.is_windowed && !wdt_ctx.window_open_flag) {
+    if (wdt_ctx.is_windowed && !wdt_ctx.window_open_flag) {
         ESP_LOGE(TAG, "WDT underflow detected: feeding is not allowed (min required = %u us)",
                  wdt_ctx.underflow_timeout);
         wdt_ctx.stop_feed = true;
@@ -185,7 +185,7 @@ bool wdt_is_underflow_detected(void)
 
 int wdt_init_windowed(uint32_t underflow_timeout_us)
 {
-    if(underflow_timeout_us == 0) {
+    if (underflow_timeout_us == 0) {
         ESP_LOGE(TAG, "Underflow timeout cannot be 0");
         return -1;
     }

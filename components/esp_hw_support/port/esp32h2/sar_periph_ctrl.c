@@ -30,7 +30,6 @@ ESP_LOG_ATTR_TAG(TAG, "sar_periph_ctrl");
 // extern portMUX_TYPE rtc_spinlock;
 // static _lock_t adc_reset_lock;
 
-
 void sar_periph_ctrl_init(void)
 {
     sar_ctrl_ll_force_power_ctrl_from_pwdet(true);
@@ -88,7 +87,6 @@ static void s_sar_power_release(void)
     modem_clock_module_disable(PERIPH_MODEM_ADC_COMMON_FE_MODULE);
 }
 
-
 /*------------------------------------------------------------------------------
 * PWDET Power
 *----------------------------------------------------------------------------*/
@@ -101,7 +99,6 @@ void sar_periph_ctrl_pwdet_power_release(void)
 {
     s_sar_power_release();
 }
-
 
 /*------------------------------------------------------------------------------
 * ADC Power

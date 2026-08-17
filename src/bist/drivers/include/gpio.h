@@ -41,8 +41,7 @@ typedef void (*gpio_isr_t)(void *arg);
 /**
  * @brief Configuration parameters of GPIO pad for gpio_config function
  */
-typedef struct
-{
+typedef struct {
     uint64_t pin_bit_mask;        /*!< GPIO pin: set with bit mask, each bit maps to a GPIO */
     gpio_mode_t mode;             /*!< GPIO mode: set input/output mode                     */
     gpio_pullup_t pull_up_en;     /*!< GPIO pull-up                                         */

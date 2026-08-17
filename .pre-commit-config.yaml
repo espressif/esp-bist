@@ -43,6 +43,16 @@ repos:
           - '--pad-oper'
           - '--unpad-paren'
           - '--max-continuation-indent=120'
+        exclude: |
+          (?x)^(
+            samples/nuttx/|
+            samples/zephyr/|
+            tests/integration/hd_zephyr/|
+            src/bist/companion/zephyr/|
+            src/bist/companion/nuttx/|
+            src/bist/host/zephyr/|
+            src/bist/host/nuttx/
+          )
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
