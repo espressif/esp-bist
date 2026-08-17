@@ -23,13 +23,11 @@
 #include "esp_rom_sys.h"
 #include "wdt.h"
 
-
 #ifdef SOC_TARGET_ESP32P4
-    #define RESET_REASON_CORE RESET_REASON_CORE_MWDT
+#define RESET_REASON_CORE RESET_REASON_CORE_MWDT
 #else
-    #define RESET_REASON_CORE RESET_REASON_CORE_MWDT0
+#define RESET_REASON_CORE RESET_REASON_CORE_MWDT0
 #endif
-
 
 bist_esp_err_t bist_wdt_test(void)
 {

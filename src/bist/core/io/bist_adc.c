@@ -203,7 +203,7 @@ bist_esp_err_t bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)
 
     ESP_LOGD(TAG, "ADC%d channel %d reference raw: %d", unit + 1, channel, raw);
 
-    if (raw < (BIST_ADC_REFERENCE - BIST_ADC_TOLERANCE) || raw > (BIST_ADC_REFERENCE + BIST_ADC_TOLERANCE) ) {
+    if (raw < (BIST_ADC_REFERENCE - BIST_ADC_TOLERANCE) || raw > (BIST_ADC_REFERENCE + BIST_ADC_TOLERANCE)) {
         ESP_LOGE(TAG, "ADC%d channel %d reference test failed, raw stuck low: %d, expected: %d",
                  unit + 1, channel, raw, BIST_ADC_REFERENCE);
         goto cleanup;

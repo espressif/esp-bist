@@ -50,7 +50,6 @@ static inline void xt_wdt_ll_set_timeout(rtc_cntl_dev_t *hw, uint8_t timeout)
     hw->xtal32k_conf.xtal32k_wdt_timeout = timeout;
 }
 
-
 /**
  * @brief Reset the XT_WDT
  *
@@ -61,7 +60,6 @@ static inline void xt_wdt_ll_reset(rtc_cntl_dev_t *hw)
     hw->ext_xtl_conf.xtal32k_wdt_reset = 1;
     hw->ext_xtl_conf.xtal32k_wdt_reset = 0;
 }
-
 
 /**
  * @brief Set the backup clock value

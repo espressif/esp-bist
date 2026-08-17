@@ -313,7 +313,7 @@ This ensures the pin can reliably read external signals.
 
 ### Analog I/O
 
-The analog I/O (ADC) test routines verify the correct operation of ADC input channels. 
+The analog I/O (ADC) test routines verify the correct operation of ADC input channels.
 
 Tolerance is controlled by `CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION` (default: 1%).
 

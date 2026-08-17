@@ -9,7 +9,6 @@ Usage:
 """
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -20,9 +19,7 @@ def chunk_rst(filepath: Path) -> list[dict]:
     text = filepath.read_text(encoding="utf-8", errors="replace")
     filename = filepath.name
 
-    section_re = re.compile(
-        r"^(.+)\n([=\-\^~\"]+)$", re.MULTILINE
-    )
+    section_re = re.compile(r"^(.+)\n([=\-\^~\"]+)$", re.MULTILINE)
 
     sections: list[dict] = []
     matches = list(section_re.finditer(text))
@@ -159,7 +156,11 @@ def parse_c_header(filepath: Path) -> list[dict]:
         module = "core"
 
     file_brief = ""
-    file_brief_match = re.search(r"@file\s+\S+\s*\n\s*\*\s*@brief\s+(.+?)(?:\n\s*\*\s*\n|\n\s*\*/)", text, re.DOTALL)
+    file_brief_match = re.search(
+        r"@file\s+\S+\s*\n\s*\*\s*@brief\s+(.+?)(?:\n\s*\*\s*\n|\n\s*\*/)",
+        text,
+        re.DOTALL,
+    )
     if file_brief_match:
         file_brief = re.sub(r"\n\s*\*\s*", " ", file_brief_match.group(1)).strip()
 
@@ -179,24 +180,36 @@ def parse_c_header(filepath: Path) -> list[dict]:
         func_name = match.group(3)
 
         brief = ""
-        brief_match = re.search(r"@brief\s+(.+?)(?:\n\s*\*\s*\n|\n\s*\*\s*@|\n\s*\*/)", doxygen_block, re.DOTALL)
+        brief_match = re.search(
+            r"@brief\s+(.+?)(?:\n\s*\*\s*\n|\n\s*\*\s*@|\n\s*\*/)",
+            doxygen_block,
+            re.DOTALL,
+        )
         if brief_match:
             brief = re.sub(r"\n\s*\*\s*", " ", brief_match.group(1)).strip()
 
         params = []
-        for pm in re.finditer(r"@param\s+(\w+)\s+(.+?)(?=\n\s*\*\s*@|\n\s*\*/)", doxygen_block, re.DOTALL):
+        for pm in re.finditer(
+            r"@param\s+(\w+)\s+(.+?)(?=\n\s*\*\s*@|\n\s*\*/)", doxygen_block, re.DOTALL
+        ):
             param_desc = re.sub(r"\n\s*\*\s*", " ", pm.group(2)).strip()
             params.append({"name": pm.group(1), "description": param_desc})
 
         returns = ""
-        return_matches = re.findall(r"@return\s+(.+?)(?=\n\s*\*\s*@|\n\s*\*/|\n\s*\*\s*\n)", doxygen_block, re.DOTALL)
+        return_matches = re.findall(
+            r"@return\s+(.+?)(?=\n\s*\*\s*@|\n\s*\*/|\n\s*\*\s*\n)",
+            doxygen_block,
+            re.DOTALL,
+        )
         if return_matches:
             returns = "; ".join(
                 re.sub(r"\n\s*\*\s*", " ", r).strip() for r in return_matches
             )
 
         note = ""
-        note_match = re.search(r"@note\s+(.+?)(?=\n\s*\*\s*@|\n\s*\*/)", doxygen_block, re.DOTALL)
+        note_match = re.search(
+            r"@note\s+(.+?)(?=\n\s*\*\s*@|\n\s*\*/)", doxygen_block, re.DOTALL
+        )
         if note_match:
             note = re.sub(r"\n\s*\*\s*", " ", note_match.group(1)).strip()
 
@@ -237,7 +250,6 @@ def parse_c_header(filepath: Path) -> list[dict]:
 def parse_enums_and_typedefs(filepath: Path) -> list[dict]:
     """Extract enums and typedefs from a C header for API reference."""
     text = filepath.read_text(encoding="utf-8", errors="replace")
-    filename = filepath.name
 
     entries = []
 
@@ -252,7 +264,9 @@ def parse_enums_and_typedefs(filepath: Path) -> list[dict]:
         name = match.group(3)
 
         brief = ""
-        brief_match = re.search(r"@brief\s+(.+?)(?:\n\s*\*\s*\n|\n\s*\*\s*@|\n\s*\*/)", doxygen, re.DOTALL)
+        brief_match = re.search(
+            r"@brief\s+(.+?)(?:\n\s*\*\s*\n|\n\s*\*\s*@|\n\s*\*/)", doxygen, re.DOTALL
+        )
         if brief_match:
             brief = re.sub(r"\n\s*\*\s*", " ", brief_match.group(1)).strip()
 
@@ -385,8 +399,6 @@ def parse_kconfig(filepath: Path) -> list[dict]:
 def chunk_source_file(filepath: Path) -> list[dict]:
     """Chunk a C source file by function definitions."""
     text = filepath.read_text(encoding="utf-8", errors="replace")
-    filename = filepath.name
-    lines = text.splitlines()
 
     module = "unknown"
     if "core/cpu" in str(filepath):
@@ -535,9 +547,13 @@ def build_socs_data(repo_root: Path) -> list[dict]:
         entry = {
             "soc": soc_key,
             **info,
-            "cmake_file": str(cmake_file.relative_to(repo_root)) if cmake_file.exists() else "",
+            "cmake_file": str(cmake_file.relative_to(repo_root))
+            if cmake_file.exists()
+            else "",
             "linker_scripts": ld_files,
-            "soc_dir": str(soc_path.relative_to(repo_root)) if soc_path.exists() else "",
+            "soc_dir": str(soc_path.relative_to(repo_root))
+            if soc_path.exists()
+            else "",
             "specific_notes": cmake_notes,
         }
         socs.append(entry)
@@ -598,7 +614,9 @@ def ingest(repo_root: Path, output_dir: Path):
         if md_file.exists():
             chunks = chunk_markdown(md_file)
             doc_chunks.extend(chunks)
-            print(f"  MD:  {md_file.name} ({md_file.parent.name}) -> {len(chunks)} chunks")
+            print(
+                f"  MD:  {md_file.name} ({md_file.parent.name}) -> {len(chunks)} chunks"
+            )
 
     doc_chunks = _relativize(doc_chunks, repo_root)
     with open(output_dir / "docs.json", "w") as f:

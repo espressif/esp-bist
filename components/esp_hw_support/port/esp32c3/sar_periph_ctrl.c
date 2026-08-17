@@ -28,7 +28,6 @@
 static const char *TAG = "sar_periph_ctrl";
 // extern portMUX_TYPE rtc_spinlock;
 
-
 void sar_periph_ctrl_init(void)
 {
     //Put SAR control mux to FSM state
@@ -50,7 +49,6 @@ void sar_periph_ctrl_power_disable(void)
     sar_ctrl_ll_set_power_mode(SAR_CTRL_LL_POWER_OFF);
     // portEXIT_CRITICAL_SAFE(&rtc_spinlock);
 }
-
 
 /*------------------------------------------------------------------------------
 * PWDET Power
@@ -81,7 +79,6 @@ void sar_periph_ctrl_pwdet_power_release(void)
     }
     // portEXIT_CRITICAL_SAFE(&rtc_spinlock);
 }
-
 
 /*------------------------------------------------------------------------------
 * ADC Power

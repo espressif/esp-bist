@@ -127,7 +127,7 @@ static int run_challenge_audit(void)
     }
     expected = bist_hd_challenge_answer(challenge, seq);
     if (rsp.payload != expected) {
-        ESP_LOGE(TAG, "chal bad ans");
+        ESP_LOGE(TAG, "chal bad and");
         return -1;
     }
     if (elapsed_us > window_us) {
@@ -272,7 +272,7 @@ int bist_hd_companion_init(void)
 
     ESP_LOGD(TAG, "init: wait AGENT_READY");
     if (bist_hd_comp_port_recv(&msg, ready_timeout_us) != 0 ||
-        msg.type != BIST_HD_MSG_AGENT_READY) {
+            msg.type != BIST_HD_MSG_AGENT_READY) {
         ESP_LOGE(TAG, "no AGENT_READY");
         bist_hd_safe_state();
         return -1;

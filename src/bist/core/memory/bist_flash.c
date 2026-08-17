@@ -61,7 +61,7 @@ bist_esp_err_t bist_flash_test(void)
     ESP_LOGD(TAG, "flash.rodata CRC: 0x%lx", _crc_section_data_start);
 
     ESP_LOGD(TAG, "Calculating CRC for flash.rodata section from %p to %p (%d B)", &_flash_rodata_start,
-        &_flash_rodata_end, (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4);
+             &_flash_rodata_end, (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4);
 
     crc_section_len = (size_t)(&_flash_rodata_end - &_flash_rodata_start) * 4;
     BIST_ADD_LABEL("bist_flash_test_data");
@@ -74,7 +74,7 @@ bist_esp_err_t bist_flash_test(void)
     }
 
     ESP_LOGD(TAG, "Calculating CRC for flash.text section from %p to %p (%d B)", &_flash_text_start,
-        &_flash_text_end, (size_t)(&_flash_text_end - &_flash_text_start) * 4);
+             &_flash_text_end, (size_t)(&_flash_text_end - &_flash_text_start) * 4);
 
     crc_section_len = (size_t)(&_flash_text_end - &_flash_text_start) * 4;
     BIST_ADD_LABEL("bist_flash_test_text");

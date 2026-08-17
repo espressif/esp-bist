@@ -47,7 +47,7 @@ static volatile size_t __attribute__((section(".dram0.safe_ram"))) abraham_pair_
 
 // Stack for the RAM test
 static uint8_t __attribute__((section(".dram0.safe_ram"), aligned(16)))
-    ram_test_stack[MARCH_STACK_SIZE];
+ram_test_stack[MARCH_STACK_SIZE];
 
 /*
  * Run fn() with SP relocated to ram_test_stack (.dram0.safe_ram).
@@ -78,7 +78,7 @@ static bist_esp_err_t run_on_safe_stack(bist_esp_err_t (*fn)(void))
         : [ret] "=r"(result)
         : [stk] "r"(safe_sp), [func] "r"(fn)
         : "t0", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
-          "t1", "t2", "t3", "t4", "t5", "t6", "ra", "memory"
+        "t1", "t2", "t3", "t4", "t5", "t6", "ra", "memory"
     );
 
     return result;
@@ -92,8 +92,8 @@ static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
-                                        ? (dram_test_size - offset)
-                                        : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+                                    ? (dram_test_size - offset)
+                                    : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
 
         // Save the current chunk
         for (size_t i = 0; i < current_chunk_size; i++) {
@@ -124,7 +124,7 @@ static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
             }
         }
 
-    restore_a:
+restore_a:
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = backup_chunk[i];
         }
@@ -145,8 +145,8 @@ static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
         size_t current_chunk_size = ((offset + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
-                                        ? (dram_test_size - offset)
-                                        : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+                                    ? (dram_test_size - offset)
+                                    : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
 
         // Save the current chunk
         for (size_t i = 0; i < current_chunk_size; i++) {
@@ -196,7 +196,7 @@ static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
             start_addr[offset + i - 1] = 0; // Write 0
         }
 
-    restore_x:
+restore_x:
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = backup_chunk[i];
         }
@@ -260,8 +260,8 @@ static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
     } else {
         // Validate pair state against NOLOAD garbage
         if (abraham_pair_i >= num_partitions - 1 ||
-            abraham_pair_j >= num_partitions ||
-            abraham_pair_j <= abraham_pair_i) {
+                abraham_pair_j >= num_partitions ||
+                abraham_pair_j <= abraham_pair_i) {
             abraham_pair_i = 0;
             abraham_pair_j = 1;
         }
@@ -270,11 +270,11 @@ static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
         size_t off_b = abraham_pair_j * BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
 
         size_a = ((off_a + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
-                     ? (dram_test_size - off_a)
-                     : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+                 ? (dram_test_size - off_a)
+                 : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
         size_b = ((off_b + BIST_ESP_RAM_BACKUP_CHUNK_SIZE) > dram_test_size)
-                     ? (dram_test_size - off_b)
-                     : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
+                 ? (dram_test_size - off_b)
+                 : BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
 
         part_a = &start_addr[off_a];
         part_b = &start_addr[off_b];
@@ -290,164 +290,268 @@ static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
     }
 
     // --- ↕(w0): Initialize all cells to 0 ---
-    for (size_t i = 0; i < size_a; i++) part_a[i] = 0;
-    for (size_t i = 0; i < size_b; i++) part_b[i] = 0;
+    for (size_t i = 0; i < size_a; i++) {
+        part_a[i] = 0;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        part_b[i] = 0;
+    }
 
     // --- Seq 1: ↓(r0,w1) ↑(r1) ---
     ASM("bist_ram_test_abraham_seq1:");
     // ↓(r0,w1)
     for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i - 1] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i - 1] = 0xFFFFFFFF;
     }
     for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i - 1] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i - 1] = 0xFFFFFFFF;
     }
     // ↑(r1)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- Seq 2: ↓(r1,w0) ↑(r0) ---
     // ↓(r1,w0)
     for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i - 1] = 0;
     }
     for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i - 1] = 0;
     }
     // ↑(r0)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- Seq 3: ↑(r0,w1) ↓(r1) ---
     // ↑(r0,w1)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i] = 0xFFFFFFFF;
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i] = 0xFFFFFFFF;
     }
     // ↓(r1)
     for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- Seq 4: ↑(r1,w0) ↓(r0) ---
     // ↑(r1,w0)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i] = 0;
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i] = 0;
     }
     // ↓(r0)
     for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i - 1] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i - 1] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- Seq 5: ↓(r0,w1,w0) ↑(r0) ---
     // ↓(r0,w1,w0)
     for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i - 1] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i - 1] = 0xFFFFFFFF;
         part_b[i - 1] = 0;
     }
     for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i - 1] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i - 1] = 0xFFFFFFFF;
         part_a[i - 1] = 0;
     }
     // ↑(r0)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- Seq 6: ↑(r0,w1,w0) ↑(r0) ---
     // ↑(r0,w1,w0)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i] = 0xFFFFFFFF;
         part_a[i] = 0;
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i] = 0xFFFFFFFF;
         part_b[i] = 0;
     }
     // ↑(r0)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- ↕(w1): Reset all cells to 1 ---
-    for (size_t i = 0; i < size_a; i++) part_a[i] = 0xFFFFFFFF;
-    for (size_t i = 0; i < size_b; i++) part_b[i] = 0xFFFFFFFF;
+    for (size_t i = 0; i < size_a; i++) {
+        part_a[i] = 0xFFFFFFFF;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        part_b[i] = 0xFFFFFFFF;
+    }
 
     // --- Seq 7: ↑(r1,w0,w1) ↑(r1) ---
     // ↑(r1,w0,w1)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i] = 0;
         part_a[i] = 0xFFFFFFFF;
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i] = 0;
         part_b[i] = 0xFFFFFFFF;
     }
     // ↑(r1)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
     // --- Seq 8: ↓(r1,w0,w1) ↑(r1) ---
     // ↓(r1,w0,w1)
     for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_b[i - 1] = 0;
         part_b[i - 1] = 0xFFFFFFFF;
     }
     for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
         part_a[i - 1] = 0;
         part_a[i - 1] = 0xFFFFFFFF;
     }
     // ↑(r1)
     for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
     for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) { test_passed = false; goto restore_abraham; }
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto restore_abraham;
+        }
     }
 
 restore_abraham:
@@ -504,8 +608,8 @@ bist_esp_err_t bist_ram_test_abraham_full(void)
     size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
                             / BIST_ESP_RAM_BACKUP_CHUNK_SIZE;
     size_t total_pairs = (num_partitions <= 1)
-                             ? 1
-                             : (num_partitions * (num_partitions - 1)) / 2;
+                         ? 1
+                         : (num_partitions * (num_partitions - 1)) / 2;
 
     bist_ram_test_abraham_reset();
 

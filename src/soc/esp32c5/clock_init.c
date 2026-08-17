@@ -65,7 +65,6 @@ void esp_clk_init(void)
     rtc_clk_8m_enable(true);
     rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_RC_FAST);
 
-
 #if defined(CONFIG_RTC_CLK_SRC_EXT_CRYS)
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_XTAL32K);
 #elif defined(CONFIG_RTC_CLK_SRC_EXT_OSC)

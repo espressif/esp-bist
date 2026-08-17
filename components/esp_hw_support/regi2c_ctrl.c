@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-
 #include "esp_attr.h"
 #include <stdint.h>
 // #include "freertos/FreeRTOS.h"
@@ -103,7 +102,7 @@ void regi2c_saradc_disable(void)
 {
     regi2c_enter_critical();
     s_i2c_saradc_enable_cnt--;
-    if (s_i2c_saradc_enable_cnt < 0){
+    if (s_i2c_saradc_enable_cnt < 0) {
         regi2c_exit_critical();
         ESP_HW_LOGE(TAG, "REGI2C_SARADC is already disabled");
     } else if (s_i2c_saradc_enable_cnt == 0) {

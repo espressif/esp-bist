@@ -26,16 +26,16 @@ extern "C" {
 static inline uint32_t periph_ll_get_clk_en_mask(shared_periph_module_t periph)
 {
     switch (periph) {
-        case PERIPH_TIMG0_MODULE:
-            return PCR_TG0_CLK_EN;
-        case PERIPH_TIMG1_MODULE:
-            return PCR_TG1_CLK_EN;
-        case PERIPH_UHCI0_MODULE:
-            return PCR_UHCI_CLK_EN;
-        case PERIPH_SYSTIMER_MODULE:
-            return PCR_SYSTIMER_CLK_EN;
-        default:
-            return 0;
+    case PERIPH_TIMG0_MODULE:
+        return PCR_TG0_CLK_EN;
+    case PERIPH_TIMG1_MODULE:
+        return PCR_TG1_CLK_EN;
+    case PERIPH_UHCI0_MODULE:
+        return PCR_UHCI_CLK_EN;
+    case PERIPH_SYSTIMER_MODULE:
+        return PCR_SYSTIMER_CLK_EN;
+    default:
+        return 0;
     }
 }
 
@@ -44,48 +44,48 @@ static inline uint32_t periph_ll_get_rst_en_mask(shared_periph_module_t periph, 
     (void)enable;
 
     switch (periph) {
-        case PERIPH_TIMG0_MODULE:
-            return PCR_TG0_RST_EN;
-        case PERIPH_TIMG1_MODULE:
-            return PCR_TG1_RST_EN;
-        case PERIPH_UHCI0_MODULE:
-            return PCR_UHCI_RST_EN;
-        case PERIPH_SYSTIMER_MODULE:
-            return PCR_SYSTIMER_RST_EN;
-        default:
-            return 0;
+    case PERIPH_TIMG0_MODULE:
+        return PCR_TG0_RST_EN;
+    case PERIPH_TIMG1_MODULE:
+        return PCR_TG1_RST_EN;
+    case PERIPH_UHCI0_MODULE:
+        return PCR_UHCI_RST_EN;
+    case PERIPH_SYSTIMER_MODULE:
+        return PCR_SYSTIMER_RST_EN;
+    default:
+        return 0;
     }
 }
 
 static uint32_t periph_ll_get_clk_en_reg(shared_periph_module_t periph)
 {
     switch (periph) {
-        case PERIPH_TIMG0_MODULE:
-            return PCR_TIMERGROUP0_CONF_REG;
-        case PERIPH_TIMG1_MODULE:
-            return PCR_TIMERGROUP1_CONF_REG;
-        case PERIPH_UHCI0_MODULE:
-            return PCR_UHCI_CONF_REG;
-        case PERIPH_SYSTIMER_MODULE:
-            return PCR_SYSTIMER_CONF_REG;
-        default:
-            return 0;
+    case PERIPH_TIMG0_MODULE:
+        return PCR_TIMERGROUP0_CONF_REG;
+    case PERIPH_TIMG1_MODULE:
+        return PCR_TIMERGROUP1_CONF_REG;
+    case PERIPH_UHCI0_MODULE:
+        return PCR_UHCI_CONF_REG;
+    case PERIPH_SYSTIMER_MODULE:
+        return PCR_SYSTIMER_CONF_REG;
+    default:
+        return 0;
     }
 }
 
 static uint32_t periph_ll_get_rst_en_reg(shared_periph_module_t periph)
 {
     switch (periph) {
-        case PERIPH_TIMG0_MODULE:
-            return PCR_TIMERGROUP0_CONF_REG;
-        case PERIPH_TIMG1_MODULE:
-            return PCR_TIMERGROUP1_CONF_REG;
-        case PERIPH_UHCI0_MODULE:
-            return PCR_UHCI_CONF_REG;
-        case PERIPH_SYSTIMER_MODULE:
-            return PCR_SYSTIMER_CONF_REG;
-        default:
-            return 0;
+    case PERIPH_TIMG0_MODULE:
+        return PCR_TIMERGROUP0_CONF_REG;
+    case PERIPH_TIMG1_MODULE:
+        return PCR_TIMERGROUP1_CONF_REG;
+    case PERIPH_UHCI0_MODULE:
+        return PCR_UHCI_CONF_REG;
+    case PERIPH_SYSTIMER_MODULE:
+        return PCR_SYSTIMER_CONF_REG;
+    default:
+        return 0;
     }
 }
 

@@ -55,7 +55,7 @@ static void lp_core_init(void)
     };
 
     ESP_ERROR_CHECK(ulp_lp_core_load_binary(ulp_idf_bist_sample_bin_start,
-                    (ulp_idf_bist_sample_bin_end - ulp_idf_bist_sample_bin_start)));
+                                            (ulp_idf_bist_sample_bin_end - ulp_idf_bist_sample_bin_start)));
 
     ESP_ERROR_CHECK(ulp_lp_core_run(&cfg));
 
@@ -65,21 +65,21 @@ static void lp_core_init(void)
 static void print_postboot_results(uint32_t result)
 {
     ESP_LOGI(TAG, "=== Post-boot BIST results ===");
-    ESP_LOGI(TAG,"test_BIST_cpu_reg:%s\n",     (result & BIST_HD_BIT_CPU_REG) ? "PASS" : "FAIL");
-    ESP_LOGI(TAG, "test_BIST_cpu_csr:%s",     (result & BIST_HD_BIT_CPU_CSR) ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_cpu_reg:%s\n", (result & BIST_HD_BIT_CPU_REG) ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_cpu_csr:%s", (result & BIST_HD_BIT_CPU_CSR) ? "PASS" : "FAIL");
     ESP_LOGI(TAG, "test_BIST_ram_march_x:%s", (result & BIST_HD_BIT_RAM_X)  ? "PASS" : "FAIL");
     ESP_LOGI(TAG, "test_BIST_ram_abraham:%s", (result & BIST_HD_BIT_ABRAHAM) ? "PASS" : "FAIL");
-    ESP_LOGI(TAG, "test_BIST_flash_crc:%s",   (result & BIST_HD_BIT_FLASH)  ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_flash_crc:%s", (result & BIST_HD_BIT_FLASH)  ? "PASS" : "FAIL");
 }
 
 static void print_runtime_results(uint32_t result)
 {
     ESP_LOGI(TAG, "=== Runtime BIST results ===");
-    ESP_LOGI(TAG, "test_BIST_runtime_cpu_reg:%s",      (result & BIST_HD_BIT_CPU_REG) ? "PASS" : "FAIL");
-    ESP_LOGI(TAG, "test_BIST_runtime_cpu_csr:%s",      (result & BIST_HD_BIT_CPU_CSR) ? "PASS" : "FAIL");
-    ESP_LOGI(TAG, "test_BIST_runtime_ram_march_a:%s",  (result & BIST_HD_BIT_RAM_A)   ? "PASS" : "FAIL");
-    ESP_LOGI(TAG, "test_BIST_runtime_ram_abraham:%s",  (result & BIST_HD_BIT_ABRAHAM) ? "PASS" : "FAIL");
-    ESP_LOGI(TAG, "test_BIST_runtime_stack_check:%s",  (result & BIST_HD_BIT_STACK)   ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_runtime_cpu_reg:%s", (result & BIST_HD_BIT_CPU_REG) ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_runtime_cpu_csr:%s", (result & BIST_HD_BIT_CPU_CSR) ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_runtime_ram_march_a:%s", (result & BIST_HD_BIT_RAM_A)   ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_runtime_ram_abraham:%s", (result & BIST_HD_BIT_ABRAHAM) ? "PASS" : "FAIL");
+    ESP_LOGI(TAG, "test_BIST_runtime_stack_check:%s", (result & BIST_HD_BIT_STACK)   ? "PASS" : "FAIL");
 }
 
 void app_main(void)

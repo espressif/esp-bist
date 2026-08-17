@@ -14,7 +14,7 @@
 #define PARTITION_OFFSET     CONFIG_PARTITION_OFFSET
 
 void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t app_drom_size,
-    uint32_t app_irom_start, uint32_t app_irom_vaddr, uint32_t app_irom_size);
+                      uint32_t app_irom_start, uint32_t app_irom_vaddr, uint32_t app_irom_size);
 
 void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t app_rtc_size);
 

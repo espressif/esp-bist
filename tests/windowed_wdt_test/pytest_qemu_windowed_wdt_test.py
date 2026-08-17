@@ -1,4 +1,3 @@
-import time
 import queue
 
 from tests.idf_targets import pytestmark  # noqa: F401
@@ -18,7 +17,9 @@ def test_windowed_wdt_normal_success(qemu_instance, target):
     except queue.Empty:
         print("No more output from QEMU.")
 
-    assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
+    assert any(expected_output in line for line in output_lines), (
+        "Expected output not found in QEMU output"
+    )
 
 
 def test_windowed_wdt_underflow_success(qemu_instance, target):
@@ -35,7 +36,9 @@ def test_windowed_wdt_underflow_success(qemu_instance, target):
     except queue.Empty:
         print("No more output from QEMU.")
 
-    assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
+    assert any(expected_output in line for line in output_lines), (
+        "Expected output not found in QEMU output"
+    )
 
 
 def test_windowed_wdt_consecutive_success(qemu_instance, target):
@@ -52,4 +55,6 @@ def test_windowed_wdt_consecutive_success(qemu_instance, target):
     except queue.Empty:
         print("No more output from QEMU.")
 
-    assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
+    assert any(expected_output in line for line in output_lines), (
+        "Expected output not found in QEMU output"
+    )

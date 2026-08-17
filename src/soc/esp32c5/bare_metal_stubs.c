@@ -65,4 +65,3 @@ char *esp_log_system_timestamp(void)
 }
 
 vprintf_like_t esp_log_vprint_func = &vprintf;
-

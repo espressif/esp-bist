@@ -28,7 +28,6 @@
 ESP_LOG_ATTR_TAG(TAG, "sar_periph_ctrl");
 // extern portMUX_TYPE rtc_spinlock;
 
-
 void sar_periph_ctrl_init(void)
 {
     //Put SAR control mux to FSM state
@@ -83,7 +82,6 @@ static void s_sar_power_release(void)
     // esp_os_exit_critical_safe(&rtc_spinlock);
 }
 
-
 /*------------------------------------------------------------------------------
 * PWDET Power
 *----------------------------------------------------------------------------*/
@@ -96,7 +94,6 @@ void sar_periph_ctrl_pwdet_power_release(void)
 {
     s_sar_power_release();
 }
-
 
 /*------------------------------------------------------------------------------
 * ADC Power

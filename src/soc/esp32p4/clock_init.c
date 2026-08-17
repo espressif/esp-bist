@@ -116,7 +116,7 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
         rtc_clk_slow_src_set(rtc_slow_clk_src);
 
         if (revoke_32k_enable ||
-            ((old_rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_XTAL32K) && rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_XTAL32K)) {
+                ((old_rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_XTAL32K) && rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_XTAL32K)) {
             rtc_clk_32k_enable(false);
         }
         if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_RC32K) {

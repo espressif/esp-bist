@@ -32,15 +32,13 @@ static const char *GPIO_TAG = "GPIO";
 
 #define GPIO_ISR_CORE_ID_UNINIT (3)
 
-typedef struct
-{
+typedef struct {
     gpio_isr_t fn; /*!< isr function */
     void *args;    /*!< isr function args */
 } gpio_isr_func_t;
 
 // Used by the IPC call to register the interrupt service routine.
-typedef struct
-{
+typedef struct {
     int source;           /*!< ISR source */
     int intr_alloc_flags; /*!< ISR alloc flag */
     void (*fn)(void *);   /*!< ISR function */
@@ -49,12 +47,11 @@ typedef struct
     esp_err_t ret;
 } gpio_isr_alloc_t;
 
-typedef struct
-{
+typedef struct {
     gpio_hal_context_t *gpio_hal;
     uint32_t isr_core_id;
     uint64_t isr_clr_on_entry_mask; // for edge-triggered interrupts, interrupt status bits should be cleared before
-                                    // entering per-pin handlers
+    // entering per-pin handlers
 } gpio_context_t;
 
 static gpio_hal_context_t _gpio_hal = { .dev = GPIO_HAL_GET_HW(GPIO_PORT_0) };
@@ -155,30 +152,30 @@ esp_err_t gpio_set_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull)
     esp_err_t ret = ESP_OK;
 
     switch (pull) {
-        case GPIO_PULLUP_ONLY:
-            gpio_pulldown_dis(gpio_num);
-            gpio_pullup_en(gpio_num);
-            break;
+    case GPIO_PULLUP_ONLY:
+        gpio_pulldown_dis(gpio_num);
+        gpio_pullup_en(gpio_num);
+        break;
 
-        case GPIO_PULLDOWN_ONLY:
-            gpio_pulldown_en(gpio_num);
-            gpio_pullup_dis(gpio_num);
-            break;
+    case GPIO_PULLDOWN_ONLY:
+        gpio_pulldown_en(gpio_num);
+        gpio_pullup_dis(gpio_num);
+        break;
 
-        case GPIO_PULLUP_PULLDOWN:
-            gpio_pulldown_en(gpio_num);
-            gpio_pullup_en(gpio_num);
-            break;
+    case GPIO_PULLUP_PULLDOWN:
+        gpio_pulldown_en(gpio_num);
+        gpio_pullup_en(gpio_num);
+        break;
 
-        case GPIO_FLOATING:
-            gpio_pulldown_dis(gpio_num);
-            gpio_pullup_dis(gpio_num);
-            break;
+    case GPIO_FLOATING:
+        gpio_pulldown_dis(gpio_num);
+        gpio_pullup_dis(gpio_num);
+        break;
 
-        default:
-            ESP_LOGE(GPIO_TAG, "Unknown pull up/down mode,gpio_num=%u,pull=%u", gpio_num, pull);
-            ret = ESP_ERR_INVALID_ARG;
-            break;
+    default:
+        ESP_LOGE(GPIO_TAG, "Unknown pull up/down mode,gpio_num=%u,pull=%u", gpio_num, pull);
+        ret = ESP_ERR_INVALID_ARG;
+        break;
     }
 
     return ret;
@@ -197,22 +194,19 @@ esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode)
 
     if (mode & GPIO_MODE_DEF_INPUT) {
         gpio_input_enable(gpio_num);
-    }
-    else {
+    } else {
         gpio_input_disable(gpio_num);
     }
 
     if (mode & GPIO_MODE_DEF_OUTPUT) {
         gpio_output_enable(gpio_num);
-    }
-    else {
+    } else {
         gpio_output_disable(gpio_num);
     }
 
     if (mode & GPIO_MODE_DEF_OD) {
         gpio_od_enable(gpio_num);
-    }
-    else {
+    } else {
         gpio_od_disable(gpio_num);
     }
 
@@ -245,53 +239,47 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
             if ((pGPIOConfig->mode) & GPIO_MODE_DEF_INPUT) {
                 input_en = 1;
                 gpio_input_enable(io_num);
-            }
-            else {
+            } else {
                 gpio_input_disable(io_num);
             }
 
             if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OD) {
                 od_en = 1;
                 gpio_od_enable(io_num);
-            }
-            else {
+            } else {
                 gpio_od_disable(io_num);
             }
 
             if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OUTPUT) {
                 output_en = 1;
                 gpio_output_enable(io_num);
-            }
-            else {
+            } else {
                 gpio_output_disable(io_num);
             }
 
             if (pGPIOConfig->pull_up_en) {
                 pu_en = 1;
                 gpio_pullup_en(io_num);
-            }
-            else {
+            } else {
                 gpio_pullup_dis(io_num);
             }
 
             if (pGPIOConfig->pull_down_en) {
                 pd_en = 1;
                 gpio_pulldown_en(io_num);
-            }
-            else {
+            } else {
                 gpio_pulldown_dis(io_num);
             }
 
             ESP_LOGD(GPIO_TAG,
-                "GPIO[%" PRIu32 "]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d",
-                io_num, input_en, output_en, od_en, pu_en, pd_en);
+                     "GPIO[%" PRIu32 "]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d",
+                     io_num, input_en, output_en, od_en, pu_en, pd_en);
 
             gpio_hal_func_sel(gpio_context.gpio_hal, io_num, PIN_FUNC_GPIO);
         }
 
         io_num++;
-    }
-    while (io_num < GPIO_PIN_COUNT);
+    } while (io_num < GPIO_PIN_COUNT);
 
     return ESP_OK;
 }

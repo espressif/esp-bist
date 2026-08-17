@@ -107,7 +107,7 @@ void __start(void)
     REG_SET_BIT(PCR_MSPI_CLK_CONF_REG, PCR_MSPI_FUNC_CLK_EN);
     REG_SET_BIT(PCR_MSPI_CONF_REG, PCR_MSPI_CLK_EN);
 
-    map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr,_app_irom_size);
+    map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr, _app_irom_size);
 
     /* Bare-metal single-core: keep core1 clock-gated and in reset (IDF cpu_start.c). */
     REG_CLR_BIT(PCR_CORE1_CONF_REG, PCR_CORE1_CLK_EN);
