@@ -73,3 +73,19 @@ repos:
     hooks:
       - id: conventional-precommit-linter
         stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: mcp-server-refresh
+        name: Refresh MCP server data
+        entry: scripts/mcp_server_refresh.sh
+        language: script
+        pass_filenames: false
+        files: |
+          (?x)^(
+            docs/en/|
+            src/bist/.*\.(c|h)$|
+            src/bist/Kconfig|
+            (.*/)?README\.md$|
+            mcp-server/(ingest\.py|requirements\.txt)
+          )

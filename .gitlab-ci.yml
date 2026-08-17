@@ -163,6 +163,8 @@ pre_commit:
   stage: Lint
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
   before_script: []
+  variables:
+    SKIP: "mcp-server-refresh"
   tags: [build]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
