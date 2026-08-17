@@ -65,7 +65,7 @@ The following table provides code coverage information for each BIST module:
    * - Stack Overflow
      - 3
      - 3 (100%)
-     - 1 (overflow detection)
+     - 2 (bounds check, overflow detection)
      - 1 (insufficient recursion)
      - :doc:`software_validation` (Stack Overflow Test)
 
@@ -86,9 +86,9 @@ The following table provides code coverage information for each BIST module:
    * - Clock Test
      - 2
      - 2 (100%)
-     - 2 (32kHz, 40MHz)
+     - 2 (32kHz, 40MHz) + 1 host (deviation math)
      - Hardware-only (crystal removal)
-     - :doc:`software_validation` (Clock Test)
+     - :doc:`software_validation` (Clock Test, Host Unit Tests)
 
    * - Watchdog
      - 3
@@ -169,9 +169,9 @@ Requirements Coverage Matrix
 
    * - 3
      - Clock Source Validation
-     - ``bist_clock_test()``
-     - Hardware-only (32kHz XT WDT, 40MHz drift)
-     - ``tests/clock_test/build/tests/*_report.xml``
+     - ``bist_clock_test()``, ``xtal_deviation_percent()``
+     - Hardware-only (32kHz XT WDT, 40MHz drift) + Host unit test (deviation math)
+     - ``tests/clock_test/build/tests/*_report.xml``; ``ctest --test-dir build/clock_math_test``
 
    * - 4.1
      - Flash Memory Integrity

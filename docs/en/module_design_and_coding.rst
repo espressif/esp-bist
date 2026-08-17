@@ -206,17 +206,17 @@ Runtime Check
         ReturnOverflow -> End;
 
         Start [label = "bist_cpu_stack_overflow_check()", shape = roundedbox];
-        ReadSentinel [label = "Read *_stack_overflow_protection_start"];
-        CheckPattern [label = "== 0xDEADBEEF?", shape = diamond];
+        ReadSentinel [label = "Scan protection\nregion words"];
+        CheckPattern [label = "All == 0xDEADBEEF?", shape = diamond];
         HandleOverflow [label = "handle_stack_overflow()"];
         ReturnOverflow [label = "BIST_ESP_STACK_TEST_OVERFLOW"];
         ReturnOK [label = "BIST_ESP_OK"];
         End [label = "End"];
     }
 
-- ``bist_cpu_stack_overflow_init()`` writes sentinel pattern ``0xDEADBEEF`` to ``_stack_overflow_protection_start`` (linker-defined symbol at bottom of stack)
-- ``bist_cpu_stack_overflow_check()`` reads sentinel and returns ``BIST_ESP_STACK_TEST_OVERFLOW`` if corrupted, ``BIST_ESP_OK`` otherwise
-- Called periodically in main loop to detect stack overflow during normal operation
+- ``bist_cpu_stack_overflow_init()`` fills every word in the half-open region ``[_stack_overflow_protection_end, _stack_overflow_protection_start)`` with sentinel pattern ``0xDEADBEEF``. The region size is set by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``; the word at ``_stack_overflow_protection_start`` itself is live stack and is **not** written.
+- ``bist_cpu_stack_overflow_check()`` scans the same region and returns ``BIST_ESP_STACK_TEST_OVERFLOW`` if any word has been corrupted, ``BIST_ESP_OK`` otherwise.
+- Called periodically in main loop to detect stack overflow during normal operation.
 
 Stress Test
 ^^^^^^^^^^^
@@ -351,12 +351,11 @@ Source Files
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
-- The stack overflow test uses explicit pattern initialization and checking to detect stack overflows. The sentinel value ``0xDEADBEEF`` is written to a protected region at the bottom of the stack. The check function validates this value and calls a weak handler (``handle_stack_overflow``) if corruption is detected. All error paths return explicit error codes.
+- The stack overflow test uses explicit pattern initialization and checking to detect stack overflows. The sentinel value ``0xDEADBEEF`` is written to every word in the protection region ``[_stack_overflow_protection_end, _stack_overflow_protection_start)`` at the bottom of the stack. The upper bound is exclusive: the word at ``_stack_overflow_protection_start`` belongs to the live stack and must not be touched. The region size is controlled by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``. The check function scans this region and calls a weak handler (``handle_stack_overflow``) if any word has been corrupted. All error paths return explicit error codes.
 - Bounded recursion (max 20000) with 128-byte frames to force overflow during test
 - High watermark scans fill pattern ``0xBADC0FFE`` to measure unused stack
 - This test is self-contained but relies on linker-defined symbols for stack region boundaries.
-- Uses linker symbols (``_stack_overflow_protection_start``) to locate the sentinel region.
-- The sentinel is a single 32-bit value at a fixed address.
+- Uses linker symbols (``_stack_overflow_protection_start``, ``_stack_overflow_protection_end``) to locate the sentinel region.
 - No dynamic memory is used.
 - All functions have a single entry and exit, except for the recursive test, which exits early if overflow is detected.
 - Public APIs are declared in ``bist_cpu_stack.h`` and return explicit error codes. The handler is weak and can be overridden.
@@ -1170,7 +1169,7 @@ Main 40MHz Crystal
         CheckRatio [label = "ratio == 0?", shape = diamond];
         ErrorRatio [label = "Return\nBIST_ESP_CLOCK_TEST_ERR"];
         CalcXtal [label = "xtal_freq\nfrom ratio"];
-        Deviation [label = "measured-expected\n/expected*100"];
+        Deviation [label = "xtal_deviation_percent()\n|actual-expected|/expected*100"];
         CheckDev [label = "> CONFIG_ESP_BIST\n_CLOCK_PERCENT\n_FREQUENCY_DRIFT?", shape = diamond];
         ErrorDev [label = "Return BIST_ESP_CLOCK_TEST_ERR"];
         Success [label = "Return BIST_ESP_OK"];
@@ -1214,6 +1213,9 @@ Source Files
    * - ``src/bist/core/clock/bist_clock_fail.c``
      - v1.0.0
      - 9375bd4e39ba4049f7e38d84457a95db
+   * - ``src/bist/core/clock/include/bist_clock_math.h``
+     - N/A
+     - N/A
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1227,7 +1229,7 @@ Coding and Interfaces
 - All functions have a single entry and exit. Early returns are used for error handling.
 - Branching is limited to error detection and callback handling. No deep nesting or complex logic.
 - Loops are bounded by the number of measurement cycles or wait iterations. All loops are finite and predictable.
-- Only integer and floating-point arithmetic for frequency measurement and deviation calculation.
+- Only integer and floating-point arithmetic for frequency measurement and deviation calculation. The deviation percentage is computed by ``xtal_deviation_percent()`` (``bist_clock_math.h``), a ``static inline`` helper that uses signed subtraction (``(int32_t)actual - (int32_t)expected``) to avoid implementation-defined conversion of an unsigned wrap through ``int``, and returns ``0.0f`` when ``expected == 0``.
 - Division is only used for frequency and deviation calculation, and all denominators are checked for zero before use.
 - Interrupts are used via the external crystal watchdog callback, which is registered and handled safely.
 - Pointers are used for callback registration and configuration structures. All pointer usage is explicit and safe.
@@ -1311,7 +1313,7 @@ Windowed WDT
         InitWin [label = "wdt_init_windowed\nunderflow_timeout_us"];
         CreateTimer [label = "Create ESP\ntimer ISR"];
         StartTimer [label = "Start one-shot\nunderflow_timeout_us"];
-        Flags [label = "is_windowed=true\nwindow_open_flag=false"];
+        Flags [label = "is_windowed=true\nwindow_open_flag=true"];
         Loop [label = "Main loop: wdt_feed"];
         StopCheck [label = "stop_feed?", shape = diamond];
         NoFeed [label = "Return"];
@@ -1327,9 +1329,10 @@ Windowed WDT
 **Windowed WDT:** Adds underflow protection:
 
 - Uses ESP timer to track minimum feed interval (``underflow_timeout_us``)
-- ``window_open_flag`` prevents feeding before underflow timeout expires
-- If feed attempted too early, sets ``stop_feed=true`` and logs underflow error
+- ``window_open_flag`` is set to ``true`` after successful init so the first feed is allowed immediately; the timer callback resets it for subsequent windows
+- If feed attempted before ``window_open_flag`` is set (too early), sets ``stop_feed=true`` and logs underflow error
 - Prevents PC faults (infinite loops, unexpected jumps) from masking as valid operation
+- ``wdt_init_windowed()`` commits ``is_windowed = true`` only after every fallible ``esp_timer`` step succeeds. On failure, the timer is deleted and the function returns ``-1`` without leaving ``wdt_feed`` in a poisoned state, so the call can be retried safely.
 
 The windowed WDT behavior is validated by the ``windowed_wdt_test`` application (normal operation within the feed window, underflow detection, consecutive feed cycles). The esp_timer driver (``src/bist/drivers/esp_timer.c``) provides the high-resolution timer used for the underflow window.
 

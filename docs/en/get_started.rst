@@ -263,7 +263,7 @@ To close the monitor, press ``Ctrl+]``.
 Testing
 -------
 
-The tests are located in the ``tests`` directory. The tests are divided into two categories: QEMU and device testing.
+The tests are located in the ``tests`` directory. The tests are divided into three categories: QEMU testing, device testing, and host unit testing.
 
 QEMU Testing
 ^^^^^^^^^^^^
@@ -286,6 +286,25 @@ To run the tests on the device, execute the following command:
 .. code-block:: bash
 
    pytest pytest_device_* --junitxml=build/tests/report.xml
+
+Host Unit Testing
+^^^^^^^^^^^^^^^^^
+
+``tests/unit/`` contains host-native unit tests that run on the build machine without any target hardware or emulator. Each suite is a self-contained CMake project built and run with ``ctest``:
+
+.. code-block:: bash
+
+   cmake -S tests/unit/<suite> -B build/<suite>_test
+   cmake --build build/<suite>_test
+   ctest --test-dir build/<suite>_test --output-on-failure
+
+Available suites:
+
+- ``clock_math`` — deviation arithmetic in ``bist_clock_math.h`` (guards against regressions that the device clock test cannot catch on boards without a 32 kHz crystal)
+- ``hd_protocol`` — Host Diagnostics protocol encode/decode and sequence helpers
+- ``hd_companion`` — LP companion state machine verdicts against a scripted fake agent
+
+See also :doc:`host_diagnostics` for details on the Host Diagnostics unit tests.
 
 Samples
 -------

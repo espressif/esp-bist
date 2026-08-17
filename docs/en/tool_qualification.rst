@@ -29,7 +29,7 @@ Compiler Toolchain
 
 **Qualification Method**:
 
-1. **Version Control**: Toolchain version is pinned in the development container (``.devcontainer/Dockerfile``), ensuring reproducible builds
+1. **Version Control**: Toolchain version is pinned in the development container (``.devcontainer/Dockerfile``), ensuring reproducible builds. The IDF install uses ``--enable-test-specific --enable-ci`` (note: ``--enable-test-specific`` replaces the pre-v6 ``--enable-pytest`` flag)
 2. **Build Reproducibility**: All compiler flags are documented in ``src/bist/CMakeLists.txt`` and recorded in build artifacts
 3. **Verification**: Generated code is validated through:
 
@@ -173,6 +173,18 @@ Test Tools
 
 1. **Test Execution**: Automated test execution with JUnit XML output
 2. **Results Traceability**: Test results are recorded in ``build/tests/*_report.xml``
+
+**Tool**: Host C compiler + CMake + ctest (host unit tests)
+
+**Version**: System ``cc`` (GCC or Clang); CMake 3.16+ (see *Build Tools* above)
+
+**Classification**: T1 (test tooling, does not affect production code)
+
+**Qualification Method**:
+
+1. **Off-Target Verification**: Host unit tests in ``tests/unit/`` exercise pure algorithmic helpers (clock deviation math, protocol encode/decode, companion state machine) without target hardware or an emulator
+2. **Float-ABI Caveat**: The host build uses hard-float (x86 SSE) while the device uses soft-float on targets without an F extension; test tolerances absorb the difference for the input ranges used by the firmware
+3. **CI Enforcement**: Each suite runs as a dedicated GitLab CI job in stage ``Lint`` (``test_clock_math_unit``, ``test_hd_protocol_unit``, ``test_hd_companion_unit``)
 
 Evidence Summary
 ----------------

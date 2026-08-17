@@ -160,11 +160,11 @@ Stack Sentinel Initialization
 
 **Function**: ``bist_cpu_stack_overflow_init()``
 
-**Purpose**: Initializes stack overflow detection by writing a sentinel pattern (0xDEADBEEF) at the bottom of the stack.
+**Purpose**: Initializes stack overflow detection by filling a protection region with sentinel pattern ``0xDEADBEEF``.
 
 **Rationale**: Stack overflow is a common cause of system failures. Early detection allows the application to respond before memory corruption affects other system components.
 
-**Implementation**: Writes sentinel pattern to ``_stack_overflow_protection_start`` (linker-defined symbol). This pattern is checked periodically during runtime.
+**Implementation**: Fills every word in the half-open region ``[_stack_overflow_protection_end, _stack_overflow_protection_start)`` with the sentinel pattern. The region size is set by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``. The word at ``_stack_overflow_protection_start`` itself is live stack and is not written. This pattern is checked periodically during runtime.
 
 Watchdog Callback Registration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -212,7 +212,7 @@ Runtime Tests
 3. **Stack Overflow Check** (``bist_cpu_stack_overflow_check()``)
 
    - **IEC 60730 Component**: 4.2 (Variable Memory)
-   - **Purpose**: Detects stack overflow by checking sentinel pattern
+   - **Purpose**: Detects stack overflow by scanning the protection region for sentinel corruption
    - **Rationale**: Early detection prevents memory corruption from spreading
    - **Execution Frequency**: Called in main loop (every iteration)
 
@@ -260,6 +260,8 @@ Watchdog Initialization
 - ``CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US``: Minimum time between feeds (default: application-specific)
 
 **Operation**: Application must call ``wdt_feed()`` periodically in main loop. Failure to feed within timeout window triggers system reset.
+
+**Error Handling**: ``wdt_init_windowed()`` returns ``0`` on success or ``-1`` on failure. A ``-1`` return leaves no poisoned state (``is_windowed`` remains false, any partially created timer is deleted), so the call may be retried or the application can fall back to non-windowed mode.
 
 Main Loop
 ^^^^^^^^^
