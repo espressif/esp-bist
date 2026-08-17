@@ -87,7 +87,9 @@ def format_api_results(results: list[dict]) -> str:
         if note:
             lines.append(f"\n**Note**: {note}")
         if kconfig:
-            lines.append(f"\n**Kconfig guards**: {', '.join(f'`{k}`' for k in kconfig)}")
+            lines.append(
+                f"\n**Kconfig guards**: {', '.join(f'`{k}`' for k in kconfig)}"
+            )
         if enum_values:
             lines.append("\n**Values**:")
             for v in enum_values:
@@ -179,7 +181,9 @@ def format_soc_results(socs: list[dict]) -> str:
         if s.get("cmake_file"):
             lines.append(f"- **CMake**: `{s['cmake_file']}`")
         if s.get("linker_scripts"):
-            lines.append(f"- **Linker Scripts**: {', '.join(f'`{l}`' for l in s['linker_scripts'])}")
+            lines.append(
+                f"- **Linker Scripts**: {', '.join(f'`{linker}`' for linker in s['linker_scripts'])}"
+            )
         if s.get("specific_notes"):
             lines.append(f"- **Notes**: {s['specific_notes']}")
 
