@@ -296,6 +296,7 @@ build_qemu_remote:
     paths:
       - qemu_build/
     policy: push
+    unprotect: true
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: '"$[[ inputs.build_qemu_remote ]]" == "true"'
@@ -631,6 +632,7 @@ test_idf_hd_device:
       paths:
         - qemu_build/
       policy: pull
+      unprotect: true
     - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
       paths:
         - tests/$TEST_APP_NAME/build
