@@ -66,7 +66,7 @@ Claim 3: Fault Detection Is Effective
 
 **Evidence**:
 
-- **Fault Injection Testing**: GDB-based fault injection in QEMU demonstrates that tests detect injected faults (see :doc:`software_validation`)
+- **Fault Injection Testing**: GDB-based fault injection in QEMU and on hardware demonstrates that tests detect injected faults (see :doc:`software_validation`)
 - **Hardware Testing**: Real hardware testing validates fault detection under actual operating conditions
 - **Coverage Analysis**: :doc:`coverage_analysis` shows 100% function coverage and comprehensive requirements coverage
 - **Risk Assessment**: :doc:`risk_assessment` maps hazards to safety functions and demonstrates mitigation
