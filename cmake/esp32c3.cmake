@@ -100,6 +100,7 @@ set(idf_srcs
     ${IDF_PATH}/components/riscv/interrupt.c
     ${IDF_PATH}/components/riscv/rv_utils.c
     ${IDF_PATH}/components/esp_stdio/stdio_simple.c
+    ${IDF_PATH}/components/esp_stdio/stdio_syscalls_simple.c
     ${IDF_PATH}/components/esp_hal_ana_conv/adc_oneshot_hal.c
     ${IDF_PATH}/components/esp_hal_ana_conv/adc_hal_common.c
     ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/adc_periph.c
