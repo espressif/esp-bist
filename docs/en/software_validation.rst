@@ -8,7 +8,7 @@ The ESP-BIST library is validated with three complementary approaches:
 
 1. **QEMU-based emulation**: full system simulation with fault injection via GDB for deterministic, repeatable testing in CI pipelines
 
-2. **Hardware testing**: On-device validation on actual {IDF_TARGET_NAME} hardware for real-world condition verification
+2. **Hardware testing**: On-device validation on actual {IDF_TARGET_NAME} hardware for real-world condition verification with fault injection via GDB
 
 3. **Host unit testing**: Off-target tests in ``tests/unit/`` that run on the build machine without hardware or an emulator, covering pure algorithmic helpers and protocol logic that can be exercised outside the firmware environment
 
@@ -99,6 +99,46 @@ Key characteristics:
 - Execution resumes immediately after modification
 - GDB process terminates, leaving QEMU running the faulted test
 - Test output is captured by pytest and validated
+
+Device OpenOCD / GDB
+^^^^^^^^^^^^^^^^^^^^
+
+Device FAIL cases in ``pytest_device_*`` use the same test labels and assertions as QEMU, attaching through OpenOCD's GDB stub instead of QEMU's ``:1234`` debug server.
+
+**Environment:**
+
+- OpenOCD: ``openocd-esp32`` with board config ``board/{IDF_TARGET_PATH_NAME}-builtin.cfg`` (USB-JTAG)
+- GDB stub: TCP port ``:3333``
+- ``OPENOCD_SCRIPTS`` must be set (source ESP-IDF ``export.sh``)
+- pytest requires an explicit ``--target=<soc>`` (not ``auto``)
+
+**Execution flow:**
+
+.. blockdiag::
+    :scale: 100%
+    :caption: Device OpenOCD / GDB Flow
+    :align: center
+
+    blockdiag {
+        Flash -> "Start OpenOCD\n(:3333)" -> "GDB attach\nreset halt" -> "Inject fault" -> "Resume DUT" -> "pytest dut.expect\nFAIL/reset" -> Cleanup;
+    }
+
+**GDB script pattern:**
+
+.. code-block::
+
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb <test_label>
+    commands
+        set <reg_or_var>=<fault_value>
+        monitor step
+        monitor resume
+    end
+    continue
 
 
 CPU Register Integrity Test
@@ -205,6 +245,55 @@ Hardware Validation
 - All 32 registers pass integrity checks on real hardware
 - No stuck-at faults or register corruption detected
 
+**Failure Test: ``test_reg_error_device`` (Parameterized, 32 registers)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb testRegA_<reg_name>
+    commands
+        set $<reg_name>=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Script Parameterization:**
+
+The script is executed 32 times, once for each register:
+
+- ``ra``, ``sp``, ``gp``, ``tp``
+- ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
+- ``s0``, ``s1``, ``s2``, ``s3``, ``s4``, ``s5``, ``s6``, ``s7``, ``s8``, ``s9``, ``s10``, ``s11``
+- ``a0``, ``a1``, ``a2``, ``a3``, ``a4``, ``a5``, ``a6``, ``a7``
+
+Each test replaces ``<reg_name>`` with the specific register name.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at label ``testRegA_<reg_name>`` (where register is tested against 0xAAAAAAAA)
+2. When breakpoint hits, register is forcibly set to 0x55555555 (wrong value)
+3. Test continues and reads register, expecting 0xAAAAAAAA
+4. Mismatch detected, test returns error code ``BIST_ESP_CPU_TEST_ERR``
+5. Test prints "test_BIST_Cpu_Regs:FAIL"
+
+FPU registers use ``test_freg_error_device`` on ESP32-H4/P4.
+
+**Test Coverage:** 32 test cases (one per register)
+
+**Expected Output per Register:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:FAIL
+
 CPU CSR Integrity Test
 ----------------------
 
@@ -300,6 +389,56 @@ Hardware Validation
 
 - All CSRs pass integrity checks on real hardware (25 on C3, 37 on C6/H2/C61, 39 on C5, 40 on H4/P4)
 - No stuck-at faults or CSR corruption detected
+
+**Failure Test: ``test_reg_csr_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb testRegA_<csr_name>
+    commands
+        set $t0=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Script Parameterization:**
+
+The script is executed once for each CSR. The full list varies by SoC:
+
+- **Trap CSRs** (all SoCs): ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
+- **PMP Address CSRs** (all SoCs): ``pmpaddr0``–``pmpaddr15``
+- **PMP Configuration CSRs** (all SoCs): ``pmpcfg0``–``pmpcfg3``
+- **PMA Address CSRs** (C6, H2, C5 only): ``0xBD0``–``0xBDB`` (pma_addr0–11)
+- **Custom CSRs** (C5 only): ``0x7E1`` (mexstatus), ``0x7C5`` (mhint)
+
+Each test replaces ``<csr_name>`` with the specific CSR name or number.
+
+**Note:** GDB modifies the temporary register ``t0`` which is used by the test logic to verify CSR contents. FPU CSRs use ``test_freg_csr_error_device`` on ESP32-H4/P4.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at CSR test label
+2. When hit, modifies temporary register (t0) to incorrect value
+3. Test logic uses t0 to verify CSR contents
+4. Mismatch detected, test fails
+5. Returns ``BIST_ESP_CPU_CSR_TEST_ERR``
+
+**Test Coverage:** 25 test cases on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2/C61 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint), 40 on ESP32-H4/P4 (adds 12 pma_addr + ``fflags``, ``frm``, ``fcsr``)
+
+**Expected Output per CSR:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -457,6 +596,40 @@ Hardware Validation
 - Stack overflow detected on real hardware
 - Sentinel pattern successfully corrupted and identified
 
+**Failure Test: ``test_cpu_stack_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_cpu_stack_overflow_data
+    commands
+        set count_max=10
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at stack test initialization
+2. When hit, reduces recursion depth (count_max) to 10 (insufficient for overflow)
+3. Test attempts recursion but cannot reach deep enough to corrupt sentinel
+4. Stack overflow detection fails to trigger
+5. Returns ``BIST_ESP_STACK_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Stack_Overflow:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -583,6 +756,48 @@ Hardware Validation
 - No stuck-at, coupling, or address decoder faults detected
 - RAM backup/restore prevents data loss during test
 
+**Failure Test: Memory Corruption via GDB**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_ram_test_march_a_step2
+    commands
+        set _bist_ram_test_start=0xFF
+        monitor step
+        monitor resume
+    end
+    continue
+
+March X uses ``bist_ram_test_march_x_step2``; Abraham uses ``bist_ram_test_abraham_seq1``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint during RAM pattern verification (step 2: Read 0, Write 1)
+2. When hit, writes ``0xFF`` to the first word of the test region via the linker
+   symbol ``_bist_ram_test_start`` (the local pointer ``start_addr`` is optimized
+   into a register by ``-Os`` and is not accessible to GDB)
+3. Test continues and reads memory, expecting the all-zeros pattern written in step 1
+4. Mismatch detected, returns ``BIST_ESP_RAM_TEST_ERR``
+5. Test prints ``test_BIST_ram_march_a:FAIL`` (or March X / Abraham)
+
+**Test Coverage:** 3 test cases (March A, March X, and Abraham algorithms)
+
+**Expected Output per Test:**
+
+.. code-block::
+
+    test_BIST_ram_march_a:FAIL
+    test_BIST_ram_march_x:FAIL
+    test_BIST_ram_abraham:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -684,6 +899,42 @@ Hardware Validation
 - Both ``.flash.text`` and ``.flash.rodata`` CRCs match on real hardware
 - No flash corruption or tampering detected
 - Test detects any flash section modifications
+
+**Failure Test: CRC Length Corruption via GDB**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_flash_test_data
+    commands
+        set crc_section_len=0xFF
+        monitor step
+        monitor resume
+    end
+    continue
+
+``.flash.text`` uses the same script at ``bist_flash_test_text``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at CRC test initialization
+2. When hit, modifies section length to incorrect value (0xFF)
+3. Test computes CRC over wrong region
+4. Computed CRC does not match stored value
+5. Returns ``BIST_ESP_FLASH_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_flash:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -819,6 +1070,48 @@ Hardware Validation
 - 24 PC bits (2-17, 19-21, 25, 28) exercised successfully
 - No unexpected code execution or address corruption detected
 
+**Failure Test: Function Pointer Corruption (WDT Reset)**
+
+This test zeroes the first function pointer so that ``jalr`` jumps to address 0,
+triggering an instruction access fault. The firmware cannot recover, so the
+watchdog timer fires and resets the CPU.
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_verify_pc_test
+    commands
+        silent
+        set $arr = $sp
+        set {int}$arr = 0
+        set $sp = $arr - 256
+        call wdt_init(10000)
+        set $sp = $arr
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB sets a breakpoint at ``bist_verify_pc_test`` (the loop label)
+2. At the breakpoint ``$sp`` points to the ``pcTestFunctions`` array on the stack
+3. The first pointer is set to 0 — the CPU jumps to address 0, faults, and the WDT
+   resets the system
+4. pytest expects serial ``Reset reason: 1`` or ``Reset reason: 7``
+
+**Expected Output:**
+
+.. code-block::
+
+    Reset reason: 7
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -921,6 +1214,39 @@ Hardware Validation
 
     test_BIST_Interrupt_Source_Map:PASS
     test_BIST_Hardware_Interrupt:PASS
+
+**Failure Test: ``test_interrupt_source_map_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_interrupt_source_map_count
+    commands
+        set interrupt_count=0
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint after the software-source ISR loop
+2. When hit, ``interrupt_count`` is set to 0 (less than the expected 8)
+3. Test compares the count and returns ``BIST_ESP_INTERRUPT_TEST_ERR``
+4. Test prints ``test_BIST_Interrupt_Source_Map:FAIL``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -1098,6 +1424,42 @@ Hardware Validation
 - Both tests return PASS on real hardware
 - Two-boot sequence completes within test timeout window
 
+**Failure Test: ``test_wdt_error_device`` (No WDT Reset)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_test_wdt_timeout
+    commands
+        set wdt_timeout_us=1000000
+        monitor step
+        monitor resume
+    end
+    continue
+
+``test_wdt_success_device`` uses the same label with ``wdt_timeout_us=10000`` so the timeout still fires.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at WDT timeout initialization
+2. When hit, sets timeout to a large value (1 second)
+3. Test delay completes before timeout expires
+4. No WDT reset occurs
+5. Returns ``BIST_ESP_WDT_TEST_ERR`` (watchdog failed)
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_WDT:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1150,6 +1512,44 @@ Hardware Validation
 **Expected Behavior:**
 
 - Normal feeds within the window pass; early feeds set underflow flag; consecutive valid feeds complete without error.
+
+**Failure Test: ``test_windowed_wdt_*_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    break bist_windowed_wdt_underflow_check
+    ignore $bpnum <calls_before>
+    commands
+        set underflow=<injected_value>
+        monitor step
+        set $a0=<injected_value>
+        monitor resume
+    end
+    continue
+
+``<calls_before>`` skips hits from earlier Unity cases (NORMAL: 0, UNDERFLOW: 2, CONSECUTIVE: 3). NORMAL/CONSECUTIVE inject ``1``; UNDERFLOW injects ``0``.
+
+**Fault Injection Method:**
+
+1. GDB breaks after underflow is assigned, before return
+2. The underflow flag (and ``$a0``) is forced to the wrong value
+3. The Unity test sees an incorrect underflow result and fails
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_WINDOWED_WDT_NORMAL:FAIL
+    test_BIST_WINDOWED_WDT_UNDERFLOW:FAIL
+    test_BIST_WINDOWED_WDT_CONSECUTIVE:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -1260,6 +1660,41 @@ Hardware Validation
 - GPIO input reads correct configured level (high level 1)
 - All GPIO configurations properly reset after test
 - No GPIO configuration errors or stuck pins detected
+
+**Failure Test: ``test_io_output_gpio_error_device`` / ``test_io_input_gpio_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_gpio_output_check
+    commands
+        set level=1
+        monitor step
+        monitor resume
+    end
+    continue
+
+Input uses ``bist_gpio_input_check`` with ``level=0``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at the GPIO level check
+2. When hit, ``level`` is forced to the wrong value
+3. The comparison fails and the test returns ``BIST_ESP_IO_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_IO_OUTPUT_GPIO:FAIL
+    test_BIST_IO_INPUT_GPIO:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -1380,6 +1815,42 @@ Hardware Validation
 - All ADC and GPIO configurations properly reset after test
 - No stuck-at faults or configuration errors detected
 
+**Failure Test: ``test_analog_io_*_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_adc_low_check
+    commands
+        set raw=0xFFFF
+        monitor step
+        monitor resume
+    end
+    continue
+
+High and reference checks use ``bist_adc_high_check`` / ``bist_adc_reference_check`` with ``raw=0``. Low/high cases are skipped on ESP32-H4; reference runs on ESP32-C3 only.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at the ADC plausibility check
+2. When hit, ``raw`` is forced outside the allowed band
+3. The test returns ``BIST_ESP_ADC_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_ANALOG_IO_LOW_LEVEL:FAIL
+    test_BIST_ANALOG_IO_HIGH_LEVEL:FAIL
+    test_BIST_ANALOG_IO_REFERENCE:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1426,6 +1897,6 @@ Validation Summary
 ------------------
 
 - QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
-- Hardware covers all modules; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
+- Hardware covers all modules including OpenOCD/GDB FAIL cases; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
 - Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``).
 - Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.
