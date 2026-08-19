@@ -81,11 +81,3 @@ repos:
         entry: scripts/mcp_server_refresh.sh
         language: script
         pass_filenames: false
-        files: |
-          (?x)^(
-            docs/en/|
-            src/bist/.*\.(c|h)$|
-            src/bist/Kconfig|
-            (.*/)?README\.md$|
-            mcp-server/(ingest\.py|requirements\.txt)
-          )
