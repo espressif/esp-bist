@@ -54,6 +54,7 @@ variables:
   USE_MIRROR: $[[ inputs.use_mirror ]]
   QEMU_CACHE_KEY: ${CI_COMMIT_REF_SLUG}-qemu-remote-riscv32
   QEMU_CACHE_KEY_SHARED: ${CI_DEFAULT_BRANCH}-qemu-remote-riscv32
+  MCUBOOT_TARGETS: "esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 esp32h4"
 
 stages:
   - Lint
@@ -290,15 +291,16 @@ build_mcuboot:
   before_script:
     - . $IDF_PATH/export.sh
   script:
-    - echo "Building MCUboot for $SOC_TARGET"
-    - cd $MCUBOOT_PATH/boot/espressif
-    - cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
-    - ninja -C build
     - mkdir -p $CI_PROJECT_DIR/mcuboot_build
-    - cp build/mcuboot_${SOC_TARGET}.bin $CI_PROJECT_DIR/mcuboot_build/
-  parallel:
-    matrix:
-      - SOC_TARGET: *socs
+    - cd $MCUBOOT_PATH/boot/espressif
+    - |
+      for SOC_TARGET in $MCUBOOT_TARGETS; do
+        echo "Building MCUboot for $SOC_TARGET"
+        rm -rf build
+        cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+        ninja -C build
+        cp build/mcuboot_${SOC_TARGET}.bin $CI_PROJECT_DIR/mcuboot_build/
+      done
   artifacts:
     paths:
       - mcuboot_build/
