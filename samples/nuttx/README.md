@@ -1,8 +1,13 @@
 # ESP-BIST NuttX Sample
 
 This sample demonstrates running ESP-BIST tests on the LP core (ULP coprocessor)
-under NuttX. The HP CPU loads and starts the LP-core firmware, then exchanges
-handshake and result bitmasks with the LP core over `/dev/lp_mailbox`.
+under NuttX, plus **Host Diagnostics**: the LP companion supervises a QM host OS
+agent on the HP core. The HP CPU loads and starts the LP-core firmware, then
+exchanges handshake and result bitmasks with the LP core over `/dev/lp_mailbox`.
+
+This is deliberately the happy path only, so it works as a starting point for
+your own application. Fail-closed validation lives in
+[`tests/integration/hd_nuttx`](../../tests/integration/hd_nuttx).
 
 ## What this sample covers
 
@@ -95,11 +100,12 @@ pytest pytest_device* --port=<PORT_NAME> --baud=115200
 ```
 
 The test uses pytest-embedded serial at 115200 baud, waits for `nsh>`, runs
-`nuttx_bist`, and checks the same PASS markers as below.
+`nuttx_bist`, and checks Host Diagnostics plus the same PASS markers as below.
 
 Expected markers:
 
 ```
+test_HD_agent_ready:PASS
 === Post-boot BIST results ===
 test_BIST_cpu_reg:PASS
 test_BIST_cpu_csr:PASS
@@ -112,6 +118,7 @@ test_BIST_runtime_cpu_csr:PASS
 test_BIST_runtime_ram_march_a:PASS
 test_BIST_runtime_stack_check:PASS
 ...
+test_HD_challenge:PASS
 BIST_RESULT:PASS
 ```
 
