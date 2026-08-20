@@ -53,11 +53,3 @@ Guru Meditation Error: Core 0 panic'ed (...)   # CPU has been reset by WDT
 `LP_STATUS` before its first challenge, so this marker confirms supervision was
 live *before* the fault landed. Without it, a reset from an unrelated boot
 failure would look like a pass.
-
-## Related coverage
-
-- [`tests/unit/hd_companion`](../../unit/hd_companion) — the companion verdict
-  matrix (wrong value, replayed sequence, wrong frame type, silence, late
-  answer) off-target, no hardware needed.
-- [`tests/integration/hd_zephyr`](../hd_zephyr) — the same two faults on Zephyr,
-  plus a ztest that names the reset cause.
