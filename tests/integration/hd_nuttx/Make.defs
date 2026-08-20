@@ -1,0 +1,7 @@
+############################################################################
+# tests/integration/hd_nuttx/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+############################################################################
+
+include $(wildcard $(APPDIR)/external/*/Make.defs)

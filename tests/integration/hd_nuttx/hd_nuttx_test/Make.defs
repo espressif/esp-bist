@@ -1,0 +1,9 @@
+############################################################################
+# tests/integration/hd_nuttx/hd_nuttx_test/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+############################################################################
+
+ifneq ($(CONFIG_ESP_NUTTX_HD_TEST),)
+CONFIGURED_APPS += $(APPDIR)/external/hd_nuttx_test
+endif
