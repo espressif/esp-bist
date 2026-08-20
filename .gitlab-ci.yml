@@ -55,6 +55,7 @@ variables:
   QEMU_CACHE_KEY: ${CI_COMMIT_REF_SLUG}-qemu-remote-riscv32
   QEMU_CACHE_KEY_SHARED: ${CI_DEFAULT_BRANCH}-qemu-remote-riscv32
   MCUBOOT_TARGETS: "esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 esp32h4"
+  TEST_APPS: "cpu_reg_test cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test"
 
 stages:
   - Lint
@@ -119,28 +120,6 @@ stages:
   - esp32h2
   - esp32p4
   - esp32h4
-
-.qemu_test_apps: &qemu_test_apps
-  - cpu_reg_test
-  - cpu_stack_test
-  - ram_test
-  - flash_test
-  - pc_test
-  - wdt_test
-  - windowed_wdt_test
-  - interrupt_test
-
-.device_test_apps: &device_test_apps
-  - cpu_reg_test
-  - cpu_stack_test
-  - ram_test
-  - flash_test
-  - pc_test
-  - wdt_test
-  - digital_io_test
-  - analog_io_test
-  - windowed_wdt_test
-  - interrupt_test
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
@@ -353,23 +332,21 @@ build_qemu_remote:
     - job: build_mcuboot
       artifacts: true
   script:
-    - echo "Building $ROOT_DIR/$TEST_APP_NAME"
-    - cd $ROOT_DIR/$TEST_APP_NAME
-    - cmake -DSOC_TARGET=$SOC_TARGET -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build -GNinja
-    - ninja -C build
+    - bash scripts/build_all_tests.sh $SOC_TARGET
+    - |
+      for TEST_APP in $TEST_APPS; do
+        pushd $ROOT_DIR/$TEST_APP/build
+        rm -rf *.dis bist .ninja_deps .ninja_log
+        popd
+      done
   rules:
     - when: always
   tags: [build]
-  cache:
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
-      paths:
-        - $ROOT_DIR/$TEST_APP_NAME/build
 
 .build_tests_matrix: &build_tests_matrix
   parallel:
     matrix:
       - SOC_TARGET: *socs
-        TEST_APP_NAME: *device_test_apps
 
 .build_samples_matrix: &build_samples_matrix
   parallel:
@@ -400,6 +377,19 @@ build_tests:
     - .build_template
   variables:
     ROOT_DIR: 'tests'
+  after_script:
+    - mkdir -p $ROOT_DIR/$SOC_TARGET
+    - |
+      for TEST_APP in $TEST_APPS; do
+        if [ -d "$ROOT_DIR/$TEST_APP/build" ]; then
+          rm -rf "$ROOT_DIR/$SOC_TARGET/${TEST_APP}_${SOC_TARGET}"
+          mv "$ROOT_DIR/$TEST_APP/build" "$ROOT_DIR/$SOC_TARGET/${TEST_APP}_${SOC_TARGET}"
+        fi
+      done
+  artifacts:
+    paths:
+      - $ROOT_DIR/$SOC_TARGET/
+    expire_in: 1 week
   <<: *build_tests_matrix
   rules:
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
@@ -407,10 +397,25 @@ build_tests:
     - if: '"$[[ inputs.run_qemu_remote_test ]]" == "true"'
 
 build_samples:
-  extends:
-    - .build_template
+  stage: Build
   variables:
     ROOT_DIR: 'samples'
+  needs:
+    - job: build_mcuboot
+      artifacts: true
+  script:
+    - echo "Building $ROOT_DIR/$TEST_APP_NAME"
+    - cd $ROOT_DIR/$TEST_APP_NAME
+    - cmake -DSOC_TARGET=$SOC_TARGET -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build -GNinja
+    - ninja -C build
+    - mv build "${TEST_APP_NAME}_${SOC_TARGET}"
+  rules:
+    - when: always
+  tags: [build]
+  artifacts:
+    paths:
+      - $ROOT_DIR/$TEST_APP_NAME/${TEST_APP_NAME}_${SOC_TARGET}
+    expire_in: 1 week
   <<: *build_samples_matrix
   rules:
     - if: '"$[[ inputs.run_build_standalone ]]" == "true"'
@@ -511,28 +516,6 @@ build_nuttx_samples:
     - cd $CI_PROJECT_DIR/samples/idf
     - idf.py -B build_${IDF_TARGET} set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET} build
-  rules:
-    - if: '"$[[ inputs.run_idf_test ]]" == "true"'
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - samples/idf/build_${IDF_TARGET}/
-  tags: [build]
-
-build_idf_samples:
-  extends: .build_idf_sample_template
-  parallel: *idf_samples_matrix
-
-# Host Diagnostics fail-closed validation app. Each config selects a different
-# way for the host to misbehave; the ESP-BIST library is built as a product would
-# build it, so the two images differ only in tests/integration/hd_idf.
-.build_idf_hd_test_template:
-  stage: Build
-  before_script:
-    - . $IDF_PATH/export.sh
-  script:
-    - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch
     - cd $CI_PROJECT_DIR/tests/integration/hd_idf
     - idf.py -B build_${IDF_TARGET}_hd_key_mismatch -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_key_mismatch" set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET}_hd_key_mismatch build
@@ -544,71 +527,48 @@ build_idf_samples:
     when: always
     expire_in: 1 week
     paths:
+      - samples/idf/build_${IDF_TARGET}/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_key_mismatch/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_starved_agent/
   tags: [build]
 
-build_idf_hd_tests:
-  extends: .build_idf_hd_test_template
+build_idf_samples:
+  extends: .build_idf_sample_template
   parallel: *idf_samples_matrix
 
 .test_idf_device_template:
   stage: Test Device
-  variables:
-    REPORT_PATH: 'build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
     - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch || true
   script:
     - cd $CI_PROJECT_DIR/samples/idf
-    - pytest pytest_device* --target=$IDF_TARGET --junitxml=$REPORT_PATH --reruns 2
+    - pytest pytest_device* --target=$IDF_TARGET --junitxml=build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml --reruns 2
+    - cd $CI_PROJECT_DIR/tests/integration/hd_idf
+    - pytest pytest_device* --target=$IDF_TARGET --junitxml=$CI_PROJECT_DIR/tests/integration/hd_idf/hd_idf_${IDF_TARGET}_device_report.xml --reruns 2
   rules:
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
   tags: [generic, $IDF_TARGET]
-  needs:
-    - job: build_idf_samples
-      parallel: *idf_samples_matrix
-      artifacts: true
   artifacts:
     when: always
     expire_in: 1 week
     paths:
       - samples/idf/build_*/*_device_report.xml
+      - tests/integration/hd_idf/*_device_report.xml
     reports:
-      junit: samples/idf/build_*/*_device_report.xml
+      junit:
+        - samples/idf/build_*/*_device_report.xml
+        - tests/integration/hd_idf/*_device_report.xml
 
 test_idf_device:
   extends: .test_idf_device_template
   parallel: *idf_samples_matrix
-
-.test_idf_hd_device_template:
-  stage: Test Device
-  variables:
-    REPORT_PATH: 'tests/integration/hd_idf/hd_idf_${IDF_TARGET}_device_report.xml'
-  before_script:
-    - . $IDF_PATH/export.sh
-    - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch || true
-  script:
-    - cd $CI_PROJECT_DIR/tests/integration/hd_idf
-    - pytest pytest_device* --target=$IDF_TARGET --junitxml=$CI_PROJECT_DIR/$REPORT_PATH --reruns 2
-  rules:
-    - if: '"$[[ inputs.run_idf_test ]]" == "true"'
-  tags: [generic, $IDF_TARGET]
   needs:
-    - job: build_idf_hd_tests
-      parallel: *idf_samples_matrix
+    - job: build_idf_samples
       artifacts: true
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - tests/integration/hd_idf/*_device_report.xml
-    reports:
-      junit: tests/integration/hd_idf/*_device_report.xml
-
-test_idf_hd_device:
-  extends: .test_idf_hd_device_template
-  parallel: *idf_samples_matrix
+      parallel:
+        matrix:
+          - IDF_TARGET: ['$[[ matrix.IDF_TARGET ]]']
 
 .test_qemu_template:
   stage: Test Qemu
@@ -617,29 +577,28 @@ test_idf_hd_device:
   before_script:
     - . $IDF_PATH/export.sh
   script:
-    - echo "Testing $TEST_APP_NAME"
-    - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
+    - |
+      if [ ! -d "tests/${SOC_TARGET}" ]; then
+        echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
+        exit 1
+      fi
+      for TEST_APP in $TEST_APPS; do
+        if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
+          rm -rf "tests/$TEST_APP/build"
+          mv "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" "tests/$TEST_APP/build"
+        fi
+      done
+    - python3 scripts/run_device_tests.py --target $SOC_TARGET --qemu
   rules:
     - if: '"$[[ inputs.run_qemu_upstream_test ]]" == "true"'
   tags: [build]
-  needs:
-    - job: build_tests
-      parallel:
-        matrix:
-          - SOC_TARGET: *qemu_upstream_socs
-            TEST_APP_NAME: *qemu_test_apps
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - tests/$TEST_APP_NAME/$REPORT_PATH
+      - tests/*/${REPORT_PATH}
     reports:
-      junit: tests/$TEST_APP_NAME/$REPORT_PATH
-  cache:
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
-      paths:
-        - tests/$TEST_APP_NAME/build
+      junit: tests/*/${REPORT_PATH}
 
 .test_qemu_template_remote:
   stage: Test Qemu
@@ -653,11 +612,19 @@ test_idf_hd_device:
         exit 1
       fi
   script:
-    - echo "Adding QEMU to PATH"
     - export PATH=$CI_PROJECT_DIR/qemu_build:$PATH
-    - echo "Testing $TEST_APP_NAME"
-    - cd tests/$TEST_APP_NAME
-    - pytest pytest_qemu* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
+    - |
+      if [ ! -d "tests/${SOC_TARGET}" ]; then
+        echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
+        exit 1
+      fi
+      for TEST_APP in $TEST_APPS; do
+        if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
+          rm -rf "tests/$TEST_APP/build"
+          mv "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" "tests/$TEST_APP/build"
+        fi
+      done
+    - python3 scripts/run_device_tests.py --target $SOC_TARGET --qemu
   rules:
     - if: '"$[[ inputs.run_qemu_remote_test ]]" != "true"'
       when: never
@@ -669,17 +636,17 @@ test_idf_hd_device:
   tags: [build]
   needs:
     - job: build_tests
+      artifacts: true
       parallel:
         matrix:
-          - SOC_TARGET: *qemu_remote_socs
-            TEST_APP_NAME: *qemu_test_apps
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - tests/$TEST_APP_NAME/$REPORT_PATH
+      - tests/*/${REPORT_PATH}
     reports:
-      junit: tests/$TEST_APP_NAME/$REPORT_PATH
+      junit: tests/*/${REPORT_PATH}
   cache:
     - key: $QEMU_CACHE_KEY
       fallback_keys:
@@ -688,26 +655,27 @@ test_idf_hd_device:
         - qemu_build/
       policy: pull
       unprotect: true
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
-      paths:
-        - tests/$TEST_APP_NAME/build
 
 .test_qemu_upstream_matrix: &test_qemu_upstream_matrix
   parallel:
     matrix:
       - SOC_TARGET: *qemu_upstream_socs
-        TEST_APP_NAME: *qemu_test_apps
 
 test_qemu_upstream:
   extends:
     - .test_qemu_template
   <<: *test_qemu_upstream_matrix
+  needs:
+    - job: build_tests
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
 
 .test_qemu_remote_matrix: &test_qemu_remote_matrix
   parallel:
     matrix:
       - SOC_TARGET: *qemu_remote_socs
-        TEST_APP_NAME: *qemu_test_apps
 
 test_qemu_remote:
   extends:
@@ -719,12 +687,18 @@ test_qemu_remote:
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
   script:
-    - echo "Testing $TEST_APP_NAME"
-    - cd tests/$TEST_APP_NAME
-    - cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
-    - ninja -C build
-    - ninja -C build flash_boot
-    - pytest pytest_device* --executable=$TEST_APP_NAME --target=$SOC_TARGET --junitxml=$REPORT_PATH --reruns 2
+    - |
+      if [ ! -d "tests/${SOC_TARGET}" ]; then
+        echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
+        exit 1
+      fi
+      for TEST_APP in $TEST_APPS; do
+        if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
+          rm -rf "tests/$TEST_APP/build"
+          mv "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" "tests/$TEST_APP/build"
+        fi
+      done
+    - python3 scripts/run_device_tests.py --target $SOC_TARGET
   rules:
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
   tags: [generic, $SOC_TARGET]
@@ -732,27 +706,22 @@ test_qemu_remote:
     - job: build_mcuboot
       artifacts: true
     - job: build_tests
+      artifacts: true
       parallel:
         matrix:
-          - SOC_TARGET: *socs
-            TEST_APP_NAME: *device_test_apps
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - tests/$TEST_APP_NAME/$REPORT_PATH
+      - tests/*/${REPORT_PATH}
     reports:
-      junit: tests/$TEST_APP_NAME/$REPORT_PATH
-  cache:
-    - key: ${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}_${SOC_TARGET}_${TEST_APP_NAME}
-      paths:
-        - tests/$TEST_APP_NAME/build
+      junit: tests/*/${REPORT_PATH}
 
 .test_device_matrix: &test_device_matrix
   parallel:
     matrix:
       - SOC_TARGET: *socs
-        TEST_APP_NAME: *device_test_apps
 
 test_device:
   extends:
@@ -894,8 +863,6 @@ test_nuttx_device:
     - job: test_device
       optional: true
     - job: test_idf_device
-      optional: true
-    - job: test_idf_hd_device
       optional: true
 
 build_docs_html:
