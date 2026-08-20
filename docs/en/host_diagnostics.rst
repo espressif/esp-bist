@@ -1146,6 +1146,18 @@ Twister test cases:
 
 Platforms: ESP32-C5, ESP32-C6.
 
+**NuttX** (``tests/integration/hd_nuttx/``):
+
+The same two faults as ESP-IDF, built as a NuttX custom-apps tree and flashed
+as ``nuttx.merged.bin``. Pytest asserts:
+
+#. ``test_HD_agent_ready:PASS``
+#. ``test_BIST_postboot:PASS``
+#. ``test_HD_fail_closed_armed:PASS``
+#. ROM reset-reason line containing ``WDT``
+
+Targets: ESP32-C6, ESP32-P4.
+
 **Fail-closed stimulus lives in the test application, not in the library.** The
 shipped library contains no test-only branches: a fail-closed build and a
 product build differ only in the test app's code and Kconfig. If a
@@ -1173,11 +1185,12 @@ Internal
 - ``src/bist/companion/bist_hd_companion.c`` -- companion state machine
 - ``src/bist/host/bist_hd_agent.c`` -- agent worker loop
 - ``src/bist/Kconfig`` -- Host Diagnostics configuration (lines 189-377)
-- ``samples/idf/`` -- IDF sample (agent/companion, Q&A), happy path
-- ``samples/zephyr/`` -- Zephyr sample, happy path
+- ``samples/idf/`` -- IDF sample (agent/companion, Q&A)
+- ``samples/zephyr/`` -- Zephyr sample
 - ``samples/nuttx/nuttx_bist/`` -- NuttX sample
 - ``tests/integration/hd_idf/`` -- IDF fail-closed validation
 - ``tests/integration/hd_zephyr/`` -- Zephyr fail-closed validation
+- ``tests/integration/hd_nuttx/`` -- NuttX fail-closed validation
 - ``tests/unit/hd_companion/`` -- off-target companion verdict matrix
 - ``tests/unit/hd_protocol/`` -- protocol and challenge unit tests
 
