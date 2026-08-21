@@ -27,6 +27,7 @@
 
 #include "esp_sleep.h"
 #include "esp_err.h"
+__attribute__((weak))
 esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_t option)
 {
     (void)domain;

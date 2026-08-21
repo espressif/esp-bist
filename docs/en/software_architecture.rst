@@ -83,7 +83,7 @@ Data Storage Model
 
 - **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash region.
 - **IRAM**: All ``libbist_esp.a`` code placed in IRAM for deterministic timing; ``pc_test_0`` placed at end of IRAM.
-- **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel at bottom of stack; ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
+- **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
 - **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
 - **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
 - **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).
@@ -115,4 +115,4 @@ Error Control Measures (Architecture)
 - Minimal TCB: small modular tests, no dynamic allocation in SR.
 - CRC redundancy: post-build CRC injection; runtime verification.
 - Build reproducibility: toolchain and flags fixed in CMake; IRAM placement for deterministic timing.
-- Stack boundary checking: sentinel block defined by linker/Kconfig.
+- Stack boundary checking: sentinel region ``[_stack_overflow_protection_end, _stack_overflow_protection_start)`` defined by linker/Kconfig.

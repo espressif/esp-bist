@@ -50,7 +50,7 @@ bist_esp_err_t bist_cpu_stack_overflow_init(void)
      */
     uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;
     uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;
-    for (; p <= end; p++) {
+    for (; p < end; p++) {
         *p = STACK_PROTECTION_PATTERN;
     }
 
@@ -61,7 +61,7 @@ bist_esp_err_t bist_cpu_stack_overflow_check(void)
 {
     uint32_t *p   = (uint32_t *)&_stack_overflow_protection_end;
     uint32_t *end = (uint32_t *)&_stack_overflow_protection_start;
-    for (; p <= end; p++) {
+    for (; p < end; p++) {
         if (*p != STACK_PROTECTION_PATTERN) {
             handle_stack_overflow();
             return BIST_ESP_STACK_TEST_OVERFLOW;

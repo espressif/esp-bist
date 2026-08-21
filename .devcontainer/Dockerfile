@@ -71,10 +71,12 @@ ENV IDF_VERSION=v6.0
 
 RUN git clone -b $IDF_VERSION --recursive --shallow-submodules $IDF_URL_PATH $IDF_PATH
 
-# Install IDF
+# Install IDF.
+# Note: --enable-test-specific replaces the pre-v6 --enable-pytest flag
+# (run install.sh --help to see the current feature set).
 RUN : \
     && update-ca-certificates --fresh \
-    && $IDF_PATH/install.sh --enable-ci \
+    && $IDF_PATH/install.sh --enable-test-specific --enable-ci \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install required --targets=all \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install cmake \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install-python-env \

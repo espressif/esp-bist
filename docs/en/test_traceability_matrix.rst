@@ -128,8 +128,8 @@ Clock Test (IEC 60730 ID: 3)
 
 **Design**:
 
-- Module: ``src/bist/core/clock/bist_clock.c``
-- Functions: ``bist_clock_ext_crystal_test()``, ``bist_clock_main_crystal_test()``
+- Module: ``src/bist/core/clock/bist_clock_fail.c``, ``src/bist/core/clock/include/bist_clock_math.h``
+- Functions: ``bist_ext_crystal_fail_test()``, ``bist_main_crystal_test()``, ``xtal_deviation_percent()``
 - Design Doc: :doc:`module_design_and_coding` (Clock Test section)
 
 **Test Implementation**:
@@ -137,12 +137,15 @@ Clock Test (IEC 60730 ID: 3)
 - Hardware-only: ``tests/clock_test/pytest_device_*_crystal_test.py``
   - 32kHz crystal: XT WDT monitoring
   - 40MHz crystal: Frequency drift measurement
+- Host unit test: ``tests/unit/clock_math/test_bist_clock_math.c``
+  - Validates ``xtal_deviation_percent()`` arithmetic (exact match, ±1%, ±10%, sub-ppm drift, ``expected == 0`` guard)
 
 **Test Results**:
 
 - Hardware: ``tests/clock_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Host: ``ctest --test-dir build/clock_math_test --output-on-failure``
 
-**Coverage**: 2 clock sources tested on hardware
+**Coverage**: 2 clock sources tested on hardware + deviation math validated on host
 
 Flash CRC Test (IEC 60730 ID: 4.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -208,6 +211,7 @@ Stack Overflow Test (IEC 60730 ID: 4.2)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_stack_test/pytest_qemu_cpu_stack_test.py``
+  - Bounds test: Verifies init does not overwrite the word at ``_stack_overflow_protection_start`` (exclusive upper bound)
   - Success test: Stack overflow detected via sentinel corruption
   - Failure test: Insufficient recursion depth via GDB
 - Hardware: ``tests/cpu_stack_test/pytest_device_cpu_stack_test.py``
@@ -217,7 +221,7 @@ Stack Overflow Test (IEC 60730 ID: 4.2)
 - QEMU: ``tests/cpu_stack_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/cpu_stack_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 2 test cases (pass + fail)
+**Coverage**: 3 test cases (bounds + pass + fail)
 
 Watchdog Test (IEC 60730 ID: 6.3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -324,9 +328,9 @@ Traceability Summary
 --------------------
 
 - **Total IEC 60730 Components**: 9 (1.1, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
-- **Total Test Modules**: 12
+- **Total Test Modules**: 13
 - **Total Test Cases**: 100+
-- **Test Environments**: QEMU (emulation) + Hardware (real-world)
+- **Test Environments**: QEMU (emulation) + Hardware (real-world) + Host unit tests (off-target)
 - **Coverage**: 100% of safety-relevant functions tested
 
 This traceability matrix demonstrates complete coverage from requirements through design, implementation, testing, and validation, supporting IEC 60730-1 Annex H compliance.

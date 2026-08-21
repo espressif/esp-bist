@@ -4,13 +4,15 @@ Software Validation
 Validation Overview
 -------------------
 
-The ESP-BIST library is validated with two complementary approaches:
+The ESP-BIST library is validated with three complementary approaches:
 
 1. **QEMU-based emulation**: full system simulation with fault injection via GDB for deterministic, repeatable testing in CI pipelines
 
 2. **Hardware testing**: On-device validation on actual {IDF_TARGET_NAME} hardware for real-world condition verification
 
-Both approaches uses pytest and the Unity test framework for test assertions.
+3. **Host unit testing**: Off-target tests in ``tests/unit/`` that run on the build machine without hardware or an emulator, covering pure algorithmic helpers and protocol logic that can be exercised outside the firmware environment
+
+QEMU and hardware tests use pytest with the Unity test framework. Host unit tests are built with CMake and run under ctest.
 
 Test Execution Infrastructure
 -----------------------------
@@ -276,17 +278,15 @@ QEMU/Emulation Validation
 
 **Execution:**
 
-1. QEMU runs ``bist_cpu_stack_overflow_test()``
-2. Test initializes sentinel pattern (0xDEADBEEF) at stack bottom
-3. Intentional deep recursion with 128-byte stack frames (count_max=20000)
-4. Recursive calls force stack to grow downward and corrupt sentinel
-5. Test detects sentinel corruption via ``bist_cpu_stack_overflow_check()``
-6. Returns ``BIST_ESP_OK`` if overflow detected (stack protection working)
+1. QEMU runs the Unity test suite in ``tests/cpu_stack_test/main.c``
+2. ``test_BIST_Cpu_Stack_Overflow_Bounds``: verifies that ``bist_cpu_stack_overflow_init()`` fills only the protection region ``[_end, _start)`` and does **not** overwrite the word at ``_stack_overflow_protection_start``. The test writes a probe pattern (``0xCAFEBABE``) to that word, calls init, and asserts the probe survives. A minimum SP margin (``BOUNDS_TEST_MIN_SP_MARGIN = 256``) is checked first to ensure init's own stack frame cannot reach the probe.
+3. ``test_BIST_Cpu_Stack_Overflow``: initializes sentinel, performs intentional deep recursion with 128-byte stack frames (count_max=20000), and detects sentinel corruption via ``bist_cpu_stack_overflow_check()``.
 
 **Expected Output:**
 
 .. code-block::
 
+    test_BIST_Cpu_Stack_Overflow_Bounds:PASS
     test_BIST_Cpu_Stack_Overflow:PASS
 
 **GDB Fault Injection Script:**
@@ -813,7 +813,7 @@ Hardware Validation
 2. Run ``pytest pytest_device_main_crystal_test.py``
 3. Get expected frequency via ``rtc_clk_xtal_freq_get()``
 4. Measure frequency ratio between main and 32kHz reference via ``rtc_clk_cal_ratio()``
-5. Calculate deviation: ``|measured - expected| / expected * 100``
+5. Calculate deviation via ``xtal_deviation_percent()`` (``bist_clock_math.h``): ``|measured - expected| / expected * 100``
 6. Check if deviation exceeds ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default: ±1%)
 7. Returns ``BIST_ESP_OK`` if within tolerance, ``BIST_ESP_CLOCK_TEST_ERR`` if drift exceeds threshold
 
@@ -1223,9 +1223,46 @@ CI Test Results
 .. xml-junit-test-results:: tests/analog_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: ADC Device Test Results
 
+Host Unit Tests
+---------------
+
+**Purpose:** Verify pure algorithmic helpers on the build machine, independently of target hardware or QEMU.
+
+Host unit tests live in ``tests/unit/``. Each suite is a standalone CMake project built with the host C compiler and run under ``ctest``:
+
+.. code-block:: bash
+
+   cmake -S tests/unit/<suite> -B build/<suite>_test
+   cmake --build build/<suite>_test
+   ctest --test-dir build/<suite>_test --output-on-failure
+
+Clock Math (``tests/unit/clock_math``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/unit/clock_math/test_bist_clock_math.c``
+
+**Execution:**
+
+1. Build and run on the host (no target or emulator required)
+2. Exercises ``xtal_deviation_percent()`` (``bist_clock_math.h``) with exact match, ±1%, ±10%, sub-ppm drift, and ``expected == 0`` guard inputs
+3. Validates the signed-subtraction path that previously relied on implementation-defined unsigned-wrap-through-``int`` conversion
+
+**Rationale:** The device clock test (``tests/clock_test``) short-circuits on boards without a 32 kHz crystal because ``rtc_clk_cal`` returns 0 before the deviation math executes. This host test is the only regression guard for that arithmetic.
+
+**Float-ABI caveat:** The host build uses hard-float (x86 SSE), while the device build uses soft-float on targets without an F extension (ESP32-C3/C6/H2). The chosen tolerances are loose enough to absorb the ABI difference.
+
+**Expected Output:**
+
+.. code-block::
+
+    All bist_clock_math tests passed
+
+For the Host Diagnostics protocol and companion unit tests (``tests/unit/hd_protocol``, ``tests/unit/hd_companion``), see :doc:`host_diagnostics`.
+
 Validation Summary
 ------------------
 
 - QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
 - Hardware covers all modules; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
+- Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``), the Host Diagnostics protocol encode/decode logic, and the LP companion state machine.
 - Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.
