@@ -29,6 +29,7 @@
 #include <string.h>
 
 #define ROUNDS_MAX 8
+#define INBOX_SIZE 8
 
 typedef enum {
     AGENT_CORRECT,
@@ -37,13 +38,15 @@ typedef enum {
     AGENT_WRONG_TYPE,
     AGENT_SILENT,
     AGENT_LATE,
+    AGENT_OVER_BUDGET,
 } agent_mode_t;
 
 static agent_mode_t g_mode;
 static bist_esp_err_t g_cpu_regs_result;
 
-static bool g_inbox_valid;
-static bist_hd_msg_t g_inbox;
+static bist_hd_msg_t g_inbox_queue[INBOX_SIZE];
+static int g_inbox_head;
+static int g_inbox_count;
 
 static uint32_t g_tick;
 static uint32_t g_elapsed_us;
@@ -75,15 +78,32 @@ static void expect_eq_int(int got, int want, const char *msg)
     }
 }
 
-static void inbox_put(const bist_hd_msg_t *msg)
+static void inbox_push(const bist_hd_msg_t *msg)
 {
-    g_inbox = *msg;
-    g_inbox_valid = true;
+    if (g_inbox_count >= INBOX_SIZE) {
+        printf("FAIL: inbox overflow\n");
+        g_failures++;
+        return;
+    }
+    int tail = (g_inbox_head + g_inbox_count) % INBOX_SIZE;
+    g_inbox_queue[tail] = *msg;
+    g_inbox_count++;
+}
+
+static int inbox_pop(bist_hd_msg_t *msg)
+{
+    if (g_inbox_count == 0) {
+        return -1;
+    }
+    *msg = g_inbox_queue[g_inbox_head];
+    g_inbox_head = (g_inbox_head + 1) % INBOX_SIZE;
+    g_inbox_count--;
+    return 0;
 }
 
 static void answer_challenge(const bist_hd_msg_t *req)
 {
-    bist_hd_msg_t ans = {0};
+    bist_hd_msg_t answer = {0};
 
     if (g_challenges < ROUNDS_MAX) {
         g_challenge_seq[g_challenges] = req->seq;
@@ -96,19 +116,24 @@ static void answer_challenge(const bist_hd_msg_t *req)
         return;
     }
 
-    ans.type = (g_mode == AGENT_WRONG_TYPE) ? BIST_HD_MSG_DIAG_RSP : BIST_HD_MSG_ANSWER;
-    ans.audit_id = BIST_HD_AUDIT_QA;
-    ans.seq = (g_mode == AGENT_WRONG_SEQ) ? (uint16_t)(req->seq - 1u) : req->seq;
-    ans.payload = bist_hd_challenge_answer(req->payload, req->seq);
+    answer.type = (g_mode == AGENT_WRONG_TYPE) ? BIST_HD_MSG_DIAG_RSP : BIST_HD_MSG_ANSWER;
+    answer.audit_id = BIST_HD_AUDIT_QA;
+    answer.seq = (g_mode == AGENT_WRONG_SEQ) ? (uint16_t)(req->seq - 1u) : req->seq;
+    answer.payload = bist_hd_challenge_answer(req->payload, req->seq);
     if (g_mode == AGENT_WRONG_VALUE) {
-        ans.payload ^= 1u;
+        answer.payload ^= 1u;
     }
-    ans.deadline_ticks = req->deadline_ticks;
+    answer.deadline_ticks = req->deadline_ticks;
 
-    /* deadline_ticks carries the response window in microseconds. */
-    g_elapsed_us = (g_mode == AGENT_LATE) ? (req->deadline_ticks + 1u) : 100u;
+    if (g_mode == AGENT_LATE) {
+        g_elapsed_us = req->deadline_ticks + 1u;
+    } else if (g_mode == AGENT_OVER_BUDGET) {
+        g_elapsed_us = (uint32_t)CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US + 1u;
+    } else {
+        g_elapsed_us = 100u;
+    }
 
-    inbox_put(&ans);
+    inbox_push(&answer);
 }
 
 /* --- companion OS port --- */
@@ -145,12 +170,10 @@ int bist_hd_comp_port_recv(bist_hd_msg_t *msg, int32_t timeout_us)
 {
     (void)timeout_us;
 
-    if (msg == NULL || !g_inbox_valid) {
+    if (msg == NULL) {
         return -1;
     }
-    *msg = g_inbox;
-    g_inbox_valid = false;
-    return 0;
+    return inbox_pop(msg);
 }
 
 uint32_t bist_hd_comp_port_tick(void)
@@ -198,7 +221,17 @@ static void queue_agent_ready(void)
     bist_hd_msg_t ready = {0};
 
     ready.type = BIST_HD_MSG_AGENT_READY;
-    inbox_put(&ready);
+    inbox_push(&ready);
+}
+
+static void queue_checkpoint(uint32_t id)
+{
+    bist_hd_msg_t cp = {0};
+
+    cp.type = BIST_HD_MSG_CHECKPOINT;
+    cp.audit_id = BIST_HD_AUDIT_CHECKPOINT;
+    cp.payload = id;
+    inbox_push(&cp);
 }
 
 static void init_ok(void)
@@ -235,7 +268,7 @@ static void scenario_ready_wrong_type(void)
 
     junk.type = BIST_HD_MSG_LP_STATUS;
     junk.payload = BIST_HD_BIT_POSTBOOT;
-    inbox_put(&junk);
+    inbox_push(&junk);
 
     expect_eq_int(bist_hd_companion_init(), -1, "init rejects a non-READY first frame");
     expect_eq_int(g_safe_state_notifies, 1, "wrong first frame is safe state");
@@ -262,6 +295,7 @@ static void scenario_qa_pass(void)
     init_ok();
 
     for (int i = 0; i < rounds; i++) {
+        queue_checkpoint((uint32_t)(i + 1));
         expect_eq_int(bist_hd_companion_loop(), 0, "runtime round accepted");
     }
 
@@ -283,6 +317,7 @@ static void scenario_bad_answer(agent_mode_t mode, const char *what)
     g_mode = mode;
     init_ok();
 
+    queue_checkpoint(1);
     expect_eq_int(bist_hd_companion_loop(), -1, what);
     expect_eq_int(g_challenges, 1, "the round issued one challenge");
     expect_eq_int(g_safe_state_notifies, 1, "the verdict is safe state");
@@ -296,6 +331,7 @@ static void scenario_safe_state_latched(void)
     g_mode = AGENT_WRONG_VALUE;
     init_ok();
 
+    queue_checkpoint(1);
     expect_eq_int(bist_hd_companion_loop(), -1, "first round fails");
     feeds_at_failure = g_wdt_feeds;
     status_at_failure = g_lp_status_sent;
@@ -319,6 +355,76 @@ static void scenario_runtime_fail(void)
     expect_eq_int(g_safe_state_notifies, 1, "runtime self-BIST failure is safe state");
 }
 
+/* --- Checkpoint scenarios --- */
+
+static void scenario_checkpoint_pass(void)
+{
+    const int rounds = 3;
+
+    g_mode = AGENT_CORRECT;
+    init_ok();
+
+    for (int i = 0; i < rounds; i++) {
+        queue_checkpoint((uint32_t)(i + 1));
+        expect_eq_int(bist_hd_companion_loop(), 0, "round with checkpoint passes");
+    }
+
+    expect_eq_int(g_safe_state_notifies, 0, "checkpoints present, no safe state");
+    expect_eq_int(g_challenges, rounds, "all QA challenges completed");
+}
+
+static void scenario_checkpoint_missing(void)
+{
+    g_mode = AGENT_CORRECT;
+    init_ok();
+
+    /* Loop 1: no checkpoint, but not armed yet → grace period. */
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), 0, "first loop arms checkpoint (grace)");
+
+    /* Loop 2: armed, no checkpoint sent → miss_count = 1. With PERIOD_LOOPS=1,
+     * first miss is tolerated. */
+    expect_eq_int(bist_hd_companion_loop(), 0, "first miss tolerated (period=1)");
+    expect_eq_int(g_safe_state_notifies, 0, "one miss within budget");
+
+    /* Loop 3: still no checkpoint → miss_count = 2 > 1 → safe state. */
+    expect_eq_int(bist_hd_companion_loop(), -1, "second consecutive miss triggers safe state");
+    expect_eq_int(g_safe_state_notifies, 1, "missing checkpoint is safe state");
+}
+
+static void scenario_checkpoint_out_of_order(void)
+{
+    g_mode = AGENT_CORRECT;
+    init_ok();
+
+    /* Loop 1: checkpoint id=5 (arms checkpoint tracking). */
+    queue_checkpoint(5);
+    expect_eq_int(bist_hd_companion_loop(), 0, "first loop with id=5 passes");
+
+    /* Loop 2: checkpoint id=3 < 5 → out of order → safe state. */
+    queue_checkpoint(3);
+    expect_eq_int(bist_hd_companion_loop(), -1, "out-of-order checkpoint triggers safe state");
+    expect_eq_int(g_safe_state_notifies, 1, "out-of-order checkpoint is safe state");
+}
+
+/* --- IRQ latency scenario --- */
+
+static void scenario_irq_latency_over_budget(void)
+{
+    g_mode = AGENT_OVER_BUDGET;
+    init_ok();
+
+    /*
+     * The fake agent sends a correct answer but comp_port_elapsed_us will
+     * return budget + 1 (within the window but over the IRQ budget).
+     */
+    queue_checkpoint(1);
+
+    expect_eq_int(bist_hd_companion_loop(), -1, "over-budget answer triggers safe state");
+    expect_eq_int(g_safe_state_notifies, 1, "IRQ latency budget exceeded is safe state");
+    expect_eq_int(g_challenges, 1, "challenge was issued");
+}
+
 int main(int argc, char **argv)
 {
     const char *scenario;
@@ -332,6 +438,8 @@ int main(int argc, char **argv)
     g_cpu_regs_result = BIST_ESP_OK;
     g_mode = AGENT_CORRECT;
     g_elapsed_us = 100u;
+    g_inbox_head = 0;
+    g_inbox_count = 0;
 
     if (strcmp(scenario, "ready") == 0) {
         scenario_ready();
@@ -357,6 +465,14 @@ int main(int argc, char **argv)
         scenario_safe_state_latched();
     } else if (strcmp(scenario, "runtime_fail") == 0) {
         scenario_runtime_fail();
+    } else if (strcmp(scenario, "checkpoint_pass") == 0) {
+        scenario_checkpoint_pass();
+    } else if (strcmp(scenario, "checkpoint_missing") == 0) {
+        scenario_checkpoint_missing();
+    } else if (strcmp(scenario, "checkpoint_out_of_order") == 0) {
+        scenario_checkpoint_out_of_order();
+    } else if (strcmp(scenario, "irq_latency_over_budget") == 0) {
+        scenario_irq_latency_over_budget();
     } else {
         printf("unknown scenario '%s'\n", scenario);
         return 2;
