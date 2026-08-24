@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later
  *
  * Host Diagnostics companion (LP): self-BIST gate, Q&A challenge schedule,
- * safe-state ownership.
+ * checkpoint tracking, IRQ latency budget, and safe-state ownership.
  *
  * OS-neutral: transport and time come from bist_hd_comp_port (IDF ULP or
- * Zephyr lpcore). Catalog DIAG audits (flash/CPU/…) are deferred; only the
- * QA challenge is wired. Logging is kept minimal: LP SRAM is tight (~16 KiB).
+ * Zephyr lpcore). Catalog DIAG audits (flash/CPU/…) are deferred.
+ * Logging is kept minimal: LP SRAM is tight (~16 KiB).
  */
 
 #include "bist_hd_companion.h"
@@ -39,6 +39,12 @@
 #ifndef CONFIG_ESP_BIST_WDT_TIMEOUT_US
 #define CONFIG_ESP_BIST_WDT_TIMEOUT_US 50000
 #endif
+#ifndef CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US
+#define CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US 2000
+#endif
+#ifndef CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS
+#define CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS 1
+#endif
 
 static const char *TAG = "hd_comp";
 
@@ -46,6 +52,12 @@ static int s_in_safe_state;
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint16_t s_seq;
 static uint32_t s_challenge_prng;
+#endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+static int s_checkpoint_armed;
+static uint32_t s_checkpoint_last_id;
+static int s_checkpoint_received;
+static int s_checkpoint_miss_count;
 #endif
 
 void __attribute__((weak)) bist_hd_safe_state(void)
@@ -71,6 +83,40 @@ static int send_lp_status(uint32_t mask)
     msg.payload = mask;
     return bist_hd_comp_port_send(&msg);
 }
+
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+static int process_checkpoint(const bist_hd_msg_t *msg)
+{
+    uint32_t id = msg->payload;
+
+    if (s_checkpoint_armed) {
+        /* Wrap-safe monotonicity: treat the id as stale if it falls in the
+         * "behind" half of the uint32 number space relative to last_id. */
+        uint32_t diff = id - s_checkpoint_last_id;
+        if (diff == 0u || diff > 0x80000000u) {
+            ESP_LOGE(TAG, "ckpt order");
+            return -1;
+        }
+    }
+    s_checkpoint_last_id = id;
+    s_checkpoint_received = 1;
+    return 0;
+}
+
+static int drain_checkpoints(void)
+{
+    bist_hd_msg_t msg;
+
+    while (bist_hd_comp_port_recv(&msg, 0) == 0) {
+        if (msg.type == BIST_HD_MSG_CHECKPOINT) {
+            if (process_checkpoint(&msg) != 0) {
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+#endif /* CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT */
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint16_t next_seq(void)
@@ -115,10 +161,23 @@ static int run_challenge_audit(void)
     if (bist_hd_comp_port_send(&req) != 0) {
         return -1;
     }
-    if (bist_hd_comp_port_recv(&rsp, (int32_t)window_us) != 0) {
-        ESP_LOGE(TAG, "chal timeout");
-        return -1;
+
+    for (;;) {
+        if (bist_hd_comp_port_recv(&rsp, (int32_t)window_us) != 0) {
+            ESP_LOGE(TAG, "chal timeout");
+            return -1;
+        }
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+        if (rsp.type == BIST_HD_MSG_CHECKPOINT) {
+            if (process_checkpoint(&rsp) != 0) {
+                return -1;
+            }
+            continue;
+        }
+#endif
+        break;
     }
+
     elapsed_us = bist_hd_comp_port_elapsed_us(t0);
 
     if (rsp.type != BIST_HD_MSG_ANSWER || !bist_hd_seq_check(seq, rsp.seq)) {
@@ -134,6 +193,12 @@ static int run_challenge_audit(void)
         ESP_LOGE(TAG, "chal late");
         return -1;
     }
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY
+    if (elapsed_us > (uint32_t)CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US) {
+        ESP_LOGE(TAG, "irq budget");
+        return -1;
+    }
+#endif
     return 0;
 }
 #endif /* CONFIG_ESP_BIST_HD_AUDIT_QA */
@@ -308,8 +373,17 @@ int bist_hd_companion_loop(void)
     ESP_LOGD(TAG, "runtime: feed WDT");
     lp_wdt_feed();
 
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+    s_checkpoint_received = 0;
+    if (drain_checkpoints() != 0) {
+        bist_hd_safe_state();
+        return -1;
+    }
+#endif
+
     ESP_LOGD(TAG, "runtime: run tests");
     result = run_runtime_tests() | BIST_HD_BIT_RUNTIME;
+
     if (send_lp_status(result) != 0) {
         bist_hd_safe_state();
         return -1;
@@ -326,6 +400,23 @@ int bist_hd_companion_loop(void)
     if (run_challenge_audit() != 0) {
         bist_hd_safe_state();
         return -1;
+    }
+#endif
+
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+    if (s_checkpoint_armed) {
+        if (!s_checkpoint_received) {
+            s_checkpoint_miss_count++;
+            if (s_checkpoint_miss_count > CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS) {
+                ESP_LOGE(TAG, "ckpt miss");
+                bist_hd_safe_state();
+                return -1;
+            }
+        } else {
+            s_checkpoint_miss_count = 0;
+        }
+    } else {
+        s_checkpoint_armed = 1;
     }
 #endif
 

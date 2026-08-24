@@ -343,8 +343,8 @@
     "name": "ESP_BIST_HD_AUDIT_IRQ_LATENCY",
     "type": "bool",
     "default": "",
-    "depends_on": "",
-    "help": "Companion measures challenge-to-answer latency against a budget.",
+    "depends_on": "ESP_BIST_HD_AUDIT_QA",
+    "help": "Companion measures challenge-to-answer latency against a budget\ntighter than the challenge window. An answer that arrives inside\nthe window but exceeds the budget triggers safe state.",
     "menu": "Host Diagnostics Audits",
     "range": "",
     "prompt": "Interrupt latency / storm bound"
@@ -418,6 +418,26 @@
     "menu": "Host Diagnostics Audits",
     "range": "100 10000000",
     "prompt": "Challenge response window (us)"
+  },
+  {
+    "name": "ESP_BIST_HD_IRQ_LATENCY_BUDGET_US",
+    "type": "int",
+    "default": "5000",
+    "depends_on": "ESP_BIST_HD_AUDIT_IRQ_LATENCY",
+    "help": "Maximum acceptable challenge-to-answer round-trip time, which must\nbe smaller than CHALLENGE_WINDOW_US. A correct answer that arrives\nwithin the window but exceeds this budget triggers safe state.",
+    "menu": "Host Diagnostics Audits",
+    "range": "100 10000000",
+    "prompt": "IRQ latency budget (us)"
+  },
+  {
+    "name": "ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS",
+    "type": "int",
+    "default": "1",
+    "depends_on": "ESP_BIST_HD_AUDIT_CHECKPOINT",
+    "help": "Maximum number of consecutive companion loop iterations that may\npass without receiving at least one host checkpoint. Once exceeded,\nthe companion enters safe state. Default 1 means the host must send\na checkpoint every companion period.",
+    "menu": "Host Diagnostics Audits",
+    "range": "1 255",
+    "prompt": "Checkpoint deadline (companion loops)"
   },
   {
     "name": "ESP_BIST_HD_DIAG_TIMEOUT_US",

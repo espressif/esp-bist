@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <unistd.h>
 
@@ -26,6 +27,7 @@
 #define HD_FLUSH_MAX_BYTES (2u * BIST_HD_WIRE_WORDS_MAX * 4u)
 
 static int s_fd = -1;
+static pthread_mutex_t s_tx_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int write_word(int fd, uint32_t word)
 {
@@ -138,11 +140,16 @@ int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)
         return -1;
     }
 
+    pthread_mutex_lock(&s_tx_mutex);
+
     for (i = 0; i < nwords; i++) {
         if (write_word(s_fd, words[i]) != 0) {
+            pthread_mutex_unlock(&s_tx_mutex);
             return -1;
         }
     }
+
+    pthread_mutex_unlock(&s_tx_mutex);
     return 0;
 }
 

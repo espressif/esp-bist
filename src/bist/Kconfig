@@ -262,8 +262,11 @@ config ESP_BIST_HD_AUDIT_PC
 
 config ESP_BIST_HD_AUDIT_IRQ_LATENCY
     bool "Interrupt latency / storm bound"
+    depends on ESP_BIST_HD_AUDIT_QA
     help
-      Companion measures challenge-to-answer latency against a budget.
+      Companion measures challenge-to-answer latency against a budget
+      tighter than the challenge window. An answer that arrives inside
+      the window but exceeds the budget triggers safe state.
 
 config ESP_BIST_HD_AUDIT_GPIO
     bool "Peripheral / GPIO plausibility"
@@ -307,6 +310,27 @@ config ESP_BIST_HD_CHALLENGE_WINDOW_US
     help
       Maximum time allowed for the host to answer a Q&A challenge.
       Sized from the product FTTI budget.
+
+config ESP_BIST_HD_IRQ_LATENCY_BUDGET_US
+    int "IRQ latency budget (us)"
+    depends on ESP_BIST_HD_AUDIT_IRQ_LATENCY
+    default 5000
+    range 100 10000000
+    help
+      Maximum acceptable challenge-to-answer round-trip time, which must
+      be smaller than CHALLENGE_WINDOW_US. A correct answer that arrives
+      within the window but exceeds this budget triggers safe state.
+
+config ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS
+    int "Checkpoint deadline (companion loops)"
+    depends on ESP_BIST_HD_AUDIT_CHECKPOINT
+    default 1
+    range 1 255
+    help
+      Maximum number of consecutive companion loop iterations that may
+      pass without receiving at least one host checkpoint. Once exceeded,
+      the companion enters safe state. Default 1 means the host must send
+      a checkpoint every companion period.
 
 config ESP_BIST_HD_DIAG_TIMEOUT_US
     int "Diagnostic response timeout (us)"
