@@ -103,6 +103,9 @@ static void *bist_suite_setup(void)
 		err = bist_hd_agent_wait_lp_status(&runtime_result, BIST_HD_BIT_RUNTIME,
 						   STATUS_TIMEOUT_MS);
 		zassert_ok(err, "timed out waiting for the first runtime status");
+#ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
+		bist_hd_checkpoint_reached();
+#endif
 
 		starve_agent();
 		zassert_unreachable("companion did not reset the host after the missed window");
@@ -119,6 +122,9 @@ static void *bist_suite_setup(void)
 						   STATUS_TIMEOUT_MS);
 		zassert_ok(err, "timed out waiting for LP companion runtime status %u", i + 1);
 		runtime_rounds++;
+#ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
+		bist_hd_checkpoint_reached();
+#endif
 	}
 
 	return NULL;
@@ -146,6 +152,22 @@ ZTEST(bist_lp, test_hd_challenge)
 	 */
 	zassert_equal(runtime_rounds, RUNTIME_LOOPS,
 		      "companion stopped issuing challenges after %u of %u rounds",
+		      runtime_rounds, RUNTIME_LOOPS);
+}
+
+ZTEST(bist_lp, test_hd_checkpoint)
+{
+	if (!IS_ENABLED(CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT)) {
+		ztest_test_skip();
+	}
+
+	/*
+	 * The companion enters safe state on a missed checkpoint, which stops
+	 * runtime status reports. Completing all loops proves every checkpoint
+	 * was received and accepted.
+	 */
+	zassert_equal(runtime_rounds, RUNTIME_LOOPS,
+		      "checkpoint missed: companion stopped after %u of %u rounds",
 		      runtime_rounds, RUNTIME_LOOPS);
 }
 
@@ -245,13 +267,19 @@ int main(void)
 	 */
 	err = bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_RUNTIME, STATUS_TIMEOUT_MS);
 	printk("test_HD_fail_closed_armed:%s\n", (err == 0) ? "PASS" : "FAIL");
+#ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
+	bist_hd_checkpoint_reached();
+#endif
 
 #ifdef CONFIG_BIST_HD_TEST_STARVE_AGENT
 	starve_agent();
 #endif
 
 	while (1) {
-		k_msleep(1000);
+		k_msleep(10);
+#ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
+		bist_hd_checkpoint_reached();
+#endif
 	}
 
 	return 0;

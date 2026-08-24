@@ -60,3 +60,15 @@ tests:
     extra_configs:
       - CONFIG_ZTEST=n
       - CONFIG_BIST_HD_TEST_STARVE_AGENT=y
+  bist.hd.skip_checkpoint:
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "test_HD_agent_ready:PASS"
+        - "test_HD_fail_closed_armed:PASS"
+        - "Booting Zephyr OS build"
+    extra_configs:
+      - CONFIG_ZTEST=n
+      - CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT=y
