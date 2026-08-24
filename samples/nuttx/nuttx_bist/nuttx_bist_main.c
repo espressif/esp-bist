@@ -163,6 +163,8 @@ int main(int argc, FAR char *argv[])
         {
           all_pass = false;
         }
+
+      bist_hd_checkpoint_reached();
     }
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
@@ -179,13 +181,28 @@ int main(int argc, FAR char *argv[])
     }
 #endif
 
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+  /* Completing all loops proves every checkpoint was accepted by the
+   * companion. */
+
+  if (runtime_ok)
+    {
+      printf("test_HD_checkpoint:PASS\n");
+    }
+  else
+    {
+      printf("test_HD_checkpoint:FAIL\n");
+    }
+#endif
+
   printf("BIST_RESULT:%s\n", all_pass ? "PASS" : "FAIL");
 
   /* Agent task keeps receiving companion messages. Park main. */
 
   while (1)
     {
-      sleep(1);
+      usleep(10000);
+      bist_hd_checkpoint_reached();
     }
 
   return all_pass ? 0 : 1;
