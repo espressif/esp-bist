@@ -66,7 +66,6 @@ repos:
             scripts/misra_rules\.txt|
             mcp-server/data/.+
           )$
-        # HDA = Host Diagnostic Agent
         args: ['-w', '-L', 'hda']
 
   - repo: https://github.com/espressif/conventional-precommit-linter

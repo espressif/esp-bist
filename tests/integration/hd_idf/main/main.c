@@ -30,8 +30,10 @@
 #include "bist_hd_agent.h"
 #include "bist_hd_protocol.h"
 
-#if !defined(CONFIG_BIST_HD_TEST_KEY_MISMATCH) && !defined(CONFIG_BIST_HD_TEST_STARVE_AGENT)
-#error "Select a fault: CONFIG_BIST_HD_TEST_KEY_MISMATCH or CONFIG_BIST_HD_TEST_STARVE_AGENT"
+#if !defined(CONFIG_BIST_HD_TEST_KEY_MISMATCH) && \
+    !defined(CONFIG_BIST_HD_TEST_STARVE_AGENT) && \
+    !defined(CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT)
+#error "Select a fault: CONFIG_BIST_HD_TEST_KEY_MISMATCH, CONFIG_BIST_HD_TEST_STARVE_AGENT or CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT"
 #endif
 
 #define MAILBOX_TIMEOUT_MS 10000
@@ -124,6 +126,9 @@ void app_main(void)
      */
     err = bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_RUNTIME, MAILBOX_TIMEOUT_MS);
     printf("test_HD_fail_closed_armed:%s\n", (err == 0) ? "PASS" : "FAIL");
+#ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
+    bist_hd_checkpoint_reached();
+#endif
 
 #ifdef CONFIG_BIST_HD_TEST_STARVE_AGENT
     starve_agent();
@@ -136,6 +141,9 @@ void app_main(void)
      * companion reaches its safe-state threshold while this task idles.
      */
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(10));
+#ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
+        bist_hd_checkpoint_reached();
+#endif
     }
 }

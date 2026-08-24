@@ -544,6 +544,8 @@ build_nuttx_samples:
     - idf.py -B build_${IDF_TARGET}_hd_key_mismatch build
     - idf.py -B build_${IDF_TARGET}_hd_starved_agent -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_starved_agent" set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET}_hd_starved_agent build
+    - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_skip_checkpoint" set-target $IDF_TARGET
+    - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint build
   rules:
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
   artifacts:
@@ -553,6 +555,7 @@ build_nuttx_samples:
       - samples/idf/build_${IDF_TARGET}/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_key_mismatch/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_starved_agent/
+      - tests/integration/hd_idf/build_${IDF_TARGET}_hd_skip_checkpoint/
   tags: [build]
 
 build_idf_samples:
