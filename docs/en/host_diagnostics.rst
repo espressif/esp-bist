@@ -386,7 +386,7 @@ Message Types
    * - ``CHECKPOINT`` (6)
      - HP to LP
      - Alive / deadline / logical checkpoint
-     - Defined, not handled
+     - Implemented
    * - ``SAFE_STATE_NOTIFY`` (7)
      - LP to HP
      - Companion already acting; informational only
@@ -407,6 +407,19 @@ Sequence Number Rules
   distance. Incoming is stale when it is not strictly ahead of the last accepted
   sequence in the forward half of the space (``BIST_HD_SEQ_HALF_RANGE =
   0x8000``). The agent drops stale or duplicate challenges.
+
+Checkpoint ID
+^^^^^^^^^^^^^
+
+The checkpoint ID is a private ``uint32_t`` counter inside the agent
+(``bist_hd_agent.c``). ``bist_hd_checkpoint_reached()`` takes no argument;
+each call increments the counter before sending, so the first payload is 1.
+A failed transport send still consumes the ID, guaranteeing the companion
+never sees a duplicate even after partial frame errors.
+
+The companion validates the checkpoint ID with a wrap-safe unsigned-distance
+check: the ID is rejected when ``diff == 0`` (duplicate) or ``diff > 0x80000000``
+(backwards). This handles the ``UINT32_MAX`` wrap correctly.
 
 Timeouts
 ^^^^^^^^
@@ -518,9 +531,21 @@ Each iteration:
    OR the ``BIST_HD_BIT_RUNTIME`` flag.
 #. Send ``LP_STATUS`` with the runtime bitmask.
 #. Verify expected runtime bits. If not: ``bist_hd_safe_state()``.
+#. If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT``: drain pending checkpoint messages
+   (non-blocking receive). If a checkpoint arrives during the Q&A wait below, it
+   is also consumed. If the checkpoint tracker is armed and no checkpoint was
+   received for more than ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS``
+   consecutive loops: ``bist_hd_safe_state()``. Out-of-order checkpoint IDs
+   (wrap-safe unsigned-distance check on ``payload``) also trigger safe state.
 #. If ``CONFIG_ESP_BIST_HD_AUDIT_QA``: run Q&A challenge -- send ``CHALLENGE``,
    recv ``ANSWER`` within ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``, verify seq
    + value + elapsed time. If any check fails: ``bist_hd_safe_state()``.
+#. If ``CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY`` (requires Q&A): after a correct
+   in-window answer, additionally check that the round-trip time does not exceed
+   ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``. If it does:
+   ``bist_hd_safe_state()``.
+#. If checkpoint is enabled: arm the checkpoint tracker after the first
+   successful loop (grace period for the host to start sending checkpoints).
 
 The application-side LP main loop calls ``bist_hd_companion_loop()`` with a
 delay between iterations (e.g. ``bist_hd_comp_port_delay_us(10000)``).
@@ -650,7 +675,7 @@ but no wired runtime path in this revision.
    * - Alive / deadline / logical checkpoints
      - Missed tasks, late work, wrong sequence
      - Companion checks; host reports checkpoints
-     - Declared (``BIST_HD_AUDIT_CHECKPOINT``); stub returns -1
+     - **Implemented** (``BIST_HD_AUDIT_CHECKPOINT``)
    * - Host RAM March
      - DRAM bit faults
      - Host (quiesce) under companion trigger
@@ -686,7 +711,7 @@ but no wired runtime path in this revision.
    * - Interrupt latency / storm bound
      - Host not servicing within budget
      - Companion timestamps challenge IRQ response
-     - Declared (``BIST_HD_AUDIT_IRQ_LATENCY``)
+     - **Implemented** (``BIST_HD_AUDIT_IRQ_LATENCY``)
    * - Peripheral / GPIO plausibility
      - Hazard outputs in illegal state
      - Companion reads or host reports via callback
@@ -804,6 +829,17 @@ Timing Parameters
      - int
      - 50000
      - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us); defined, not referenced
+   * - ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``
+     - int
+     - 5000
+     - Max acceptable Q&A round-trip time (us); must be less than the challenge
+       window. Exceeding this with a correct answer triggers safe state
+   * - ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS``
+     - int
+     - 1
+     - Max consecutive companion loops without a host checkpoint before safe
+       state. The host has a one-loop grace period after init before the check
+       is armed
    * - ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US``
      - int
      - 1000000
@@ -1075,7 +1111,7 @@ Runs host-native via ``cmake`` + ``ctest``; no device required.
 **Companion verdict matrix** (``tests/unit/hd_companion/``):
 
 Drives the real ``bist_hd_companion.c`` state machine against a scripted fake
-agent. 13 scenarios cover the judgment logic without hardware:
+agent. 16 scenarios cover the judgment logic without hardware:
 
 .. list-table::
    :header-rows: 1
@@ -1107,6 +1143,37 @@ agent. 13 scenarios cover the judgment logic without hardware:
      - Once in safe state, no further WDT feeds or challenges
    * - ``runtime_fail``
      - Runtime BIST failure triggers safe state
+   * - ``checkpoint_pass``
+     - Checkpoints arriving every loop keep the companion running
+   * - ``checkpoint_missing``
+     - Consecutive loops without a checkpoint trigger safe state
+   * - ``checkpoint_out_of_order``
+     - Decreasing checkpoint ID triggers safe state
+   * - ``checkpoint_wrap``
+     - Checkpoint ID wrapping past ``UINT32_MAX`` is accepted (not a false
+       out-of-order)
+   * - ``irq_latency_over_budget``
+     - Correct answer exceeding the IRQ latency budget triggers safe state
+
+Agent Checkpoint Counter (``tests/unit/hd_agent/``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Host-native tests for the HP agent's private checkpoint counter. Transport and
+platform adapters are stubbed; only the counter behaviour is verified.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Scenario
+     - What it proves
+   * - ``checkpoint_first_id``
+     - First call emits payload 1 (never 0, avoiding confusion with zeroed memory)
+   * - ``checkpoint_step_is_one``
+     - Five consecutive calls produce payloads whose unsigned step is exactly 1
+   * - ``checkpoint_send_failure_consumes_id``
+     - A failed transport send still consumes the ID (gap of 2), so no duplicate
+       reaches the companion after a partial frame error
 
 On-Target Fail-Closed Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1114,7 +1181,7 @@ On-Target Fail-Closed Tests
 **ESP-IDF** (``tests/integration/hd_idf/``):
 
 The test application makes the host misbehave; the companion enters safe state;
-the LP WDT resets the chip. Two configurations:
+the LP WDT resets the chip. Three configurations:
 
 - ``hd_key_mismatch``: HP is built with ``BIST_HD_CHALLENGE_KEY=0x5A5A5A5A``
   (a key the LP companion does not share), so the production answer path
@@ -1124,6 +1191,10 @@ the LP WDT resets the chip. Two configurations:
   unpinned, so the app holds every HP core above the agent priority; on a
   multi-core target, starving one core alone would let the agent answer from
   another.
+- ``hd_skip_checkpoint``: HP answers Q&A challenges correctly but never calls
+  ``bist_hd_checkpoint_reached()`` (``CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT``).
+  The companion's checkpoint deadline is the only path to safe state, proving
+  the checkpoint audit alone triggers the fail-closed reaction.
 
 The pytest (``pytest_device_hd_idf.py``) asserts:
 
@@ -1143,6 +1214,8 @@ Twister test cases:
   ``hwinfo`` for ``RESET_WATCHDOG``.
 - ``bist.hd.key_mismatch`` -- HP key mismatch causes WDT reset.
 - ``bist.hd.starved_agent`` -- starvation causes WDT reset (console harness).
+- ``bist.hd.skip_checkpoint`` -- HP answers Q&A correctly but never sends
+  checkpoints; checkpoint deadline alone causes WDT reset (console harness).
 
 Platforms: ESP32-C5, ESP32-C6.
 
@@ -1168,6 +1241,30 @@ The LP companion image is identical in the samples and in the test apps: it is
 the element under test, so it is always built exactly as a product would build
 it. Every difference is on the HP side.
 
+Per-Platform Verification Depth
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - Platform
+     - Device-tested evidence
+     - Coverage scope
+   * - ESP-IDF
+     - pytest happy-path + fail-closed (key mismatch, starved agent, skip
+       checkpoint); targets ESP32-C5, C6, P4
+     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+   * - Zephyr
+     - Twister ztest + console harness (selftest, reset_cause, key_mismatch,
+       starved_agent, skip_checkpoint); targets ESP32-C5, C6
+     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+   * - NuttX
+     - Build + happy-path sample pytest only; no fail-closed app or device
+       test; targets ESP32-C6, P4
+     - Implementation and boot validated; fail-closed judgment is not verified
+       on NuttX hardware in this revision
+
 .. _hd-references:
 
 References
@@ -1191,6 +1288,7 @@ Internal
 - ``tests/integration/hd_idf/`` -- IDF fail-closed validation
 - ``tests/integration/hd_zephyr/`` -- Zephyr fail-closed validation
 - ``tests/integration/hd_nuttx/`` -- NuttX fail-closed validation
+- ``tests/unit/hd_agent/`` -- off-target agent checkpoint counter tests
 - ``tests/unit/hd_companion/`` -- off-target companion verdict matrix
 - ``tests/unit/hd_protocol/`` -- protocol and challenge unit tests
 
