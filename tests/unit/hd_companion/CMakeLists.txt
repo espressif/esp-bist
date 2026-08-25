@@ -54,6 +54,7 @@ set(HD_COMPANION_SCENARIOS
     checkpoint_pass
     checkpoint_missing
     checkpoint_out_of_order
+    checkpoint_wrap
     irq_latency_over_budget
 )
 

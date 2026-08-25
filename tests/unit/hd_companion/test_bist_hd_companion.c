@@ -407,6 +407,21 @@ static void scenario_checkpoint_out_of_order(void)
     expect_eq_int(g_safe_state_notifies, 1, "out-of-order checkpoint is safe state");
 }
 
+static void scenario_checkpoint_wrap(void)
+{
+    g_mode = AGENT_CORRECT;
+    init_ok();
+
+    /* Loop 1: checkpoint near uint32 max (arms tracking). */
+    queue_checkpoint(0xFFFFFFFEu);
+    expect_eq_int(bist_hd_companion_loop(), 0, "checkpoint near max passes");
+
+    /* Loop 2: checkpoint wraps past 0 → still forward in the number space. */
+    queue_checkpoint(0x00000001u);
+    expect_eq_int(bist_hd_companion_loop(), 0, "wrapped checkpoint accepted");
+    expect_eq_int(g_safe_state_notifies, 0, "wrap-around does not trigger safe state");
+}
+
 /* --- IRQ latency scenario --- */
 
 static void scenario_irq_latency_over_budget(void)
@@ -471,6 +486,8 @@ int main(int argc, char **argv)
         scenario_checkpoint_missing();
     } else if (strcmp(scenario, "checkpoint_out_of_order") == 0) {
         scenario_checkpoint_out_of_order();
+    } else if (strcmp(scenario, "checkpoint_wrap") == 0) {
+        scenario_checkpoint_wrap();
     } else if (strcmp(scenario, "irq_latency_over_budget") == 0) {
         scenario_irq_latency_over_budget();
     } else {
