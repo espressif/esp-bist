@@ -214,6 +214,20 @@ test_hd_protocol_unit:
     - cmake --build build/hd_protocol_test
     - ctest --test-dir build/hd_protocol_test --output-on-failure
 
+# Host-native unit tests for the HP agent's checkpoint counter: verifies the
+# private counter starts at 1, steps by 1, and consumes IDs on send failures.
+test_hd_agent_unit:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - when: always
+  script:
+    - cmake -S tests/unit/hd_agent -B build/hd_agent_test
+    - cmake --build build/hd_agent_test
+    - ctest --test-dir build/hd_agent_test --output-on-failure
+
 # Host-native verdict tests for the LP companion state machine: a scripted fake
 # agent plays every way a host can be wrong (bad value, replayed seq, wrong
 # frame, silence, late answer) against the real companion code.
