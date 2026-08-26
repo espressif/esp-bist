@@ -8,6 +8,8 @@
 	chosen {
 		zephyr,ipc_shm = &ipc_shm;
 		zephyr,ipc = &mbox0;
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
 	};
 
 	mbox-consumer {
