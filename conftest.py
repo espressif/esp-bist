@@ -19,6 +19,7 @@ Fixtures:
 
 Command-line Options:
         --executable: Name of the executable file (without extension) to be tested/debugged.
+        --injection: Include tests marked ``injection``; they are excluded by default.
 
 QEMU uses the same ``target`` as idf-ci (``@pytest.mark.parametrize`` / ``tests/idf_targets.py``), not a separate CLI flag.
 """
@@ -351,6 +352,30 @@ def pytest_addoption(parser):
         action="store",
         help="Name of the executable (without file extension). ",
     )
+    parser.addoption(
+        "--injection",
+        action="store_true",
+        default=False,
+        help="Include fault-injection tests (excluded by default).",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Exclude hardware fault-injection tests unless explicitly requested."""
+    if config.getoption("--injection"):
+        return
+
+    selected = []
+    deselected = []
+    for item in items:
+        if item.get_closest_marker("injection"):
+            deselected.append(item)
+        else:
+            selected.append(item)
+
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
 
 
 @pytest.fixture
