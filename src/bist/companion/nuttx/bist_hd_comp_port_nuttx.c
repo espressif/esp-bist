@@ -35,10 +35,10 @@ static int32_t us_to_cycles(int32_t timeout_us)
 static int send_word_as_bytes(uint32_t word)
 {
     uint8_t b[4] = {
-        (uint8_t)(word),
-        (uint8_t)(word >> 8),
-        (uint8_t)(word >> 16),
-        (uint8_t)(word >> 24),
+        (uint8_t)(word) & 0xFF,
+        (uint8_t)(word >> 8) & 0xFF,
+        (uint8_t)(word >> 16) & 0xFF,
+        (uint8_t)(word >> 24) & 0xFF,
     };
     size_t i;
 

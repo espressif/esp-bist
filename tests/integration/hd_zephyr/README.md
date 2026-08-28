@@ -35,10 +35,3 @@ west twister -p esp32c6_devkitc/esp32c6/hpcore \
     -T tests/integration/hd_zephyr \
     --device-testing --device-serial /dev/ttyUSB0 --west-runner esp32
 ```
-
-## Related coverage
-
-- [`tests/unit/hd_companion`](../../unit/hd_companion) — the full companion
-  verdict matrix (wrong value, replayed sequence, wrong frame type, silence,
-  late answer) off-target, no hardware needed.
-- [`tests/integration/hd_idf`](../hd_idf) — the same two faults on ESP-IDF.

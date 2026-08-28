@@ -1,0 +1,4 @@
+# Local pytest leftovers (NuttX images are built in the NuttX tree)
+__pycache__/
+.pytest_cache/
+*_device_report.xml

@@ -23,6 +23,8 @@
 
 #define HD_RESYNC_MAX_BYTES (BIST_HD_WIRE_WORDS_MAX * 4u)
 
+#define HD_FLUSH_MAX_BYTES (2u * BIST_HD_WIRE_WORDS_MAX * 4u)
+
 static int s_fd = -1;
 
 static int write_word(int fd, uint32_t word)
@@ -65,10 +67,30 @@ int bist_hd_transport_init(void)
 
 void bist_hd_transport_flush(void)
 {
-    /* /dev/lp_mailbox has no non-blocking read, poll() or FIONREAD, so leftover
-     * bytes cannot be drained here; bist_hd_transport_recv() instead resyncs on
-     * the frame header. Kept as the hook for when the driver gains O_NONBLOCK.
-     */
+    int flags;
+    uint8_t b;
+    unsigned int i;
+
+    if (s_fd < 0) {
+        return;
+    }
+
+    flags = fcntl(s_fd, F_GETFL);
+    if (flags < 0) {
+        return;
+    }
+
+    if (fcntl(s_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        return;
+    }
+
+    for (i = 0; i < HD_FLUSH_MAX_BYTES; i++) {
+        if (read(s_fd, &b, 1) != 1) {
+            break;
+        }
+    }
+
+    (void)fcntl(s_fd, F_SETFL, flags);
 }
 
 static int read_header_word(int fd, uint32_t *word)

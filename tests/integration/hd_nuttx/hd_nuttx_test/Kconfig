@@ -1,0 +1,53 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config NUTTX_ESP_BIST_MODULE
+	bool
+	---help---
+		Internal symbol. Indicates ESP-BIST is integrated as a NuttX LP-core module.
+
+orsource "../../../../src/bist/Kconfig"
+
+config ESP_NUTTX_HD_TEST
+	tristate "ESP-BIST Host Diagnostics fail-closed test"
+	default n
+	depends on ESPRESSIF_USE_LP_CORE
+	select NUTTX_ESP_BIST_MODULE
+	---help---
+		Enable the Host Diagnostics fail-closed test application. The HP-core
+		NuttX application loads LP firmware and then misbehaves so the companion
+		must enter safe state. Not a product example; see samples/nuttx.
+
+if ESP_NUTTX_HD_TEST
+
+config ESP_NUTTX_HD_TEST_PROGNAME
+	string "Program name"
+	default "hd_nuttx_test"
+	---help---
+		This is the name of the program that will be used when the NSH ELF
+		program is installed.
+
+menu "Host Diagnostics fail-closed validation"
+
+comment "Select one fault. The ESP-BIST library is unchanged; the fault comes from this app."
+
+config BIST_HD_TEST_KEY_MISMATCH
+	bool "Build the host agent with a challenge key the companion does not share"
+	---help---
+		Compiles the HP-side library with BIST_HD_CHALLENGE_KEY set to a value
+		other than CONFIG_ESP_BIST_HD_CHALLENGE_KEY, which the LP companion keeps.
+		The production answer path then produces a wrong answer every round, so
+		the companion must enter safe state.
+
+config BIST_HD_TEST_STARVE_AGENT
+	bool "Starve the Host Diagnostic Agent past the challenge window"
+	---help---
+		The application raises its own priority above the agent task and
+		busy-waits, occupying the HP core, so no ANSWER reaches the companion
+		before the challenge window expires.
+
+endmenu
+
+endif
