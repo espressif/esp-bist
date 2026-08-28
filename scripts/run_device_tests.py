@@ -55,7 +55,10 @@ def app_supports_target(app_dir: Path, target: str) -> bool:
 def discover_test_apps(mode: str, target: str) -> tuple[str, ...]:
     """tests/<name> dirs with pytest_<mode>*.py that support the given SoC."""
     pattern = f"pytest_{mode}*.py"
-    names = os.getenv("TEST_APPS", "").split()
+    selected = os.getenv("TEST_APP_FILTER", os.getenv("TEST_APPS", "all"))
+    names = selected.replace(",", " ").replace(";", " ").split()
+    if not names or names == ["all"]:
+        names = os.getenv("TEST_APPS", "").split()
     candidates = (
         [TESTS_DIR / name for name in names]
         if names
