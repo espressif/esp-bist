@@ -40,6 +40,10 @@ spec:
       type: boolean
       default: false
       description: "Build and deploy the documentation from cached test reports"
+    test_apps:
+      type: string
+      default: "all"
+      description: "Space-separated BIST test apps to run, or all"
 
 ---
 
