@@ -381,7 +381,7 @@ build_samples:
 # west/SDK setup, which dominates the job time.
 build_zephyr_twister:
   stage: Build
-  image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.28.7.20251127
+  image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.29.3.20260727
   before_script: []
   rules:
     - when: always
@@ -738,7 +738,6 @@ test_device:
         -T "$CI_PROJECT_DIR/tests/integration/hd_zephyr"
         --outdir "$CI_PROJECT_DIR/twister-out"
         --device-serial=$ESPPORT
-        --west-flash=--skip-rebuild
         --west-runner esp32
   rules:
     - when: always
@@ -755,6 +754,8 @@ test_device:
     expire_in: 1 week
     paths:
       - twister-out/twister.xml
+      - twister-out/**/device.log
+      - twister-out/**/handler.log
     reports:
       junit: twister-out/twister.xml
 
