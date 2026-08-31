@@ -628,13 +628,12 @@ test_idf_device:
   rules:
     - if: '"$[[ inputs.run_qemu_remote_test ]]" != "true"'
       when: never
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      needs: [build_qemu_remote]
-    - if: '"$[[ inputs.build_qemu_remote ]]" == "true"'
-      needs: [build_qemu_remote]
     - when: always
   tags: [build]
   needs:
+    - job: build_qemu_remote
+      optional: true
+      artifacts: true
     - job: build_tests
       artifacts: true
       parallel:
