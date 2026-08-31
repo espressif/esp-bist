@@ -824,7 +824,7 @@ build_nuttx_hd_tests:
   before_script: []
   timeout: 2h
   rules:
-    - when: always
+    - if: '"$[[ inputs.run_nuttx_test ]]" == "true"'
   parallel: *nuttx_boards_matrix
   variables:
     NUTTX_WORKSPACE: "$CI_PROJECT_DIR/nuttx-workspace"
@@ -890,7 +890,7 @@ build_nuttx_hd_tests:
           -k "${HD_CONFIG}"
       done
   rules:
-    - when: always
+    - if: '"$[[ inputs.run_nuttx_test ]]" == "true"'
   tags: [generic, $SOC_TAG]
   needs:
     - job: build_nuttx_hd_tests
