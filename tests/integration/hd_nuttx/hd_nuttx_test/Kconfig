@@ -48,6 +48,13 @@ config BIST_HD_TEST_STARVE_AGENT
 		busy-waits, occupying the HP core, so no ANSWER reaches the companion
 		before the challenge window expires.
 
+config BIST_HD_TEST_SKIP_CHECKPOINT
+	bool "Never send a checkpoint to the LP companion"
+	---help---
+		The host answers Q&A challenges correctly but never calls
+		bist_hd_checkpoint_reached(), so the companion's checkpoint deadline
+		is the only path to safe state.
+
 endmenu
 
 endif
