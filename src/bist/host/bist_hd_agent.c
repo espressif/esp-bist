@@ -24,6 +24,33 @@ static int s_started;
 static int s_have_seq;
 static uint16_t s_last_seq;
 
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+/*
+ * Deferred checkpoint: the main loop sets s_ckpt_pending_seq via
+ * bist_hd_checkpoint_reached(); the agent worker sends it just before
+ * the CHALLENGE answer.  At that point the companion is blocked in its
+ * recv loop waiting for the ANSWER, so the HP→LP send cannot collide
+ * with a concurrent LP→HP send (which would stall on the shared
+ * mailbox semaphore).
+ */
+static volatile uint32_t s_ckpt_pending_seq;
+
+static void send_checkpoint(void)
+{
+    uint32_t seq = s_ckpt_pending_seq;
+    if (seq == 0u) {
+        return;
+    }
+    s_ckpt_pending_seq = 0u;
+
+    bist_hd_msg_t ckpt = {0};
+    ckpt.type = BIST_HD_MSG_CHECKPOINT;
+    ckpt.audit_id = BIST_HD_AUDIT_CHECKPOINT;
+    ckpt.payload = seq;
+    (void)bist_hd_transport_send(&ckpt, 500);
+}
+#endif
+
 static int accept_seq(uint16_t seq)
 {
     if (s_have_seq && bist_hd_seq_is_stale(s_last_seq, seq)) {
@@ -42,9 +69,6 @@ static void agent_worker(void *arg)
         bist_hd_msg_t msg;
         int err = bist_hd_transport_recv(&msg, -1);
         if (err != 0) {
-            /* Errors can return without blocking (malformed frame, transport
-             * down), so yield to keep this high-priority task off a spin.
-             */
             bist_hd_platform_sleep_ms(1);
             continue;
         }
@@ -58,6 +82,9 @@ static void agent_worker(void *arg)
             if (!accept_seq(msg.seq)) {
                 continue;
             }
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+            send_checkpoint();
+#endif
             (void)bist_hd_audit_handle_challenge(&msg);
             continue;
         }
@@ -132,14 +159,9 @@ int bist_hd_checkpoint_reached(void)
 {
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
     static uint32_t s_ckpt_seq;
-    bist_hd_msg_t msg = {0};
-
     s_ckpt_seq++;
-    msg.type = BIST_HD_MSG_CHECKPOINT;
-    msg.audit_id = BIST_HD_AUDIT_CHECKPOINT;
-    msg.payload = s_ckpt_seq;
-
-    return bist_hd_transport_send(&msg, 500);
+    s_ckpt_pending_seq = s_ckpt_seq;
+    return 0;
 #else
     return -1;
 #endif

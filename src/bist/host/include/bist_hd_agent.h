@@ -43,12 +43,18 @@ int bist_hd_agent_wait_lp_status(uint32_t *status_out, uint32_t expect_flag, int
 /**
  * @brief Report that a logical / alive checkpoint was reached.
  *
- * Sends a BIST_HD_MSG_CHECKPOINT to the LP companion with an internally
- * managed sequence counter.  The companion tracks received checkpoints
- * and enters safe state if they stop arriving within the configured
- * deadline.  Must be called periodically from the host main loop.
+ * Marks a pending checkpoint with an internally managed sequence counter.
+ * The agent worker sends it to the LP companion on the next mailbox
+ * opportunity (after receiving a CHALLENGE).  The companion tracks
+ * received checkpoints and enters safe state if they stop arriving
+ * within the configured deadline.
  *
- * @return 0 on success, -1 if checkpoint audit is disabled or transport fails
+ * Must be called periodically from the host main loop.  If the main
+ * loop stops calling this function the pending counter stays stale,
+ * no new checkpoints are sent, and the companion triggers safe state
+ * (at most +1 companion-loop detection latency from the last call).
+ *
+ * @return 0 on success, -1 if checkpoint audit is disabled
  */
 int bist_hd_checkpoint_reached(void);
 

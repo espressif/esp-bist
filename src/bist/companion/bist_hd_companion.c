@@ -25,6 +25,7 @@
 #include "bist_ram.h"
 #include "lp_wdt.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -48,16 +49,16 @@
 
 static const char *TAG = "hd_comp";
 
-static int s_in_safe_state;
+static bool s_in_safe_state;
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint16_t s_seq;
 static uint32_t s_challenge_prng;
 #endif
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
-static int s_checkpoint_armed;
+static bool s_checkpoint_armed;
 static uint32_t s_checkpoint_last_id;
-static int s_checkpoint_received;
-static int s_checkpoint_miss_count;
+static bool s_checkpoint_received;
+static uint32_t s_checkpoint_miss_count;
 #endif
 
 void __attribute__((weak)) bist_hd_safe_state(void)
@@ -67,7 +68,7 @@ void __attribute__((weak)) bist_hd_safe_state(void)
     if (s_in_safe_state) {
         return;
     }
-    s_in_safe_state = 1;
+    s_in_safe_state = true;
     ESP_LOGE(TAG, "safe_state");
     /* Best-effort notify so HP/pytest can observe companion judgment. */
     notify.type = BIST_HD_MSG_SAFE_STATE_NOTIFY;
@@ -99,7 +100,25 @@ static int process_checkpoint(const bist_hd_msg_t *msg)
         }
     }
     s_checkpoint_last_id = id;
-    s_checkpoint_received = 1;
+    s_checkpoint_received = true;
+    return 0;
+}
+
+static int check_checkpoint(void)
+{
+    if (s_checkpoint_received) {
+        s_checkpoint_miss_count = 0;
+        s_checkpoint_armed = true;
+        return 0;
+    }
+
+    /* Count from the first runtime loop, including before any checkpoint
+     * arrives. A host that never reports still hits the deadline. */
+    s_checkpoint_miss_count++;
+    if (s_checkpoint_miss_count > CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS) {
+        ESP_LOGE(TAG, "ckpt miss");
+        return -1;
+    }
     return 0;
 }
 
@@ -374,7 +393,7 @@ int bist_hd_companion_loop(void)
     lp_wdt_feed();
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
-    s_checkpoint_received = 0;
+    s_checkpoint_received = false;
     if (drain_checkpoints() != 0) {
         bist_hd_safe_state();
         return -1;
@@ -404,19 +423,9 @@ int bist_hd_companion_loop(void)
 #endif
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
-    if (s_checkpoint_armed) {
-        if (!s_checkpoint_received) {
-            s_checkpoint_miss_count++;
-            if (s_checkpoint_miss_count > CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS) {
-                ESP_LOGE(TAG, "ckpt miss");
-                bist_hd_safe_state();
-                return -1;
-            }
-        } else {
-            s_checkpoint_miss_count = 0;
-        }
-    } else {
-        s_checkpoint_armed = 1;
+    if (check_checkpoint() != 0) {
+        bist_hd_safe_state();
+        return -1;
     }
 #endif
 

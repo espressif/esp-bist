@@ -3,20 +3,26 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Host-native unit tests for the HP agent's checkpoint counter.
+ * Host-native unit tests for the HP agent's deferred checkpoint send.
  *
  * The agent is compiled from src/bist exactly as it is on target; only the
- * transport, platform and audit adapters are replaced by stubs that capture
- * outgoing messages. The companion is not involved — it has its own off-target
- * test suite in tests/unit/hd_companion that covers the receiving side.
+ * transport, platform and audit adapters are replaced by stubs. The companion
+ * is not involved — it has its own off-target suite in tests/unit/hd_companion.
+ *
+ * Checkpoint sending is deferred: bist_hd_checkpoint_reached() only marks a
+ * pending sequence number. The agent worker sends it after accepting a
+ * CHALLENGE. These tests start that worker on a host thread and inject
+ * mailbox messages through the transport stubs.
  *
  * One scenario per process: the agent has file-scope static state (s_started,
  * s_ckpt_seq) that cannot be reset without a fresh process.
  */
 
 #include "bist_hd_agent.h"
+#include "bist_hd_platform.h"
 #include "bist_hd_protocol.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -27,6 +33,14 @@ static int g_sent_count;
 static int g_send_result;
 
 static int g_failures;
+
+static pthread_mutex_t g_mu = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t g_cv = PTHREAD_COND_INITIALIZER;
+static pthread_t g_worker_tid;
+static int g_worker_in_recv;
+static bist_hd_msg_t g_inbox;
+static int g_inbox_ready;
+static uint16_t g_challenge_seq;
 
 /* ----- test helpers ---------------------------------------------------- */
 
@@ -80,9 +94,20 @@ int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)
 
 int bist_hd_transport_recv(bist_hd_msg_t *msg, int32_t timeout_ms)
 {
-    (void)msg;
     (void)timeout_ms;
-    return -1;
+
+    pthread_mutex_lock(&g_mu);
+    g_worker_in_recv = 1;
+    pthread_cond_broadcast(&g_cv);
+    while (!g_inbox_ready) {
+        pthread_cond_wait(&g_cv, &g_mu);
+    }
+    *msg = g_inbox;
+    g_inbox_ready = 0;
+    g_worker_in_recv = 0;
+    pthread_cond_broadcast(&g_cv);
+    pthread_mutex_unlock(&g_mu);
+    return 0;
 }
 
 /* ----- platform stubs -------------------------------------------------- */
@@ -92,10 +117,21 @@ int bist_hd_platform_init(void)
     return 0;
 }
 
-int bist_hd_platform_start_worker(void (*fn)(void *), void *arg)
+static void *worker_entry(void *arg)
 {
-    (void)fn;
+    bist_hd_worker_fn_t fn = (bist_hd_worker_fn_t)arg;
+
+    fn(NULL);
+    return NULL;
+}
+
+int bist_hd_platform_start_worker(bist_hd_worker_fn_t fn, void *arg)
+{
     (void)arg;
+
+    if (pthread_create(&g_worker_tid, NULL, worker_entry, (void *)fn) != 0) {
+        return -1;
+    }
     return 0;
 }
 
@@ -130,11 +166,53 @@ int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge)
     return 0;
 }
 
-/* ----- helper: start the agent so s_started is set --------------------- */
+/* ----- worker mailbox helpers ------------------------------------------ */
+
+static void wait_worker_idle(void)
+{
+    pthread_mutex_lock(&g_mu);
+    while (!g_worker_in_recv || g_inbox_ready) {
+        pthread_cond_wait(&g_cv, &g_mu);
+    }
+    pthread_mutex_unlock(&g_mu);
+}
+
+static void deliver(const bist_hd_msg_t *msg)
+{
+    pthread_mutex_lock(&g_mu);
+    g_inbox = *msg;
+    g_inbox_ready = 1;
+    pthread_cond_broadcast(&g_cv);
+    while (g_inbox_ready || !g_worker_in_recv) {
+        pthread_cond_wait(&g_cv, &g_mu);
+    }
+    pthread_mutex_unlock(&g_mu);
+}
+
+static void deliver_challenge(void)
+{
+    bist_hd_msg_t chal = {0};
+
+    chal.type = BIST_HD_MSG_CHALLENGE;
+    chal.audit_id = BIST_HD_AUDIT_QA;
+    chal.seq = ++g_challenge_seq;
+    chal.payload = 0x12345678u;
+    deliver(&chal);
+}
+
+static void deliver_lp_status(void)
+{
+    bist_hd_msg_t status = {0};
+
+    status.type = BIST_HD_MSG_LP_STATUS;
+    status.payload = BIST_HD_BIT_RUNTIME;
+    deliver(&status);
+}
 
 static void agent_start(void)
 {
     expect_eq_int(bist_hd_agent_start(), 0, "agent_start succeeds");
+    wait_worker_idle();
 }
 
 /*
@@ -159,9 +237,15 @@ static void scenario_checkpoint_first_id(void)
 
     agent_start();
     expect_eq_int(bist_hd_checkpoint_reached(), 0, "first checkpoint call succeeds");
+    expect_true(find_checkpoint(0) < 0, "checkpoint is not sent before a CHALLENGE");
+
+    deliver_lp_status();
+    expect_true(find_checkpoint(0) < 0, "LP_STATUS does not flush the pending checkpoint");
+
+    deliver_challenge();
 
     idx = find_checkpoint(0);
-    expect_true(idx >= 0, "a CHECKPOINT message was sent");
+    expect_true(idx >= 0, "a CHECKPOINT message was sent after CHALLENGE");
     if (idx >= 0) {
         expect_eq_u32(g_sent[idx].payload, 1u, "first checkpoint payload is 1");
         expect_eq_u32(g_sent[idx].audit_id, BIST_HD_AUDIT_CHECKPOINT,
@@ -179,6 +263,7 @@ static void scenario_checkpoint_step_is_one(void)
 
     for (int i = 0; i < n; i++) {
         expect_eq_int(bist_hd_checkpoint_reached(), 0, "checkpoint call succeeds");
+        deliver_challenge();
     }
 
     for (int i = 0; i < g_sent_count && count < n; i++) {
@@ -204,25 +289,29 @@ static void scenario_checkpoint_send_failure_consumes_id(void)
 
     agent_start();
 
-    /* First call: succeeds, capture the payload. */
     expect_eq_int(bist_hd_checkpoint_reached(), 0, "first call succeeds");
+    deliver_challenge();
+
     idx = find_checkpoint(0);
     expect_true(idx >= 0, "first CHECKPOINT captured");
     before_fail = (idx >= 0) ? g_sent[idx].payload : 0;
 
-    /* Force the next send to fail. */
+    /* Mark pending, then fail the worker's send on the next CHALLENGE. */
+    expect_eq_int(bist_hd_checkpoint_reached(), 0, "second call succeeds (deferred)");
     g_send_result = -1;
-    expect_eq_int(bist_hd_checkpoint_reached(), -1, "second call fails");
+    deliver_challenge();
 
-    /* Restore transport and send again. */
     g_send_result = 0;
     expect_eq_int(bist_hd_checkpoint_reached(), 0, "third call succeeds");
+    deliver_challenge();
+
     idx = find_checkpoint(idx + 1);
     expect_true(idx >= 0, "third CHECKPOINT captured");
     after_fail = (idx >= 0) ? g_sent[idx].payload : 0;
 
     /*
-     * The ID consumed by the failed send must not be reused. The gap is 2:
+     * send_checkpoint() clears the pending ID before the transport call, so a
+     * failed send still consumes it. The gap is 2:
      * before_fail → (before_fail+1 consumed by failure) → after_fail.
      */
     expect_eq_u32(after_fail - before_fail, 2u,
@@ -241,6 +330,7 @@ int main(int argc, char **argv)
 
     g_sent_count = 0;
     g_send_result = 0;
+    g_challenge_seq = 0;
 
     if (strcmp(scenario, "checkpoint_first_id") == 0) {
         scenario_checkpoint_first_id();

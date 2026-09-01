@@ -208,8 +208,11 @@ config ESP_BIST_HD_AUDIT_QA
 
 config ESP_BIST_HD_AUDIT_CHECKPOINT
     bool "Alive / deadline / logical checkpoints"
+    depends on ESP_BIST_HD_AUDIT_QA
     help
       Host reports checkpoints; companion tracks set, order, and deadlines.
+      Checkpoints are flushed from the Q&A challenge handler to avoid
+      mailbox collisions, so this audit requires ESP_BIST_HD_AUDIT_QA.
 
 config ESP_BIST_HD_AUDIT_RAM
     bool "Host RAM March"

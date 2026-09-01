@@ -378,18 +378,30 @@ static void scenario_checkpoint_missing(void)
     g_mode = AGENT_CORRECT;
     init_ok();
 
-    /* Loop 1: no checkpoint, but not armed yet → grace period. */
     queue_checkpoint(1);
-    expect_eq_int(bist_hd_companion_loop(), 0, "first loop arms checkpoint (grace)");
+    expect_eq_int(bist_hd_companion_loop(), 0, "first loop with a checkpoint arms tracking");
 
-    /* Loop 2: armed, no checkpoint sent → miss_count = 1. With PERIOD_LOOPS=1,
-     * first miss is tolerated. */
+    /* Armed, no checkpoint → miss_count = 1. With PERIOD_LOOPS=1 the first
+     * miss is still within budget. */
     expect_eq_int(bist_hd_companion_loop(), 0, "first miss tolerated (period=1)");
     expect_eq_int(g_safe_state_notifies, 0, "one miss within budget");
 
-    /* Loop 3: still no checkpoint → miss_count = 2 > 1 → safe state. */
     expect_eq_int(bist_hd_companion_loop(), -1, "second consecutive miss triggers safe state");
     expect_eq_int(g_safe_state_notifies, 1, "missing checkpoint is safe state");
+}
+
+static void scenario_checkpoint_never(void)
+{
+    g_mode = AGENT_CORRECT;
+    init_ok();
+
+    /* PERIOD_LOOPS=1: one empty loop is tolerated, the next fails. A host
+     * that never calls bist_hd_checkpoint_reached() must still fail closed. */
+    expect_eq_int(bist_hd_companion_loop(), 0, "first empty loop within budget");
+    expect_eq_int(g_safe_state_notifies, 0, "grace loop does not trip safe state");
+
+    expect_eq_int(bist_hd_companion_loop(), -1, "never-received checkpoint triggers safe state");
+    expect_eq_int(g_safe_state_notifies, 1, "silent host is safe state");
 }
 
 static void scenario_checkpoint_out_of_order(void)
@@ -484,6 +496,8 @@ int main(int argc, char **argv)
         scenario_checkpoint_pass();
     } else if (strcmp(scenario, "checkpoint_missing") == 0) {
         scenario_checkpoint_missing();
+    } else if (strcmp(scenario, "checkpoint_never") == 0) {
+        scenario_checkpoint_never();
     } else if (strcmp(scenario, "checkpoint_out_of_order") == 0) {
         scenario_checkpoint_out_of_order();
     } else if (strcmp(scenario, "checkpoint_wrap") == 0) {

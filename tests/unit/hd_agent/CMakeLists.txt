@@ -31,6 +31,9 @@ target_include_directories(hd_agent_test PRIVATE
 
 target_compile_options(hd_agent_test PRIVATE -Wall -Wextra -Werror)
 
+find_package(Threads REQUIRED)
+target_link_libraries(hd_agent_test PRIVATE Threads::Threads)
+
 enable_testing()
 
 # One process per scenario: the agent has file-scope static state that cannot

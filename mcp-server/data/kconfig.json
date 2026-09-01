@@ -253,8 +253,8 @@
     "name": "ESP_BIST_HD_AUDIT_CHECKPOINT",
     "type": "bool",
     "default": "",
-    "depends_on": "",
-    "help": "Host reports checkpoints; companion tracks set, order, and deadlines.",
+    "depends_on": "ESP_BIST_HD_AUDIT_QA",
+    "help": "Host reports checkpoints; companion tracks set, order, and deadlines.\nCheckpoints are flushed from the Q&A challenge handler to avoid\nmailbox collisions, so this audit requires ESP_BIST_HD_AUDIT_QA.",
     "menu": "Host Diagnostics Audits",
     "range": "",
     "prompt": "Alive / deadline / logical checkpoints"

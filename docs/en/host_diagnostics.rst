@@ -533,10 +533,11 @@ Each iteration:
 #. Verify expected runtime bits. If not: ``bist_hd_safe_state()``.
 #. If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT``: drain pending checkpoint messages
    (non-blocking receive). If a checkpoint arrives during the Q&A wait below, it
-   is also consumed. If the checkpoint tracker is armed and no checkpoint was
-   received for more than ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS``
-   consecutive loops: ``bist_hd_safe_state()``. Out-of-order checkpoint IDs
-   (wrap-safe unsigned-distance check on ``payload``) also trigger safe state.
+   is also consumed. If no checkpoint was received for more than
+   ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS`` consecutive loops — including
+   a host that never sends one — ``bist_hd_safe_state()``. Out-of-order
+   checkpoint IDs (wrap-safe unsigned-distance check on ``payload``) also
+   trigger safe state.
 #. If ``CONFIG_ESP_BIST_HD_AUDIT_QA``: run Q&A challenge -- send ``CHALLENGE``,
    recv ``ANSWER`` within ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``, verify seq
    + value + elapsed time. If any check fails: ``bist_hd_safe_state()``.
@@ -544,8 +545,9 @@ Each iteration:
    in-window answer, additionally check that the round-trip time does not exceed
    ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``. If it does:
    ``bist_hd_safe_state()``.
-#. If checkpoint is enabled: arm the checkpoint tracker after the first
-   successful loop (grace period for the host to start sending checkpoints).
+#. If checkpoint is enabled: the first received checkpoint arms ID-order
+   tracking. Misses are counted from the first runtime loop, so a host that
+   never reports still hits the deadline.
 
 The application-side LP main loop calls ``bist_hd_companion_loop()`` with a
 delay between iterations (e.g. ``bist_hd_comp_port_delay_us(10000)``).
@@ -838,8 +840,8 @@ Timing Parameters
      - int
      - 1
      - Max consecutive companion loops without a host checkpoint before safe
-       state. The host has a one-loop grace period after init before the check
-       is armed
+       state. Applies from the first runtime loop, so a host that never
+       reports still fails closed
    * - ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US``
      - int
      - 1000000
