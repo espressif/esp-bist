@@ -915,7 +915,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 30 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_cpu_regs_test``\n     - 24.8 us\n     - 992\n     - 362\n     - 1346",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 30 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_cpu_regs_test``\n     - 16.72 us\n     - 669\n     - 354\n     - 1336",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -923,7 +923,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_cpu_regs.c``\n     - v1.0.0\n     - 18ad6bcdaed51c19f26961fc067d57a0",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_cpu_regs.c``\n     - v1.1.0\n     - 46672ca8384163f78e6df2667d1dbf42",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -947,7 +947,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 30 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_cpu_csr_regs_test``\n     - 26.15 us\n     - 1046\n     - 416\n     - 1542",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 30 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_cpu_csr_regs_test``\n     - 17.6 us\n     - 704\n     - 488\n     - 1832",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -955,7 +955,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_cpu_csr_regs.c``\n     - v1.0.0\n     - 0d1ce5b4fef534283d438ad7c16f5c9d",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_cpu_csr_regs.c``\n     - v1.1.0\n     - 9b338c950939cb5fb9b85919ac483c79",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -995,7 +995,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 20 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_cpu_stack_overflow_init``\n     - 0.63 us\n     - 25\n     - 22\n     - 42\n   * - ``bist_cpu_stack_overflow_check``\n     - 0.45 us\n     - 18\n     - 14\n     - 56\n   * - ``bist_cpu_stack_overflow_test``\n     - 1.30 ms\n     - 52031\n     - 40440\n     - 80\n   * - ``bist_get_stack_high_watermark``\n     - 15.85\u2013575.55 us\n     - 634\u201323022\n     - 40\u201314978\n     - 120",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 20 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_cpu_stack_overflow_init``\n     - 22.72 us\n     - 909\n     - 269\n     - 38\n   * - ``bist_cpu_stack_overflow_check``\n     - 36.56 us\n     - 1462\n     - 333\n     - 56\n   * - ``bist_cpu_stack_overflow_test``\n     - 2589.96 ms\n     - 103597756\n     - 85225844\n     - 58\n   * - ``bist_get_stack_high_watermark``\n     - 15.85\u2013575.55 us\n     - 634\u201323022\n     - 40\u201314978\n     - 44",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1003,7 +1003,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_cpu_stack.c``\n     - v1.0.0\n     - 88c79e6d96bbd53dc5c36fba82a30867",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_cpu_stack.c``\n     - v1.1.0\n     - 207683007b786f44fa607305474baeb3",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1051,7 +1051,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_ram_test_march_a``\n     - 7.60 ms\n     - 304178\n     - 203954\n     - 454\n   * - ``bist_ram_test_march_x``\n     - 11.44 ms\n     - 457611\n     - 313843\n     - 664\n   * - ``bist_ram_test_abraham``\n     - 3.14 ms\n     - 502704\n     - 311512\n     - 1320\n   * - ``bist_ram_test_abraham_full``\n     - 5260.72 ms\n     - 841715631\n     - 524484762\n     - 1526\n\n.. note::\n\n   Abraham measurements were taken on ESP32-C3 at 160 MHz with\n   ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE`` set to 1024 words. Abraham metrics depend on\n   the partition size: single-pair cost scales linearly with partition size (more cells\n   per pair), while full-coverage cost depends quadratically on the number of partitions\n   N = ceil(region / partition_size), since C(N,2) pairs must be tested. March A and\n   March X are unaffected by partition size as they iterate the full region regardless.",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_ram_test_march_a``\n     - 85.12 ms\n     - 3405282\n     - 2082613\n     - 12\n   * - ``bist_ram_test_march_x``\n     - 127.28 ms\n     - 5091220\n     - 3153152\n     - 12\n   * - ``bist_ram_test_abraham``\n     - 13.12 ms\n     - 525243\n     - 311516\n     - 62\n   * - ``bist_ram_test_abraham_full``\n     - 22003.76 ms\n     - 880149792\n     - 524415020\n     - 106\n\n.. note::\n\n   Abraham measurements were taken on ESP32-C3 at 160 MHz with\n   ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE`` set to 1024 words. Abraham metrics depend on\n   the partition size: single-pair cost scales linearly with partition size (more cells\n   per pair), while full-coverage cost depends quadratically on the number of partitions\n   N = ceil(region / partition_size), since C(N,2) pairs must be tested. March A and\n   March X are unaffected by partition size as they iterate the full region regardless.",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1059,7 +1059,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/memory/bist_ram.c``\n     - v1.0.0\n     - 83acc801a25f7fcea5942ba8a0129092",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/memory/bist_ram.c``\n     - v1.1.0\n     - 7bb7982e0827cefbe77805dd3d1eff6c",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1091,7 +1091,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_flash_test``\n     - 4.72 ms\n     - 188671\n     - 121249\n     - 604\n\nIn this analysis CONFIG_BIST_FLASH_TEST_CHUNK_SIZE was set to 1024 bytes.",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_flash_test``\n     - 155.56 ms\n     - 6221935.2\n     - 2532845.4\n     - 348\n\nIn this analysis CONFIG_BIST_FLASH_TEST_CHUNK_SIZE was set to 1024 bytes.",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1099,7 +1099,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/memory/bist_flash.c``\n     - v1.0.0\n     - 64feb9abb885ad1343df81b30117c58e",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/memory/bist_flash.c``\n     - v1.1.0\n     - dc51fd6f762667c16f01f816515b8408",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1171,7 +1171,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_pc_test``\n     - 38.60 us\n     - 1544\n     - 160\n     - 160",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 35 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_pc_test``\n     - 59.16 us\n     - 2366\n     - 161\n     - 54",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1179,7 +1179,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_pc.c``\n     - v1.0.0\n     - 1f25ac855582fa7a07f51ef74a638f28",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/cpu/bist_pc.c``\n     - v1.1.0\n     - 78569f53cddc8fcb74f7e0daaf0cd973",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1211,7 +1211,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 45 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_interrupt_source_map_test``\n     - 44.6 ms\n     - 7140244\n     - 2565393\n     - 528\n   * - ``bist_hardware_interrupt_test``\n     - 500 ms\n     - 80001979\n     - 39957618\n     - 1014\n\n.. note::\n\n   Interrupt test measurements were taken on ESP32-C3 at 160 MHz.\n   The hardware interrupt test takes a longer time due to expecting 1000 interrupts.",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 45 15 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_interrupt_source_map_test``\n     - 178.48 ms\n     - 7138958\n     - 2976110\n     - 462\n   * - ``bist_hardware_interrupt_test``\n     - 2000.04 ms\n     - 80002102.8\n     - 39753904\n     - 874\n\n.. note::\n\n   Interrupt test measurements were taken on ESP32-C3 at 160 MHz.\n   The hardware interrupt test takes a longer time due to expecting 1000 interrupts.",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1219,7 +1219,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 45 15 40\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/interrupt/bist_interrupt_sw.c``\n     - v1.0.0\n     - 12e7e301dad87b8990c57927ac906366\n   * - ``src/bist/core/interrupt/bist_interrupt.c``\n     - v1.0.0\n     - f9dd6bd7a1530a88757e927e3d426c5b",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 45 15 40\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/interrupt/bist_interrupt_sw.c``\n     - v1.1.0\n     - 3ff1fd697f93435862a902213604a947\n   * - ``src/bist/core/interrupt/bist_interrupt.c``\n     - v1.1.0\n     - 4af30c5d3945cee4d1d395a13b9a8535",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1259,7 +1259,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/clock/bist_clock_fail.c``\n     - v1.0.0\n     - 9375bd4e39ba4049f7e38d84457a95db\n   * - ``src/bist/core/clock/include/bist_clock_math.h``\n     - N/A\n     - N/A",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/clock/bist_clock_fail.c``\n     - v1.1.0\n     - f82f6e9f77dbb5d5ca162ac694a09a22\n   * - ``src/bist/core/clock/include/bist_clock_math.h``\n     - v1.1.0\n     - 8153c488e300d49914d679ef20fd7b98",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1299,7 +1299,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/wdt/bist_wdt.c``\n     - v1.0.0\n     - 71da4b2eacf7335b795c8e41175e80a8",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/wdt/bist_wdt.c``\n     - v1.1.0\n     - 273bd817f195744625a11304149de6fa",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1339,7 +1339,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/io/bist_gpio.c``\n     - v1.0.0\n     - a13966f5e6630a63b47b6eefab3bc0e5",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/io/bist_gpio.c``\n     - v1.1.0\n     - d525e03929c18f45d4a13bffd1c304d0",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1379,7 +1379,7 @@
     "id": "doc:module_design_and_coding.rst:module_api",
     "title": "Module API",
     "section": "module_api",
-    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 45 20 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``\n     - 126.43 ms\n     - 5057005\n     - 2697513\n     - 380\n   * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``\n     - 127.77 ms\n     - 5110753\n     - 2723904\n     - 388\n   * - ``bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)`` (ESP32-C3 only)\n     - 129.51 ms\n     - 5180240\n     - 2749217\n     - 748",
+    "body": ".. list-table::\n   :header-rows: 1\n   :widths: 45 20 15 20 20\n\n   * - Function name\n     - Exec Time\n     - Cycles\n     - Instruction Count\n     - Code size (Bytes)\n   * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``\n     - 126.36 ms\n     - 5054903\n     - 2705397\n     - 278\n   * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``\n     - 127.76 ms\n     - 5110445.4\n     - 2724208.8\n     - 292\n   * - ``bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)`` (ESP32-C3 only)\n     - 129.48 ms\n     - 5179886.6\n     - 2749206.6\n     - 662",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1387,7 +1387,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/io/bist_adc.c``\n     - N/A\n     - 5329ede84aa9604bf42a116b040d2d74",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/core/io/bist_adc.c``\n     - v1.1.0\n     - a9fc1c017183e904a8bd3b5a77a4d99d",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },
@@ -1467,7 +1467,7 @@
     "id": "doc:module_design_and_coding.rst:source_files",
     "title": "Source Files",
     "section": "source_files",
-    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/include/bist_metrics.h``\n     - v1.0.0\n     - fdb9b4ef52f3c7ba0c2c9395f5b5bbee",
+    "body": ".. list-table:: Source Files\n   :header-rows: 1\n   :widths: 30 20 50\n\n   * - Source File\n     - Version\n     - MD5\n   * - ``src/bist/include/bist_metrics.h``\n     - v1.1.0\n     - fdb9b4ef52f3c7ba0c2c9395f5b5bbee",
     "source_file": "docs/en/module_design_and_coding.rst",
     "content_type": "doc"
   },

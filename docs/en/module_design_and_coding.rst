@@ -53,10 +53,10 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_cpu_regs_test``
-     - 24.8 us
-     - 992
-     - 362
-     - 1346
+     - 16.72 us
+     - 669
+     - 354
+     - 1336
 
 Source Files
 ^^^^^^^^^^^^
@@ -69,8 +69,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/cpu/bist_cpu_regs.c``
-     - v1.0.0
-     - 18ad6bcdaed51c19f26961fc067d57a0
+     - v1.1.0
+     - 46672ca8384163f78e6df2667d1dbf42
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -150,10 +150,10 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_cpu_csr_regs_test``
-     - 26.15 us
-     - 1046
-     - 416
-     - 1542
+     - 17.6 us
+     - 704
+     - 488
+     - 1832
 
 Source Files
 ^^^^^^^^^^^^
@@ -166,8 +166,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/cpu/bist_cpu_csr_regs.c``
-     - v1.0.0
-     - 0d1ce5b4fef534283d438ad7c16f5c9d
+     - v1.1.0
+     - 9b338c950939cb5fb9b85919ac483c79
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -314,25 +314,25 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_cpu_stack_overflow_init``
-     - 0.63 us
-     - 25
-     - 22
-     - 42
+     - 22.72 us
+     - 909
+     - 269
+     - 38
    * - ``bist_cpu_stack_overflow_check``
-     - 0.45 us
-     - 18
-     - 14
+     - 36.56 us
+     - 1462
+     - 333
      - 56
    * - ``bist_cpu_stack_overflow_test``
-     - 1.30 ms
-     - 52031
-     - 40440
-     - 80
+     - 2589.96 ms
+     - 103597756
+     - 85225844
+     - 58
    * - ``bist_get_stack_high_watermark``
      - 15.85–575.55 us
      - 634–23022
      - 40–14978
-     - 120
+     - 44
 
 Source Files
 ^^^^^^^^^^^^
@@ -345,8 +345,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/cpu/bist_cpu_stack.c``
-     - v1.0.0
-     - 88c79e6d96bbd53dc5c36fba82a30867
+     - v1.1.0
+     - 207683007b786f44fa607305474baeb3
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -554,25 +554,25 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_ram_test_march_a``
-     - 7.60 ms
-     - 304178
-     - 203954
-     - 454
+     - 85.12 ms
+     - 3405282
+     - 2082613
+     - 12
    * - ``bist_ram_test_march_x``
-     - 11.44 ms
-     - 457611
-     - 313843
-     - 664
+     - 127.28 ms
+     - 5091220
+     - 3153152
+     - 12
    * - ``bist_ram_test_abraham``
-     - 3.14 ms
-     - 502704
-     - 311512
-     - 1320
+     - 13.12 ms
+     - 525243
+     - 311516
+     - 62
    * - ``bist_ram_test_abraham_full``
-     - 5260.72 ms
-     - 841715631
-     - 524484762
-     - 1526
+     - 22003.76 ms
+     - 880149792
+     - 524415020
+     - 106
 
 .. note::
 
@@ -594,8 +594,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/memory/bist_ram.c``
-     - v1.0.0
-     - 83acc801a25f7fcea5942ba8a0129092
+     - v1.1.0
+     - 7bb7982e0827cefbe77805dd3d1eff6c
 
 Stack-Pointer Relocation (Safe Stack)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -718,10 +718,10 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_flash_test``
-     - 4.72 ms
-     - 188671
-     - 121249
-     - 604
+     - 155.56 ms
+     - 6221935.2
+     - 2532845.4
+     - 348
 
 In this analysis CONFIG_BIST_FLASH_TEST_CHUNK_SIZE was set to 1024 bytes.
 
@@ -736,8 +736,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/memory/bist_flash.c``
-     - v1.0.0
-     - 64feb9abb885ad1343df81b30117c58e
+     - v1.1.0
+     - dc51fd6f762667c16f01f816515b8408
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -903,10 +903,10 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_pc_test``
-     - 38.60 us
-     - 1544
-     - 160
-     - 160
+     - 59.16 us
+     - 2366
+     - 161
+     - 54
 
 Source Files
 ^^^^^^^^^^^^
@@ -919,8 +919,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/cpu/bist_pc.c``
-     - v1.0.0
-     - 1f25ac855582fa7a07f51ef74a638f28
+     - v1.1.0
+     - 78569f53cddc8fcb74f7e0daaf0cd973
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1066,15 +1066,15 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_interrupt_source_map_test``
-     - 44.6 ms
-     - 7140244
-     - 2565393
-     - 528
+     - 178.48 ms
+     - 7138958
+     - 2976110
+     - 462
    * - ``bist_hardware_interrupt_test``
-     - 500 ms
-     - 80001979
-     - 39957618
-     - 1014
+     - 2000.04 ms
+     - 80002102.8
+     - 39753904
+     - 874
 
 .. note::
 
@@ -1092,11 +1092,11 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/interrupt/bist_interrupt_sw.c``
-     - v1.0.0
-     - 12e7e301dad87b8990c57927ac906366
+     - v1.1.0
+     - 3ff1fd697f93435862a902213604a947
    * - ``src/bist/core/interrupt/bist_interrupt.c``
-     - v1.0.0
-     - f9dd6bd7a1530a88757e927e3d426c5b
+     - v1.1.0
+     - 4af30c5d3945cee4d1d395a13b9a8535
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1211,11 +1211,11 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/clock/bist_clock_fail.c``
-     - v1.0.0
-     - 9375bd4e39ba4049f7e38d84457a95db
+     - v1.1.0
+     - f82f6e9f77dbb5d5ca162ac694a09a22
    * - ``src/bist/core/clock/include/bist_clock_math.h``
-     - N/A
-     - N/A
+     - v1.1.0
+     - 8153c488e300d49914d679ef20fd7b98
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1352,8 +1352,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/wdt/bist_wdt.c``
-     - v1.0.0
-     - 71da4b2eacf7335b795c8e41175e80a8
+     - v1.1.0
+     - 273bd817f195744625a11304149de6fa
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1500,8 +1500,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/io/bist_gpio.c``
-     - v1.0.0
-     - a13966f5e6630a63b47b6eefab3bc0e5
+     - v1.1.0
+     - d525e03929c18f45d4a13bffd1c304d0
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1672,20 +1672,20 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-     - 126.43 ms
-     - 5057005
-     - 2697513
-     - 380
+     - 126.36 ms
+     - 5054903
+     - 2705397
+     - 278
    * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-     - 127.77 ms
-     - 5110753
-     - 2723904
-     - 388
+     - 127.76 ms
+     - 5110445.4
+     - 2724208.8
+     - 292
    * - ``bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)`` (ESP32-C3 only)
-     - 129.51 ms
-     - 5180240
-     - 2749217
-     - 748
+     - 129.48 ms
+     - 5179886.6
+     - 2749206.6
+     - 662
 
 Source Files
 ^^^^^^^^^^^^
@@ -1698,8 +1698,8 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/core/io/bist_adc.c``
-     - N/A
-     - 5329ede84aa9604bf42a116b040d2d74
+     - v1.1.0
+     - a9fc1c017183e904a8bd3b5a77a4d99d
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1863,7 +1863,7 @@ Source Files
      - Version
      - MD5
    * - ``src/bist/include/bist_metrics.h``
-     - v1.0.0
+     - v1.1.0
      - fdb9b4ef52f3c7ba0c2c9395f5b5bbee
 
 Coding and Interfaces
