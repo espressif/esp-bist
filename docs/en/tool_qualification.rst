@@ -184,7 +184,7 @@ Test Tools
 
 1. **Off-Target Verification**: Host unit tests in ``tests/unit/`` exercise pure algorithmic helpers (clock deviation math, protocol encode/decode, companion state machine) without target hardware or an emulator
 2. **Float-ABI Caveat**: The host build uses hard-float (x86 SSE) while the device uses soft-float on targets without an F extension; test tolerances absorb the difference for the input ranges used by the firmware
-3. **CI Enforcement**: Each suite runs as a dedicated GitLab CI job in stage ``Lint`` (``test_clock_math_unit``, ``test_hd_protocol_unit``, ``test_hd_companion_unit``)
+3. **CI Enforcement**: Each suite runs as a dedicated GitLab CI job in stage ``Lint`` (``test_clock_math_unit``, ``test_hd_protocol_unit``, ``test_hd_companion_unit``, ``test_hd_agent_unit``)
 
 Evidence Summary
 ----------------

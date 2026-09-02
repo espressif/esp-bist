@@ -303,6 +303,7 @@ Available suites:
 - ``clock_math`` — deviation arithmetic in ``bist_clock_math.h`` (guards against regressions that the device clock test cannot catch on boards without a 32 kHz crystal)
 - ``hd_protocol`` — Host Diagnostics protocol encode/decode and sequence helpers
 - ``hd_companion`` — LP companion state machine verdicts against a scripted fake agent
+- ``hd_agent`` — HP agent checkpoint counter and deferred send verification
 
 See also :doc:`host_diagnostics` for details on the Host Diagnostics unit tests.
 

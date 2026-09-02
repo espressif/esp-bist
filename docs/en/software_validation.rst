@@ -1257,12 +1257,12 @@ Clock Math (``tests/unit/clock_math``)
 
     All bist_clock_math tests passed
 
-For the Host Diagnostics protocol and companion unit tests (``tests/unit/hd_protocol``, ``tests/unit/hd_companion``), see :doc:`host_diagnostics`.
+For the Host Diagnostics protocol, companion, and agent unit tests (``tests/unit/hd_protocol``, ``tests/unit/hd_companion``, ``tests/unit/hd_agent``), see :doc:`host_diagnostics`.
 
 Validation Summary
 ------------------
 
 - QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
 - Hardware covers all modules; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
-- Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``), the Host Diagnostics protocol encode/decode logic, and the LP companion state machine.
+- Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``), the Host Diagnostics protocol encode/decode logic, the LP companion state machine, and the HP agent checkpoint counter.
 - Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.
