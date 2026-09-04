@@ -59,17 +59,12 @@ static uint32_t runtime_rounds;
 
 #include <zephyr/drivers/hwinfo.h>
 
-#define BOOT_MARKER_MAGIC 0x5AFEB157u
-
-/* Survives the companion's reset: the loader does not initialise .noinit. */
-static uint32_t boot_marker __noinit;
-
 static bool armed_boot;
 static uint32_t reset_cause;
 
 /*
- * Treat any non-watchdog boot as a fresh start, so a marker left in RAM by a
- * flash or external reset cannot masquerade as the post-safe-state boot.
+ * Check the hardware reset cause: the first boot (power-on, flash, or pin reset)
+ * arms the starvation test, while the post-safe-state boot observes RESET_WATCHDOG.
  */
 static void fail_closed_boot_classify(void)
 {
@@ -77,12 +72,7 @@ static void fail_closed_boot_classify(void)
 		reset_cause = 0;
 	}
 
-	if ((reset_cause & RESET_WATCHDOG) == 0) {
-		boot_marker = 0;
-	}
-
-	armed_boot = (boot_marker != BOOT_MARKER_MAGIC);
-	boot_marker = BOOT_MARKER_MAGIC;
+	armed_boot = ((reset_cause & RESET_WATCHDOG) == 0);
 }
 
 #endif /* CONFIG_BIST_HD_TEST_STARVE_AGENT */
