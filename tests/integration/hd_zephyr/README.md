@@ -22,11 +22,11 @@ under test and must be built exactly as a product would build it.
 There are no test hooks in `src/bist/`; a fail-closed build and a product build
 differ only in this app's code and Kconfig.
 
-`bist.hd.reset_cause` uses a `__noinit` boot marker to tell the armed boot from
-the post-reset boot, and clears it on any non-watchdog reset so a stale marker
-cannot fake a pass. That is also why it cannot use the key mismatch: a
-build-time key is wrong on every boot, so there would be no "armed once" state
-to observe.
+`bist.hd.reset_cause` inspects `hwinfo_get_reset_cause()` to tell the armed boot
+from the post-reset boot: the initial non-watchdog boot arms starvation, while
+the subsequent boot observes `RESET_WATCHDOG`. That is also why it cannot use the
+key mismatch: a build-time key is wrong on every boot, so there would be no
+"armed once" state to observe.
 
 ## Running
 
