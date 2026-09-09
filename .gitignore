@@ -9,3 +9,7 @@ tools/
 # Sphinx documentation
 docs/_build/
 docs/extensions/_build/
+
+# Knowledge graph build cache
+graphify-out/
+.cursor/rules/graphify.mdc
