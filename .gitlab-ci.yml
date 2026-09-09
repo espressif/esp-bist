@@ -444,6 +444,7 @@ build_zephyr_twister:
         libmetal
         mcuboot
         mbedtls
+        tf-psa-crypto
     - west sdk install -t riscv64-zephyr-elf
     - west zephyr-export
     - west twister --prep-artifacts-for-testing -p $ZEPHYR_BOARD
