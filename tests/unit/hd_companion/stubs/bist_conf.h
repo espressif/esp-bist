@@ -8,6 +8,10 @@
  *
  * Only the CPU register test is enabled, so one stubbed STL entry point is
  * enough to drive both a passing and a failing self-BIST.
+ *
+ * CONFIG_ESP_BIST_HD_TEST_DIAG_SCHEDULE is stub-only: it puts one DIAG_REQ
+ * on the companion schedule so the DIAG_RSP judgment scenarios can run
+ * before any catalog audit Kconfig exists.
  */
 
 #pragma once
@@ -16,9 +20,12 @@
 #define CONFIG_ESP_BIST_HD_AUDIT_QA 1
 #define CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT 1
 #define CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY 1
+#define CONFIG_ESP_BIST_HD_AUDIT 1
+#define CONFIG_ESP_BIST_HD_TEST_DIAG_SCHEDULE 1
 #define CONFIG_ESP_BIST_CPU_REG_TEST 1
 #define CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US 1000000
 #define CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US 10000
+#define CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US 50000
 #define CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US 5000
 #define CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS 1
 #define CONFIG_ESP_BIST_WDT_TIMEOUT_US 50000

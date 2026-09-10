@@ -160,9 +160,21 @@ void bist_hd_platform_sleep_ms(uint32_t ms)
 
 /* ----- audit stub ------------------------------------------------------ */
 
+static bist_hd_msg_t g_last_diag_req;
+static int g_diag_handled_count;
+
 int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge)
 {
     (void)challenge;
+    return 0;
+}
+
+int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
+{
+    if (req != NULL) {
+        g_last_diag_req = *req;
+        g_diag_handled_count++;
+    }
     return 0;
 }
 
@@ -198,6 +210,18 @@ static void deliver_challenge(void)
     chal.seq = ++g_challenge_seq;
     chal.payload = 0x12345678u;
     deliver(&chal);
+}
+
+static void deliver_diag_req(uint8_t audit_id)
+{
+    bist_hd_msg_t req = {0};
+
+    req.type = BIST_HD_MSG_DIAG_REQ;
+    req.audit_id = audit_id;
+    req.seq = ++g_challenge_seq;
+    req.payload = 0;
+    req.deadline_ticks = 50000;
+    deliver(&req);
 }
 
 static void deliver_lp_status(void)
@@ -318,6 +342,35 @@ static void scenario_checkpoint_send_failure_consumes_id(void)
                   "failed send consumes an ID (gap of 2)");
 }
 
+static void scenario_diag_req_handled(void)
+{
+    agent_start();
+    deliver_diag_req(BIST_HD_AUDIT_CPU);
+
+    expect_eq_int(g_diag_handled_count, 1, "DIAG_REQ was dispatched to handler");
+    expect_eq_int(g_last_diag_req.type, BIST_HD_MSG_DIAG_REQ, "type is DIAG_REQ");
+    expect_eq_int(g_last_diag_req.audit_id, BIST_HD_AUDIT_CPU, "audit_id is CPU");
+}
+
+static void scenario_diag_req_flushes_checkpoint(void)
+{
+    int idx;
+
+    agent_start();
+    expect_eq_int(bist_hd_checkpoint_reached(), 0, "checkpoint reached");
+    expect_true(find_checkpoint(0) < 0, "checkpoint not sent before command");
+
+    deliver_diag_req(BIST_HD_AUDIT_CPU);
+
+    idx = find_checkpoint(0);
+    expect_true(idx >= 0, "checkpoint was flushed by DIAG_REQ");
+    if (idx >= 0) {
+        expect_eq_u32(g_sent[idx].payload, 1u, "checkpoint payload is 1");
+        expect_eq_u32(g_sent[idx].audit_id, BIST_HD_AUDIT_CHECKPOINT,
+                      "audit_id is CHECKPOINT");
+    }
+}
+
 int main(int argc, char **argv)
 {
     const char *scenario;
@@ -331,6 +384,7 @@ int main(int argc, char **argv)
     g_sent_count = 0;
     g_send_result = 0;
     g_challenge_seq = 0;
+    g_diag_handled_count = 0;
 
     if (strcmp(scenario, "checkpoint_first_id") == 0) {
         scenario_checkpoint_first_id();
@@ -338,6 +392,10 @@ int main(int argc, char **argv)
         scenario_checkpoint_step_is_one();
     } else if (strcmp(scenario, "checkpoint_send_failure_consumes_id") == 0) {
         scenario_checkpoint_send_failure_consumes_id();
+    } else if (strcmp(scenario, "diag_req_handled") == 0) {
+        scenario_diag_req_handled();
+    } else if (strcmp(scenario, "diag_req_flushes_checkpoint") == 0) {
+        scenario_diag_req_flushes_checkpoint();
     } else {
         printf("unknown scenario '%s'\n", scenario);
         return 2;
