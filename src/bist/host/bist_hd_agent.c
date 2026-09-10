@@ -6,8 +6,8 @@
  * OS-neutral Host Diagnostic Agent state machine.
  * Transport and OS primitives come from platform adapters (IDF today).
  *
- * Handles LP_STATUS, Q&A CHALLENGE, and CHECKPOINT reporting. DIAG_REQ
- * catalog audits are deferred. SAFE_STATE_NOTIFY may arrive on the wire;
+ * Handles LP_STATUS, Q&A CHALLENGE, CHECKPOINT reporting, and DIAG_REQ
+ * catalog audit dispatch. SAFE_STATE_NOTIFY may arrive on the wire;
  * the companion owns safe state (e.g. stops feeding LP WDT) regardless.
  */
 
@@ -65,7 +65,7 @@ static void agent_worker(void *arg)
 {
     (void)arg;
 
-    for (;;) {
+    while (1) {
         bist_hd_msg_t msg;
         int err = bist_hd_transport_recv(&msg, -1);
         if (err != 0) {
@@ -86,6 +86,17 @@ static void agent_worker(void *arg)
             send_checkpoint();
 #endif
             (void)bist_hd_audit_handle_challenge(&msg);
+            continue;
+        }
+
+        if (msg.type == BIST_HD_MSG_DIAG_REQ) {
+            if (!accept_seq(msg.seq)) {
+                continue;
+            }
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+            send_checkpoint();
+#endif
+            (void)bist_hd_audit_handle_diag(&msg);
             continue;
         }
     }

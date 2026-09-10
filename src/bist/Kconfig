@@ -214,55 +214,6 @@ config ESP_BIST_HD_AUDIT_CHECKPOINT
       Checkpoints are flushed from the Q&A challenge handler to avoid
       mailbox collisions, so this audit requires ESP_BIST_HD_AUDIT_QA.
 
-config ESP_BIST_HD_AUDIT_RAM
-    bool "Host RAM March"
-    select ESP_BIST_MEMORY_RAM_TEST
-    help
-      Host runs March tests on an HP DRAM region under companion trigger.
-      Requires HP linker symbols for the test region and safe stack (later).
-
-config ESP_BIST_HD_AUDIT_FLASH
-    bool "Host flash / image CRC"
-    select ESP_BIST_MEMORY_FLASH_TEST
-    help
-      Host computes CRC of HP .flash.text on DIAG_REQ; companion compares
-      against a build-injected golden. Host PASS alone is never trusted.
-      Not wired yet (challenge-only Host Diagnostics).
-
-config ESP_BIST_HD_AUDIT_CPU
-    bool "Host CPU register test"
-    select ESP_BIST_CPU_REG_TEST
-    help
-      Host runs CPU general-purpose register tests under companion trigger.
-
-config ESP_BIST_HD_AUDIT_CSR
-    bool "Host CSR / PMP-PMA config audit"
-    select ESP_BIST_CPU_CSR_REG_TEST
-    help
-      Host runs CSR (and related config) diagnostics under companion trigger.
-
-config ESP_BIST_HD_AUDIT_STACK
-    bool "Stack overflow / canary / watermark"
-    select ESP_BIST_STACK_TEST
-    help
-      Host stack integrity check, companion-demandable.
-
-config ESP_BIST_HD_AUDIT_CLOCK
-    bool "Clock / crystal drift"
-    help
-      Clock monitoring for the host time base (FTTI integrity). May use
-      companion independent time-slot and/or host measurement.
-
-config ESP_BIST_HD_AUDIT_WDT
-    bool "Host WDT path check"
-    help
-      Host reports armed/feed counters; companion checks the pattern.
-
-config ESP_BIST_HD_AUDIT_PC
-    bool "PC / program-flow sample"
-    help
-      Host program-counter / program-flow sample under companion trigger.
-
 config ESP_BIST_HD_AUDIT_IRQ_LATENCY
     bool "Interrupt latency / storm bound"
     depends on ESP_BIST_HD_AUDIT_QA
@@ -271,37 +222,11 @@ config ESP_BIST_HD_AUDIT_IRQ_LATENCY
       tighter than the challenge window. An answer that arrives inside
       the window but exceeds the budget triggers safe state.
 
-config ESP_BIST_HD_AUDIT_GPIO
-    bool "Peripheral / GPIO plausibility"
+config ESP_BIST_HD_AUDIT
+    bool "Host diagnostic audits"
     help
-      Critical GPIO plausibility via companion read or host report.
-      If enabled without an app callback where required, fails NOT_CONFIGURED.
-
-config ESP_BIST_HD_AUDIT_ADC
-    bool "ADC / supply plausibility"
-    help
-      Analog / supply plausibility via host or companion ADC when available.
-      If enabled without an app callback where required, fails NOT_CONFIGURED.
-
-config ESP_BIST_HD_AUDIT_CONFIG_NVM
-    bool "Config / NVM / partition integrity"
-    help
-      Host CRC over configured regions; golden from build or provisioning.
-
-config ESP_BIST_HD_AUDIT_IPC
-    bool "IPC / shared-mem integrity"
-    help
-      Protocol sequence/CRC enforcement and optional explicit IPC self-check.
-
-config ESP_BIST_HD_AUDIT_SECURE_BOOT
-    bool "Secure-boot / image authenticity status"
-    help
-      Host reports secure-boot state; companion may gate supervision on it.
-
-config ESP_BIST_HD_AUDIT_DUAL_CHANNEL
-    bool "Dual-channel output compare"
-    help
-      App-registered compare/cut-off callbacks; library invokes only.
+      Compile the companion DIAG_REQ / DIAG_RSP schedule. Individual audits
+      are added under this option as each audit is implemented.
 
 endmenu # Host Diagnostics Audits
 
@@ -337,7 +262,7 @@ config ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS
 
 config ESP_BIST_HD_DIAG_TIMEOUT_US
     int "Diagnostic response timeout (us)"
-    depends on ESP_BIST_HOST_DIAGNOSTICS
+    depends on ESP_BIST_HD_AUDIT
     default 50000
     range 100 60000000
     help

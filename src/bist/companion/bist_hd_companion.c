@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later
  *
  * Host Diagnostics companion (LP): self-BIST gate, Q&A challenge schedule,
- * checkpoint tracking, IRQ latency budget, and safe-state ownership.
+ * host catalog audits (DIAG_REQ/DIAG_RSP), checkpoint tracking,
+ * IRQ latency budget, and safe-state ownership.
  *
  * OS-neutral: transport and time come from bist_hd_comp_port (IDF ULP or
- * Zephyr lpcore). Catalog DIAG audits (flash/CPU/…) are deferred.
+ * Zephyr lpcore).
  * Logging is kept minimal: LP SRAM is tight (~16 KiB).
  */
 
@@ -37,6 +38,9 @@
 #ifndef CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US
 #define CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US 10000
 #endif
+#ifndef CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US
+#define CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US 50000
+#endif
 #ifndef CONFIG_ESP_BIST_WDT_TIMEOUT_US
 #define CONFIG_ESP_BIST_WDT_TIMEOUT_US 50000
 #endif
@@ -50,8 +54,8 @@
 static const char *TAG = "hd_comp";
 
 static bool s_in_safe_state;
-#ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint16_t s_seq;
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint32_t s_challenge_prng;
 #endif
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
@@ -137,7 +141,6 @@ static int drain_checkpoints(void)
 }
 #endif /* CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT */
 
-#ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint16_t next_seq(void)
 {
     s_seq++;
@@ -147,6 +150,95 @@ static uint16_t next_seq(void)
     return s_seq;
 }
 
+#ifdef CONFIG_ESP_BIST_HD_AUDIT
+static const uint8_t s_scheduled_audits[] = {
+#ifdef CONFIG_ESP_BIST_HD_TEST_DIAG_SCHEDULE
+    BIST_HD_AUDIT_CPU,
+#endif
+    BIST_HD_AUDIT_COUNT,
+};
+
+static int __attribute__((unused)) run_diag_audit(bist_hd_audit_id_t audit_id)
+{
+    bist_hd_msg_t req = {0};
+    bist_hd_msg_t rsp;
+    uint16_t seq = next_seq();
+    uint32_t t0;
+    uint32_t elapsed_us;
+    uint32_t timeout_us = (uint32_t)CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US;
+    uint32_t slice_us = 5000u;
+    bool got_rsp = false;
+
+    if (timeout_us < slice_us && timeout_us > 0u) {
+        slice_us = timeout_us;
+    }
+
+    req.type = BIST_HD_MSG_DIAG_REQ;
+    req.audit_id = (uint8_t)audit_id;
+    req.seq = seq;
+    req.deadline_ticks = timeout_us;
+
+    t0 = bist_hd_comp_port_tick();
+    if (bist_hd_comp_port_send(&req) != 0) {
+        return -1;
+    }
+
+    while (!got_rsp) {
+        lp_wdt_feed();
+        uint32_t elapsed = bist_hd_comp_port_elapsed_us(t0);
+        if (elapsed >= timeout_us) {
+            ESP_LOGE(TAG, "diag %d timeout", (int)audit_id);
+            return -1;
+        }
+        uint32_t rem = timeout_us - elapsed;
+        uint32_t wait_us = (rem < slice_us) ? rem : slice_us;
+        int ret = bist_hd_comp_port_recv(&rsp, (int32_t)wait_us);
+        if (ret != 0) {
+            continue;
+        }
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+        if (rsp.type == BIST_HD_MSG_CHECKPOINT) {
+            if (process_checkpoint(&rsp) != 0) {
+                return -1;
+            }
+            continue;
+        }
+#endif
+        got_rsp = true;
+    }
+
+    elapsed_us = bist_hd_comp_port_elapsed_us(t0);
+
+    if (rsp.type != BIST_HD_MSG_DIAG_RSP || !bist_hd_seq_check(seq, rsp.seq) ||
+            rsp.audit_id != (uint8_t)audit_id) {
+        ESP_LOGE(TAG, "diag bad rsp");
+        return -1;
+    }
+    if (elapsed_us > timeout_us) {
+        ESP_LOGE(TAG, "diag late");
+        return -1;
+    }
+    if (rsp.payload != BIST_HD_STATUS_OK) {
+        ESP_LOGE(TAG, "diag fail payload %lu", (unsigned long)rsp.payload);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int run_scheduled_diag_audits(void)
+{
+    for (size_t i = 0; s_scheduled_audits[i] != (uint8_t)BIST_HD_AUDIT_COUNT; i++) {
+        ESP_LOGD(TAG, "runtime: diag audit %u", (unsigned)s_scheduled_audits[i]);
+        if (run_diag_audit((bist_hd_audit_id_t)s_scheduled_audits[i]) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+#endif /* CONFIG_ESP_BIST_HD_AUDIT */
+
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint32_t next_challenge(void)
 {
     /* xorshift32; seed from the free-running tick counter once. */
@@ -417,6 +509,13 @@ int bist_hd_companion_loop(void)
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
     ESP_LOGD(TAG, "runtime: host QA challenge");
     if (run_challenge_audit() != 0) {
+        bist_hd_safe_state();
+        return -1;
+    }
+#endif
+
+#ifdef CONFIG_ESP_BIST_HD_AUDIT
+    if (run_scheduled_diag_audits() != 0) {
         bist_hd_safe_state();
         return -1;
     }

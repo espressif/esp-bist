@@ -31,10 +31,9 @@ int bist_hd_companion_init(void);
  * @brief One runtime companion iteration.
  *
  * Feeds the LP WDT, runs runtime LP BIST, reports LP_STATUS, drains
- * checkpoint messages, and (when CONFIG_ESP_BIST_HD_AUDIT_QA is enabled)
- * issues one host Q&A challenge with optional IRQ-latency budget check.
- * Returns so the application can interleave its own logic. No-op once in
- * safe state.
+ * checkpoint messages, issues host Q&A challenge, and executes host
+ * catalog audits (DIAG_REQ/DIAG_RSP). Returns so the application can
+ * interleave its own logic. No-op once in safe state.
  *
  * @return 0 on success / already in safe state, -1 on failure (safe-state entered)
  */
