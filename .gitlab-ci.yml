@@ -263,7 +263,7 @@ build_docker_image:
     - changes:
         - .devcontainer/Dockerfile
       when: manual
-  tags: [ "dind", "shiny" ]
+  tags: [ "dind" ]
 
 build_mcuboot:
   stage: Build
