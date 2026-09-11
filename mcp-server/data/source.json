@@ -9,6 +9,33 @@
     "content_type": "source"
   },
   {
+    "function_name": "bist_cpu_instruction_test",
+    "body": "bist_esp_err_t bist_cpu_instruction_test(void)\n{\n    bist_esp_err_t err = BIST_ESP_OK;\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_INTEGER)\n    err = bist_cpu_instruction_integer();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_INTEGER;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_SHIFT)\n    err = bist_cpu_instruction_shift();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_SHIFT;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_UPPERIMM)\n    err = bist_cpu_instruction_upperimm();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_UPPERIMM;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CTRL)\n    err = bist_cpu_instruction_ctrl();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CTRL;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_LDST)\n    err = bist_cpu_instruction_ldst();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_LDST;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_MUL)\n    err = bist_cpu_instruction_mul();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_MUL;\n        return err;\n    }\n#endif\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_instructions.c",
+    "line_start": 34,
+    "line_end": 87,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_instruction_last_failure_id",
+    "body": "uint32_t bist_cpu_instruction_last_failure_id(void)\n{\n    return bist_cpu_instruction_failure_id;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_instructions.c",
+    "line_start": 89,
+    "line_end": 92,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_instruction_last_failure_group",
+    "body": "bist_insn_group_t bist_cpu_instruction_last_failure_group(void)\n{\n    return bist_cpu_instruction_failure_group;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_instructions.c",
+    "line_start": 94,
+    "line_end": 97,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
     "function_name": "bist_cpu_regs_test",
     "body": "bist_esp_err_t bist_cpu_regs_test(void)\n{\n    ASM(\" addi sp, sp, -16\");\n    // t0 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t0, t1, errorCPU);\n    // t1 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t1, t0, errorCPU);\n    // t2 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t2, t0, errorCPU);\n    // t3 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t3, t0, errorCPU);\n    //  t4 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t4, t0, errorCPU);\n    //  t5 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t5, t0, errorCPU);\n    //  t6 test\n    BIST_TEST_CPU_REG_NOT_STACKED(t6, t0, errorCPU);\n    // Push Ra to stack so we can return in case it fails\n    ASM(\" sw ra, 0(sp)\");\n    // ra test\n    BIST_TEST_CPU_REG_STACKED(ra, t0, restoreRA);\n    // sp test\n    // Push SP to temp so we can restore it later\n    ASM(\" mv t3, sp\");\n    BIST_TEST_CPU_REG_NOT_STACKED(sp, t0, restoreSP);\n    // Restore SP and continue\n    ASM(\" mv sp, t3\");\n    // gp test\n    ASM(\" mv t3, gp\");\n    BIST_TEST_CPU_REG_STACKED(gp, t0, restoreGP);\n    // Restore GP and continue\n    ASM(\" mv gp, t3\");\n    // tp test\n    BIST_TEST_CPU_REG_STACKED(tp, t0, errorCPU);\n    // s0 test\n    BIST_TEST_CPU_REG_STACKED(s0, t0, errorCPU);\n    // s1 test\n    BIST_TEST_CPU_REG_STACKED(s1, t0, errorCPU);\n    // s2 test\n    BIST_TEST_CPU_REG_STACKED(s2, t0, errorCPU);\n    // s3 test\n    BIST_TEST_CPU_REG_STACKED(s3, t0, errorCPU);\n    // s4 test\n    BIST_TEST_CPU_REG_STACKED(s4, t0, errorCPU);\n    // s5 test\n    BIST_TEST_CPU_REG_STACKED(s5, t0, errorCPU);\n    // s6 test\n    BIST_TEST_CPU_REG_STACKED(s6, t0, errorCPU);\n    // s7 test\n    BIST_TEST_CPU_REG_STACKED(s7, t0, errorCPU);\n    // s8 test\n    BIST_TEST_CPU_REG_STACKED(s8, t0, errorCPU);\n    // s9 test\n    BIST_TEST_CPU_REG_STACKED(s9, t0, errorCPU);\n    // s10 test\n    BIST_TEST_CPU_REG_STACKED(s10, t0, errorCPU);\n    // s11 test\n    BIST_TEST_CPU_REG_STACKED(s11, t0, errorCPU);\n    // a0 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a0, t0, errorCPU);\n    // a1 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a1, t0, errorCPU);\n    // a2 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a2, t0, errorCPU);\n    // a3 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a3, t0, errorCPU);\n    // a4 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a4, t0, errorCPU);\n    // a5 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a5, t0, errorCPU);\n    // a6 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a6, t0, errorCPU);\n    // a7 test\n    BIST_TEST_CPU_REG_NOT_STACKED(a7, t0, errorCPU);\n#if defined(ESP_BIST_USE_FPU)\n    // ft0 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft0, ft1, t2, errorCPU);\n    // ft1 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft1, ft0, t2, errorCPU);\n    // ft2 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft2, ft0, t2, errorCPU);\n    // ft3 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft3, ft0, t2, errorCPU);\n    // ft4 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft4, ft0, t2, errorCPU);\n    // ft5 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft5, ft0, t2, errorCPU);\n    // ft6 test\n    BIST_TEST_FPU_REG_NOT_STACKED(ft6, ft0, t2, errorCPU);\n    // ft7 test\n    BIST_TE\n    // ... (truncated)",
     "file": "src/bist/core/cpu/bist_cpu_regs.c",

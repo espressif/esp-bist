@@ -31,6 +31,7 @@
 #include "bist_cpu_instructions_upperimm.h"
 #include "bist_cpu_instructions_ctrl.h"
 #include "bist_cpu_instructions_ldst.h"
+#include "bist_cpu_instructions_mul.h"
 
 /**
  * Instruction group for last-failure reporting.
@@ -45,6 +46,7 @@ typedef enum {
     BIST_INSN_GROUP_UPPERIMM,
     BIST_INSN_GROUP_CTRL,
     BIST_INSN_GROUP_LDST,
+    BIST_INSN_GROUP_MUL,
 } bist_insn_group_t;
 
 /**
