@@ -80,6 +80,16 @@
     "prompt": "Load and store instruction group"
   },
   {
+    "name": "ESP_BIST_CPU_INSTRUCTION_MUL",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32M MUL/MULH/MULHSU/MULHU and DIV/DIVU/REM/REMU, including\ndivide-by-zero and signed overflow (INT_MIN / -1).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Multiply and divide instruction group (RV32M)"
+  },
+  {
     "name": "ESP_BIST_MEMORY_RAM_TEST",
     "type": "bool",
     "default": "y if !ZEPHYR_ESP_BIST_MODULE",

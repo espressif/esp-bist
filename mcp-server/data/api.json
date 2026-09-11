@@ -101,6 +101,11 @@
         "name": "BIST_ESP_MULTICORE_ERR",
         "value": 13,
         "description": "Multi-core dispatch failed"
+      },
+      {
+        "name": "BIST_ESP_CPU_INSTRUCTION_TEST_ERR",
+        "value": 14,
+        "description": "CPU instruction equivalence test failed"
       }
     ]
   },
@@ -522,6 +527,1351 @@
     "note": "",
     "header_file": "src/bist/core/cpu/include/bist_cpu_csr_regs.h",
     "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_instruction_test",
+    "signature": "bist_esp_err_t bist_cpu_instruction_test(void)",
+    "module": "cpu",
+    "description": "CPU instruction equivalence-class self-test (IEC 60730 H.2.18.5)",
+    "params": [],
+    "returns": "BIST_ESP_OK on success; BIST_ESP_CPU_INSTRUCTION_TEST_ERR if any vector fails",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_instruction_last_failure_id",
+    "signature": "uint32_t bist_cpu_instruction_last_failure_id(void)",
+    "module": "cpu",
+    "description": "Vector ID of the last failure from bist_cpu_instruction_test()",
+    "params": [],
+    "returns": "0 if last run passed or has not failed; otherwise a per-group enum value (see bist_cpu_instruction_last_failure_group())",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_cpu_instruction_last_failure_group",
+    "signature": "bist_insn_group_t bist_cpu_instruction_last_failure_group(void)",
+    "module": "cpu",
+    "description": "Group of the last failure from bist_cpu_instruction_test()",
+    "params": [],
+    "returns": "BIST_INSN_GROUP_NONE if last run passed or has not failed",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_group_t",
+    "signature": "typedef enum { ... } bist_insn_group_t",
+    "module": "core",
+    "description": "CPU instruction equivalence-class self-test (IEC 60730 H.2.18.5)",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_GROUP_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_INTEGER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_SHIFT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_UPPERIMM",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_CTRL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_LDST",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_MUL",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_ctrl",
+    "signature": "",
+    "module": "cpu",
+    "description": "Branch / jump instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_ctrl.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_ctrl_id_t",
+    "signature": "typedef enum { ... } bist_insn_ctrl_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_ctrl.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_CTRL_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BEQ_FWD_TAKEN",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BEQ_FWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BEQ_BWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BEQ_BWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BNE_FWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BNE_FWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BNE_BWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BNE_BWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLT_FWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLT_FWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLT_BWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLT_EQ_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGE_FWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGE_FWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGE_EQ_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGE_BWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLTU_FWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLTU_FWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLTU_NEG_POS_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BLTU_BWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGEU_FWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGEU_FWD_NOT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGEU_EQ_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_BGEU_BWD_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_JAL_FWD_LINK",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_JAL_BWD_LINK",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_JALR_LINK",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_JALR_OFFSET",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_integer",
+    "signature": "",
+    "module": "cpu",
+    "description": "Integer ALU instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_integer.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_integer_id_t",
+    "signature": "typedef enum { ... } bist_insn_integer_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_integer.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_INTEGER_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADD_ZEROS",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADD_ONE_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADD_UNEQUAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADD_MAX_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADD_MIN_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADD_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADDI_IMM_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADDI_IMM_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADDI_IMM_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADDI_IMM_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADDI_MAX_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ADDI_MIN_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SUB_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SUB_ONE_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SUB_ZERO_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SUB_MIN_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SUB_MAX_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SUB_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AND_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AND_ONES",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AND_UNEQUAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AND_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AND_AA_ONES",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AND_MAX_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ANDI_IMM_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ANDI_IMM_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ANDI_IMM_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ANDI_IMM_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ANDI_AA_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ANDI_AA_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_OR_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_OR_ZERO_X",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_OR_UNEQUAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_OR_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_OR_AA_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_OR_MAX_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ORI_IMM_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ORI_IMM_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ORI_IMM_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ORI_IMM_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ORI_AA_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_ORI_55_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XOR_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XOR_SAME",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XOR_UNEQUAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XOR_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XOR_AA_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XOR_NEG1_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XORI_IMM_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XORI_IMM_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XORI_NEG1_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XORI_IMM_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XORI_IMM_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_XORI_AA_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLT_LT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLT_GT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLT_EQ",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLT_NEG_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLT_MIN_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLT_MAX_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_LT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_GT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_NEG_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_IMM_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_IMM_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_IMM_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTI_MIN_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTU_LT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTU_GT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTU_EQ",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTU_NEG_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTU_ZERO_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTU_MIN_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_LT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_GT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_NEG_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_ZERO_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_IMM_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_IMM_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLTIU_NEG1_MAX",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_ldst",
+    "signature": "",
+    "module": "cpu",
+    "description": "Load / store instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_ldst.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_ldst_id_t",
+    "signature": "typedef enum { ... } bist_insn_ldst_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_ldst.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_LDST_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SW_LW",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SH_LH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SH_LHU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SB_LB",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SB_LBU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LW_POS_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LW_NEG_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LH_NEG_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LB_HIGH_BYTE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LBU_HIGH_BYTE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LH_SIGN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LB_SIGN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SW_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SH_LOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SB_MID",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_mul",
+    "signature": "",
+    "module": "cpu",
+    "description": "RV32M multiply / divide instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_mul.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_mul_id_t",
+    "signature": "typedef enum { ... } bist_insn_mul_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_mul.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_MUL_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MUL_ZEROS",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MUL_ONE_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MUL_UNEQUAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MUL_MAX_TWO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MUL_MIN_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MUL_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULH_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULH_ONE_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULH_MAX_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULH_MIN_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULH_MIN_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULH_NEG1_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHSU_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHSU_NEG1_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHSU_NEG1_MAXU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHSU_MIN_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHSU_MAX_MAXU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHSU_MIN_MAXU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHU_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHU_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHU_MAXU_MAXU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHU_HALF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHU_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_MULHU_MAXU_TWO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIV_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIV_NEG_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIV_POS_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIV_NEG_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIV_OVERFLOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIV_BY_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIVU_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIVU_MAXU_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIVU_MAXU_MAXU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIVU_HALF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIVU_BY_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_DIVU_SMALL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REM_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REM_NEG_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REM_POS_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REM_NEG_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REM_OVERFLOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REM_BY_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REMU_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REMU_MAXU",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REMU_HALF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REMU_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REMU_BY_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_REMU_SEVEN",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_shift",
+    "signature": "",
+    "module": "cpu",
+    "description": "Shift instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_shift.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_shift_id_t",
+    "signature": "typedef enum { ... } bist_insn_shift_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_shift.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_SHIFT_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLL_ZERO",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLL_COUNT0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLL_COUNT1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLL_COUNT31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLL_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLL_AMT32",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLLI_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLLI_COUNT0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLLI_COUNT1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLLI_COUNT31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLLI_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SLLI_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRL_COUNT0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRL_COUNT1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRL_COUNT31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRL_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRL_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRL_AMT32",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRLI_COUNT0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRLI_COUNT1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRLI_COUNT31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRLI_CHECKER",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRLI_ONES",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRLI_ONE_31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRA_COUNT0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRA_COUNT1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRA_COUNT31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRA_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRA_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRA_AMT32",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRAI_COUNT0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRAI_COUNT1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRAI_COUNT31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRAI_NEG1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRAI_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_SRAI_CHECKER",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_upperimm",
+    "signature": "",
+    "module": "cpu",
+    "description": "LUI / AUIPC instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_upperimm.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_upperimm_id_t",
+    "signature": "typedef enum { ... } bist_insn_upperimm_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_upperimm.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_UPPERIMM_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LUI_ZERO",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LUI_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LUI_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LUI_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LUI_FFFFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LUI_AAAAA",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AUIPC_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AUIPC_PLUS1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AUIPC_MINUS1",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AUIPC_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AUIPC_MIN",
+        "value": "",
+        "description": ""
+      }
+    ]
   },
   {
     "function": "bist_cpu_regs_test",

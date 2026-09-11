@@ -67,6 +67,13 @@ config ESP_BIST_CPU_INSTRUCTION_LDST
       Test SB/SH/SW and LB/LBU/LH/LHU/LW with positive and negative
       offsets. Misaligned accesses are not exercised.
 
+config ESP_BIST_CPU_INSTRUCTION_MUL
+    bool "Multiply and divide instruction group (RV32M)"
+    default y
+    help
+      Test RV32M MUL/MULH/MULHSU/MULHU and DIV/DIVU/REM/REMU, including
+      divide-by-zero and signed overflow (INT_MIN / -1).
+
 endif # ESP_BIST_CPU_INSTRUCTION_TEST
 
 config ESP_BIST_MEMORY_RAM_TEST
