@@ -56,7 +56,7 @@ variables:
   QEMU_CACHE_KEY: ${CI_COMMIT_REF_SLUG}-qemu-remote-riscv32
   QEMU_CACHE_KEY_SHARED: ${CI_DEFAULT_BRANCH}-qemu-remote-riscv32
   MCUBOOT_TARGETS: "esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 esp32h4"
-  TEST_APPS: "cpu_reg_test cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test multicore_test metrics"
+  TEST_APPS: "cpu_reg_test cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test multicore_test metrics cpu_instruction_test"
 
 stages:
   - Lint

@@ -23,6 +23,52 @@ config ESP_BIST_CPU_CSR_REG_TEST
     help
       Enable tests for CPU Control and Status Registers (CSRs).
 
+menuconfig ESP_BIST_CPU_INSTRUCTION_TEST
+    bool "CPU Instruction Equivalence Test"
+    default y if !ZEPHYR_ESP_BIST_MODULE && !NUTTX_ESP_BIST_MODULE
+    help
+      IEC 60730 Annex H component 1.2 periodic self-test using an
+      equivalence-class instruction test (H.2.18.5). Enable individual
+      instruction groups in the submenu.
+
+if ESP_BIST_CPU_INSTRUCTION_TEST
+
+config ESP_BIST_CPU_INSTRUCTION_INTEGER
+    bool "Integer ALU instruction group"
+    default y
+    help
+      Test RV32I integer ALU instructions: ADD/ADDI, SUB, AND/ANDI,
+      OR/ORI, XOR/XORI, SLT/SLTI, SLTU/SLTIU.
+
+config ESP_BIST_CPU_INSTRUCTION_SHIFT
+    bool "Shift instruction group"
+    default y
+    help
+      Test RV32I shifts: SLL/SLLI, SRL/SRLI, SRA/SRAI. Covers counts
+      0, 1, and 31, plus register-shift masking of amounts above 31.
+
+config ESP_BIST_CPU_INSTRUCTION_UPPERIMM
+    bool "LUI and AUIPC instruction group"
+    default y
+    help
+      Test LUI and AUIPC, including upper-immediate bounds.
+
+config ESP_BIST_CPU_INSTRUCTION_CTRL
+    bool "Control-flow instruction group"
+    default y
+    help
+      Test BEQ/BNE/BLT/BGE/BLTU/BGEU taken and not-taken, forward and
+      backward, plus JAL/JALR targets and link values.
+
+config ESP_BIST_CPU_INSTRUCTION_LDST
+    bool "Load and store instruction group"
+    default y
+    help
+      Test SB/SH/SW and LB/LBU/LH/LHU/LW with positive and negative
+      offsets. Misaligned accesses are not exercised.
+
+endif # ESP_BIST_CPU_INSTRUCTION_TEST
+
 config ESP_BIST_MEMORY_RAM_TEST
     bool "Memory RAM Test"
     default y if !ZEPHYR_ESP_BIST_MODULE
