@@ -90,6 +90,16 @@
     "prompt": "Multiply and divide instruction group (RV32M)"
   },
   {
+    "name": "ESP_BIST_CPU_INSTRUCTION_CSR",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test Zicsr CSRRW/CSRRS/CSRRC and immediate forms on mscratch,\nplus RV32I FENCE and Zifencei FENCE.I. Distinct from the CSR\nregister integrity test.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "CSR and fence instruction group (Zicsr / Zifencei)"
+  },
+  {
     "name": "ESP_BIST_MEMORY_RAM_TEST",
     "type": "bool",
     "default": "y if !ZEPHYR_ESP_BIST_MODULE",

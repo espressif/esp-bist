@@ -39,6 +39,9 @@ bist_esp_err_t bist_cpu_instruction_ldst(void);
 #if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_MUL)
 bist_esp_err_t bist_cpu_instruction_mul(void);
 #endif
+#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CSR)
+bist_esp_err_t bist_cpu_instruction_csr(void);
+#endif
 
 bist_esp_err_t bist_cpu_instruction_test(void)
 {
@@ -86,6 +89,13 @@ bist_esp_err_t bist_cpu_instruction_test(void)
     err = bist_cpu_instruction_mul();
     if (err != BIST_ESP_OK) {
         bist_cpu_instruction_failure_group = BIST_INSN_GROUP_MUL;
+        return err;
+    }
+#endif
+#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CSR)
+    err = bist_cpu_instruction_csr();
+    if (err != BIST_ESP_OK) {
+        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CSR;
         return err;
     }
 #endif

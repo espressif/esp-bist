@@ -74,6 +74,14 @@ config ESP_BIST_CPU_INSTRUCTION_MUL
       Test RV32M MUL/MULH/MULHSU/MULHU and DIV/DIVU/REM/REMU, including
       divide-by-zero and signed overflow (INT_MIN / -1).
 
+config ESP_BIST_CPU_INSTRUCTION_CSR
+    bool "CSR and fence instruction group (Zicsr / Zifencei)"
+    default y
+    help
+      Test Zicsr CSRRW/CSRRS/CSRRC and immediate forms on mscratch,
+      plus RV32I FENCE and Zifencei FENCE.I. Distinct from the CSR
+      register integrity test.
+
 endif # ESP_BIST_CPU_INSTRUCTION_TEST
 
 config ESP_BIST_MEMORY_RAM_TEST
