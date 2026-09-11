@@ -24,10 +24,60 @@
     "type": "bool",
     "default": "y if !ZEPHYR_ESP_BIST_MODULE",
     "depends_on": "",
-    "help": "Enable tests for CPU Control and Status Registers (CSRs).",
+    "help": "IEC 60730 Annex H component 1.2 periodic self-test using an\nequivalence-class instruction test (H.2.18.5). Enable individual\ninstruction groups in the submenu.",
     "menu": "ESP-BIST Tests",
     "range": "",
-    "prompt": "CPU CSR Register Test"
+    "prompt": "CPU Instruction Equivalence Test"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_INTEGER",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32I integer ALU instructions: ADD/ADDI, SUB, AND/ANDI,\nOR/ORI, XOR/XORI, SLT/SLTI, SLTU/SLTIU.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Integer ALU instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_SHIFT",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32I shifts: SLL/SLLI, SRL/SRLI, SRA/SRAI. Covers counts\n0, 1, and 31, plus register-shift masking of amounts above 31.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Shift instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_UPPERIMM",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test LUI and AUIPC, including upper-immediate bounds.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "LUI and AUIPC instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_CTRL",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test BEQ/BNE/BLT/BGE/BLTU/BGEU taken and not-taken, forward and\nbackward, plus JAL/JALR targets and link values.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Control-flow instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_LDST",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test SB/SH/SW and LB/LBU/LH/LHU/LW with positive and negative\noffsets. Misaligned accesses are not exercised.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Load and store instruction group"
   },
   {
     "name": "ESP_BIST_MEMORY_RAM_TEST",

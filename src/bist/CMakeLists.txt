@@ -65,6 +65,14 @@ if(NOT BIST_SOC_ADC_SUPPORTED)
 endif()
 list(APPEND bist_src ${_bist_srcs})
 
+# STL may include .S sources (e.g. instruction equivalence); enable ASM after project().
+foreach(_bist_s IN LISTS _bist_srcs)
+    if(_bist_s MATCHES "\\.[sS]$")
+        enable_language(ASM)
+        break()
+    endif()
+endforeach()
+
 set(idf_srcs
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
