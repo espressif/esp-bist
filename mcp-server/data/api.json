@@ -606,6 +606,115 @@
         "name": "BIST_INSN_GROUP_MUL",
         "value": "",
         "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_CSR",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_csr",
+    "signature": "",
+    "module": "cpu",
+    "description": "Zicsr / Zifencei / FENCE instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_csr.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_csr_id_t",
+    "signature": "typedef enum { ... } bist_insn_csr_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_csr.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_CSR_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRW_ZERO",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRW_ALLONES",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRW_AAAA",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRW_5555",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRS_SET",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRS_X0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRC_CLEAR",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRC_X0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRWI_UIMM0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRWI_UIMM31",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRSI_SET",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRCI_CLEAR",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_CSRRW_RD0",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FENCE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FENCE_I",
+        "value": "",
+        "description": ""
       }
     ]
   },

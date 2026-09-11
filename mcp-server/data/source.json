@@ -10,10 +10,10 @@
   },
   {
     "function_name": "bist_cpu_instruction_test",
-    "body": "bist_esp_err_t bist_cpu_instruction_test(void)\n{\n    bist_esp_err_t err = BIST_ESP_OK;\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_INTEGER)\n    err = bist_cpu_instruction_integer();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_INTEGER;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_SHIFT)\n    err = bist_cpu_instruction_shift();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_SHIFT;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_UPPERIMM)\n    err = bist_cpu_instruction_upperimm();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_UPPERIMM;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CTRL)\n    err = bist_cpu_instruction_ctrl();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CTRL;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_LDST)\n    err = bist_cpu_instruction_ldst();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_LDST;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_MUL)\n    err = bist_cpu_instruction_mul();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_MUL;\n        return err;\n    }\n#endif\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n    return BIST_ESP_OK;\n}",
+    "body": "bist_esp_err_t bist_cpu_instruction_test(void)\n{\n    bist_esp_err_t err = BIST_ESP_OK;\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_INTEGER)\n    err = bist_cpu_instruction_integer();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_INTEGER;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_SHIFT)\n    err = bist_cpu_instruction_shift();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_SHIFT;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_UPPERIMM)\n    err = bist_cpu_instruction_upperimm();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_UPPERIMM;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CTRL)\n    err = bist_cpu_instruction_ctrl();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CTRL;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_LDST)\n    err = bist_cpu_instruction_ldst();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_LDST;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_MUL)\n    err = bist_cpu_instruction_mul();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_MUL;\n        return err;\n    }\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CSR)\n    err = bist_cpu_instruction_csr();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CSR;\n        return err;\n    }\n#endif\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/cpu/bist_cpu_instructions.c",
-    "line_start": 34,
-    "line_end": 87,
+    "line_start": 37,
+    "line_end": 97,
     "module": "cpu",
     "content_type": "source"
   },
@@ -21,8 +21,8 @@
     "function_name": "bist_cpu_instruction_last_failure_id",
     "body": "uint32_t bist_cpu_instruction_last_failure_id(void)\n{\n    return bist_cpu_instruction_failure_id;\n}",
     "file": "src/bist/core/cpu/bist_cpu_instructions.c",
-    "line_start": 89,
-    "line_end": 92,
+    "line_start": 99,
+    "line_end": 102,
     "module": "cpu",
     "content_type": "source"
   },
@@ -30,8 +30,8 @@
     "function_name": "bist_cpu_instruction_last_failure_group",
     "body": "bist_insn_group_t bist_cpu_instruction_last_failure_group(void)\n{\n    return bist_cpu_instruction_failure_group;\n}",
     "file": "src/bist/core/cpu/bist_cpu_instructions.c",
-    "line_start": 94,
-    "line_end": 97,
+    "line_start": 104,
+    "line_end": 107,
     "module": "cpu",
     "content_type": "source"
   },
