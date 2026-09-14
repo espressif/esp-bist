@@ -74,10 +74,18 @@ Linker Tool
 **Linker Flags** (from ``cmake/toolchain.cmake``):
 
 - ``-nostartfiles``: Custom startup code
-- ``-march``: RISC-V ISA specification, selected by ``ESP_BIST_USE_FPU``:
+- ``-march`` and ``-mabi``: RISC-V ISA and ABI selected per SoC to match the
+  ESP-IDF defaults in ``components/soc/project_include.cmake`` (standalone build).
+  ``-mabi`` is set only for FPU SoCs; otherwise the compiler default (``ilp32``)
+  is used:
 
-  - Without FPU (default): ``-march=rv32imc_zicsr_zifencei``
-  - With FPU (``ESP_BIST_USE_FPU`` defined): ``-march=rv32imafcb_zicsr_zifencei -mabi=ilp32f``
+  - ESP32-C3: ``-march=rv32imc_zicsr_zifencei``
+  - ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2:
+    ``-march=rv32imac_zicsr_zifencei_zaamo_zalrsc``
+  - ESP32-H4:
+    ``-march=rv32imafcb_zicsr_zifencei_zaamo_zalrsc_zba_zbb_zbs_xespdsp -mabi=ilp32f``
+  - ESP32-P4 (minimum supported revision 3):
+    ``-march=rv32imafc_zicsr_zifencei_zaamo_zalrsc_xesploop_xespv -mabi=ilp32f``
 - ``--specs=nosys.specs``: Minimal system library
 
 **Evidence Location**:
