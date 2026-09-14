@@ -98,6 +98,15 @@ config ESP_BIST_CPU_INSTRUCTION_FP
       plus static rounding modes and fflags. Built only on FPU targets
       (ESP32-H4, ESP32-P4).
 
+config ESP_BIST_CPU_INSTRUCTION_COMP
+    bool "Compressed instruction group (RV32C)"
+    default y
+    help
+      Test the RV32C 16-bit encodings: scrambled immediate fields, the
+      x8-x15 register field, sp-relative loads and stores, and compressed
+      control flow. Every target supports C, so this group is always
+      built. c.ebreak is excluded because it traps.
+
 endif # ESP_BIST_CPU_INSTRUCTION_TEST
 
 config ESP_BIST_MEMORY_RAM_TEST

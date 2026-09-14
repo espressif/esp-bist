@@ -621,6 +621,11 @@
         "name": "BIST_INSN_GROUP_FP",
         "value": "",
         "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_COMP",
+        "value": "",
+        "description": ""
       }
     ]
   },
@@ -713,6 +718,410 @@
       },
       {
         "name": "BIST_INSN_AMOSWAP_W_AQRL",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_comp",
+    "signature": "",
+    "module": "cpu",
+    "description": "RV32C compressed instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_comp.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_comp_id_t",
+    "signature": "typedef enum { ... } bist_insn_comp_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_comp.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_COMP_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI_POS_MIN",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI_POS_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI_NEG_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI_NEG_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI_CARRY",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_NOP",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LI_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LI_POS_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LI_NEG_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LI_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LUI_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LUI_POS_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LUI_NEG_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LUI_NEG_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SLLI_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SLLI_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SLLI_DISCARD",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SLLI_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SRLI_ONE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SRLI_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SRAI_SIGN_FILL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SRAI_POSITIVE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ANDI_MASK_LOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ANDI_SIGN_EXT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ANDI_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_MV_LOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_MV_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_MV_REG_RA",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADD_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADD_CARRY",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADD_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SUB_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_SUB_BORROW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_XOR",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_OR",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_AND",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_AND_REG_LOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_OR_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_BIT3",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_BIT4",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_BIT5",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_BIT6",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_BIT9",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI4SPN_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDST_ZERO_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDST_MIN_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDST_BIT6_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDST_MAX_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDST_REG_LOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_ZERO_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_MIN_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_BIT5_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_BIT6_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_BIT7_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_MAX_OFF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LDSTSP_REG_HIGH",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_BIT4",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_BIT5",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_BIT6",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_BIT7",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_BIT8",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_ADDI16SP_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_LUI_VS_ADDI16SP",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_J_FORWARD",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_J_BACKWARD",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_BEQZ_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_BEQZ_NOT_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_BNEZ_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_BNEZ_NOT_TAKEN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_JAL_LINK",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_JR",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_COMP_JALR_LINK",
         "value": "",
         "description": ""
       }
