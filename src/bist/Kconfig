@@ -82,6 +82,13 @@ config ESP_BIST_CPU_INSTRUCTION_CSR
       plus RV32I FENCE and Zifencei FENCE.I. Distinct from the CSR
       register integrity test.
 
+config ESP_BIST_CPU_INSTRUCTION_AMO
+    bool "Atomic instruction group (RV32A)"
+    default y
+    help
+      Test RV32A AMOs + LR/SC (Zaamo and Zalrsc word ops). Not used
+      on ESP32-C3.
+
 endif # ESP_BIST_CPU_INSTRUCTION_TEST
 
 config ESP_BIST_MEMORY_RAM_TEST

@@ -611,6 +611,105 @@
         "name": "BIST_INSN_GROUP_CSR",
         "value": "",
         "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_AMO",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_amo",
+    "signature": "",
+    "module": "cpu",
+    "description": "RV32A (Zaamo / Zalrsc) instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_amo.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_amo_id_t",
+    "signature": "typedef enum { ... } bist_insn_amo_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_amo.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_AMO_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOADD_W_SMALL",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOADD_W_OVERFLOW",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOSWAP_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOAND_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOOR_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOXOR_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOMIN_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOMAX_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOMINU_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOMAXU_W",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LRSC_W_SUCCESS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_LRSC_W_FAIL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_AMOSWAP_W_AQRL",
+        "value": "",
+        "description": ""
       }
     ]
   },
