@@ -48,6 +48,9 @@ bist_esp_err_t bist_cpu_instruction_csr(void);
 #if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_AMO) && !defined(SOC_TARGET_ESP32C3)
 bist_esp_err_t bist_cpu_instruction_amo(void);
 #endif
+#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_FP) && defined(ESP_BIST_USE_FPU)
+bist_esp_err_t bist_cpu_instruction_fp(void);
+#endif
 
 bist_esp_err_t bist_cpu_instruction_test(void)
 {
@@ -135,6 +138,16 @@ bist_esp_err_t bist_cpu_instruction_test(void)
         return err;
     }
     ESP_LOGD(TAG, "atomics tests passed");
+#endif
+#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_FP) && defined(ESP_BIST_USE_FPU)
+    err = bist_cpu_instruction_fp();
+    if (err != BIST_ESP_OK) {
+        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_FP;
+        ESP_LOGE(TAG, "floating point failed, vector %lu",
+                 (unsigned long)bist_cpu_instruction_failure_id);
+        return err;
+    }
+    ESP_LOGD(TAG, "floating point tests passed");
 #endif
 
     bist_cpu_instruction_failure_id = 0;

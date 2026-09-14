@@ -63,7 +63,8 @@ repos:
             scripts/misra_rules\.txt|
             mcp-server/data/.+
           )$
-        args: ['-w', '-L', 'hda']
+        # HDA = Host Diagnostic Agent; fle = RV32F compare mnemonic
+        args: ['-w', '-L', 'hda,fle']
 
   - repo: https://github.com/espressif/conventional-precommit-linter
     rev: v1.11.0
