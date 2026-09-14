@@ -110,6 +110,16 @@
     "prompt": "Atomic instruction group (RV32A)"
   },
   {
+    "name": "ESP_BIST_CPU_INSTRUCTION_FP",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32F single-precision arithmetic, fused multiply-add, sign\ninjection, min/max, compares, conversions, moves and classify,\nplus static rounding modes and fflags. Built only on FPU targets\n(ESP32-H4, ESP32-P4).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Floating-point instruction group (RV32F)"
+  },
+  {
     "name": "ESP_BIST_MEMORY_RAM_TEST",
     "type": "bool",
     "default": "y if !ZEPHYR_ESP_BIST_MODULE",

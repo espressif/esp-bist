@@ -34,6 +34,7 @@
 #include "bist_cpu_instructions_mul.h"
 #include "bist_cpu_instructions_csr.h"
 #include "bist_cpu_instructions_amo.h"
+#include "bist_cpu_instructions_fp.h"
 
 /**
  * Instruction group for last-failure reporting.
@@ -51,6 +52,7 @@ typedef enum {
     BIST_INSN_GROUP_MUL,
     BIST_INSN_GROUP_CSR,
     BIST_INSN_GROUP_AMO,
+    BIST_INSN_GROUP_FP,
 } bist_insn_group_t;
 
 /**

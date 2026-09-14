@@ -616,6 +616,11 @@
         "name": "BIST_INSN_GROUP_AMO",
         "value": "",
         "description": ""
+      },
+      {
+        "name": "BIST_INSN_GROUP_FP",
+        "value": "",
+        "description": ""
       }
     ]
   },
@@ -981,6 +986,335 @@
       },
       {
         "name": "BIST_INSN_JALR_OFFSET",
+        "value": "",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "function": "bist_cpu_instructions_fp",
+    "signature": "",
+    "module": "cpu",
+    "description": "RV32F single-precision instruction test vector IDs",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_fp.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_insn_fp_id_t",
+    "signature": "typedef enum { ... } bist_insn_fp_id_t",
+    "module": "core",
+    "description": "",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_cpu_instructions_fp.h",
+    "kconfig_guards": [],
+    "enum_values": [
+      {
+        "name": "BIST_INSN_FP_NONE",
+        "value": 0,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSW_FLW_ROUNDTRIP",
+        "value": 1,
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FLW_NAN_PAYLOAD",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FADD_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FADD_INF_SUB_INF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FADD_SUBNORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSUB_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSUB_NEG_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMUL_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMUL_SIGN_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FDIV_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FDIV_NEG_BY_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSQRT_EXACT",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSQRT_NEGATIVE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMADD_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMADD_SINGLE_ROUNDING",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMADD_INF_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMSUB_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FNMSUB_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FNMADD_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSGNJ_TAKE_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSGNJN_NEGATE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSGNJX_OPPOSITE_SIGNS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSGNJ_SAME_REG_NAN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FSGNJX_SAME_REG_ABS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMIN_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMIN_SIGNED_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMIN_NAN_OPERAND",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMAX_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMAX_SIGNED_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMAX_NAN_OPERAND",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FEQ_EQUAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FEQ_SIGNED_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FEQ_NAN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FLT_INFINITIES",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FLT_SIGNED_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FLT_NAN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FLE_SIGNED_ZEROS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FLE_NAN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_W_S_RTZ",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_W_S_RNE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_W_S_SAT_POS",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_W_S_SAT_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_W_S_NAN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_WU_S_NEGATIVE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_WU_S_LARGE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_S_W_NEG",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_S_W_INT_MIN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCVT_S_WU_MAX",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FMV_BIT_PATTERN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCLASS_NEG_INF",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCLASS_NEG_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCLASS_NEG_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCLASS_POS_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCLASS_POS_NORMAL",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FCLASS_QNAN",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FADD_RTZ",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FADD_RNE",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FFLAGS_DIVIDE_BY_ZERO",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FFLAGS_INVALID",
+        "value": "",
+        "description": ""
+      },
+      {
+        "name": "BIST_INSN_FP_FFLAGS_INEXACT",
         "value": "",
         "description": ""
       }

@@ -61,6 +61,11 @@ function(bist_collect_sources out_var)
         if(CONFIG_ESP_BIST_CPU_INSTRUCTION_AMO AND NOT "${SOC_TARGET}" STREQUAL "esp32c3")
             list(APPEND _srcs "core/cpu/bist_cpu_instructions_amo.S")
         endif()
+        # ESP_BIST_USE_FPU is set by cmake/project.cmake for esp32h4/esp32p4 and
+        # is the same switch that gates the FPU CSRs in bist_cpu_csr_regs.c.
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_FP AND DEFINED ESP_BIST_USE_FPU)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_fp.S")
+        endif()
     endif()
     if(CONFIG_ESP_BIST_STACK_TEST)
         list(APPEND _srcs "core/cpu/bist_cpu_stack.c")
