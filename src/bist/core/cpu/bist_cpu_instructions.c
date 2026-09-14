@@ -51,6 +51,9 @@ bist_esp_err_t bist_cpu_instruction_amo(void);
 #if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_FP) && defined(ESP_BIST_USE_FPU)
 bist_esp_err_t bist_cpu_instruction_fp(void);
 #endif
+#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_COMP)
+bist_esp_err_t bist_cpu_instruction_comp(void);
+#endif
 
 bist_esp_err_t bist_cpu_instruction_test(void)
 {
@@ -148,6 +151,16 @@ bist_esp_err_t bist_cpu_instruction_test(void)
         return err;
     }
     ESP_LOGD(TAG, "floating point tests passed");
+#endif
+#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_COMP)
+    err = bist_cpu_instruction_comp();
+    if (err != BIST_ESP_OK) {
+        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_COMP;
+        ESP_LOGE(TAG, "compressed instructions failed, vector %lu",
+                 (unsigned long)bist_cpu_instruction_failure_id);
+        return err;
+    }
+    ESP_LOGD(TAG, "compressed instruction tests passed");
 #endif
 
     bist_cpu_instruction_failure_id = 0;

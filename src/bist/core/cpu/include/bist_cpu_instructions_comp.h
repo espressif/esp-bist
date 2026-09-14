@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+ *
+ * This file is part of Espressif's BIST (Built-In Self Test) Library.
+ *
+ * BIST library is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * BIST library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with BIST library. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
+/**
+ * @file bist_cpu_instructions_comp.h
+ * @brief RV32C compressed instruction test vector IDs
+ *
+ * Grouped by compressed encoding format, which is what the vectors
+ * discriminate: the arithmetic is already covered by the RV32I group.
+ */
+
+#pragma once
+
+typedef enum {
+    BIST_INSN_COMP_NONE = 0,
+    BIST_INSN_COMP_ADDI_POS_MIN = 1,
+    BIST_INSN_COMP_ADDI_POS_MAX,
+    BIST_INSN_COMP_ADDI_NEG_MIN,
+    BIST_INSN_COMP_ADDI_NEG_MAX,
+    BIST_INSN_COMP_ADDI_CARRY,
+    BIST_INSN_COMP_ADDI_REG_HIGH,
+    BIST_INSN_COMP_NOP,
+    BIST_INSN_COMP_LI_ZERO,
+    BIST_INSN_COMP_LI_POS_MAX,
+    BIST_INSN_COMP_LI_NEG_MAX,
+    BIST_INSN_COMP_LI_REG_HIGH,
+    BIST_INSN_COMP_LUI_MIN,
+    BIST_INSN_COMP_LUI_POS_MAX,
+    BIST_INSN_COMP_LUI_NEG_MIN,
+    BIST_INSN_COMP_LUI_NEG_MAX,
+    BIST_INSN_COMP_SLLI_ONE,
+    BIST_INSN_COMP_SLLI_MAX,
+    BIST_INSN_COMP_SLLI_DISCARD,
+    BIST_INSN_COMP_SLLI_REG_HIGH,
+    BIST_INSN_COMP_SRLI_ONE,
+    BIST_INSN_COMP_SRLI_MAX,
+    BIST_INSN_COMP_SRAI_SIGN_FILL,
+    BIST_INSN_COMP_SRAI_POSITIVE,
+    BIST_INSN_COMP_ANDI_MASK_LOW,
+    BIST_INSN_COMP_ANDI_SIGN_EXT,
+    BIST_INSN_COMP_ANDI_ZERO,
+    BIST_INSN_COMP_MV_LOW,
+    BIST_INSN_COMP_MV_REG_HIGH,
+    BIST_INSN_COMP_MV_REG_RA,
+    BIST_INSN_COMP_ADD_NORMAL,
+    BIST_INSN_COMP_ADD_CARRY,
+    BIST_INSN_COMP_ADD_REG_HIGH,
+    BIST_INSN_COMP_SUB_NORMAL,
+    BIST_INSN_COMP_SUB_BORROW,
+    BIST_INSN_COMP_XOR,
+    BIST_INSN_COMP_OR,
+    BIST_INSN_COMP_AND,
+    BIST_INSN_COMP_AND_REG_LOW,
+    BIST_INSN_COMP_OR_REG_HIGH,
+    BIST_INSN_COMP_ADDI4SPN_MIN,
+    BIST_INSN_COMP_ADDI4SPN_BIT3,
+    BIST_INSN_COMP_ADDI4SPN_BIT4,
+    BIST_INSN_COMP_ADDI4SPN_BIT5,
+    BIST_INSN_COMP_ADDI4SPN_BIT6,
+    BIST_INSN_COMP_ADDI4SPN_BIT9,
+    BIST_INSN_COMP_ADDI4SPN_MAX,
+    BIST_INSN_COMP_LDST_ZERO_OFF,
+    BIST_INSN_COMP_LDST_MIN_OFF,
+    BIST_INSN_COMP_LDST_BIT6_OFF,
+    BIST_INSN_COMP_LDST_MAX_OFF,
+    BIST_INSN_COMP_LDST_REG_LOW,
+    BIST_INSN_COMP_LDSTSP_ZERO_OFF,
+    BIST_INSN_COMP_LDSTSP_MIN_OFF,
+    BIST_INSN_COMP_LDSTSP_BIT5_OFF,
+    BIST_INSN_COMP_LDSTSP_BIT6_OFF,
+    BIST_INSN_COMP_LDSTSP_BIT7_OFF,
+    BIST_INSN_COMP_LDSTSP_MAX_OFF,
+    BIST_INSN_COMP_LDSTSP_REG_HIGH,
+    BIST_INSN_COMP_ADDI16SP_BIT4,
+    BIST_INSN_COMP_ADDI16SP_BIT5,
+    BIST_INSN_COMP_ADDI16SP_BIT6,
+    BIST_INSN_COMP_ADDI16SP_BIT7,
+    BIST_INSN_COMP_ADDI16SP_BIT8,
+    BIST_INSN_COMP_ADDI16SP_MAX,
+    BIST_INSN_COMP_ADDI16SP_NEG,
+    BIST_INSN_COMP_LUI_VS_ADDI16SP,
+    BIST_INSN_COMP_J_FORWARD,
+    BIST_INSN_COMP_J_BACKWARD,
+    BIST_INSN_COMP_BEQZ_TAKEN,
+    BIST_INSN_COMP_BEQZ_NOT_TAKEN,
+    BIST_INSN_COMP_BNEZ_TAKEN,
+    BIST_INSN_COMP_BNEZ_NOT_TAKEN,
+    BIST_INSN_COMP_JAL_LINK,
+    BIST_INSN_COMP_JR,
+    BIST_INSN_COMP_JALR_LINK,
+} bist_insn_comp_id_t;
