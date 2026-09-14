@@ -97,5 +97,4 @@ set(rom_ld
     -T${IDF_PATH}/components/riscv/ld/rom.api.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib.ld
     -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libgcc.ld
     )
