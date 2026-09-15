@@ -73,6 +73,12 @@ static void runtime_tests(void)
         fail_safe_exit();
     }
 
+    test_err = bist_cpu_instruction_test();
+    if (test_err == BIST_ESP_CPU_INSTRUCTION_TEST_ERR) {
+        ESP_LOGE(TAG, "CPU instruction test failed");
+        fail_safe_exit();
+    }
+
     test_err = bist_cpu_stack_overflow_check();
     if (test_err == BIST_ESP_STACK_TEST_OVERFLOW) {
         ESP_LOGE(TAG, "Stack test failed");
