@@ -17,6 +17,7 @@ CPU Tests
 
 .. include-build-file:: inc/bist_cpu_regs.inc
 .. include-build-file:: inc/bist_cpu_csr_regs.inc
+.. include-build-file:: inc/bist_cpu_instructions.inc
 .. include-build-file:: inc/bist_cpu_stack.inc
 .. include-build-file:: inc/bist_pc.inc
 

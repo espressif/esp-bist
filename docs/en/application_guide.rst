@@ -230,6 +230,13 @@ Runtime Tests
    - **Rationale**: PC corruption can cause execution outside intended code regions
    - **Execution Frequency**: Called in main loop (every iteration)
 
+5. **CPU Instruction Equivalence Test** (``bist_cpu_instruction_test()``)
+
+   - **IEC 60730 Component**: 1.2 (Instruction Decoding & Execution)
+   - **Purpose**: Verifies instruction decoding and ALU/FPU execution across 10 equivalence groups (381 vectors covering RV32I ALU/shifts/upper imm/branches/loads/stores, RV32M, Zicsr/Zifencei, RV32A, RV32F, and RV32C)
+   - **Rationale**: Detects decoding logic errors, arithmetic calculation faults, branch decision errors, register field corruption, and immediate value scrambling faults
+   - **Execution Frequency**: Called in startup self-tests and periodically in main loop
+
 **Error Handling**: All runtime test failures trigger ``fail_safe_exit()``, preventing continued operation with detected faults.
 
 GPIO Configuration

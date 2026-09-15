@@ -45,48 +45,54 @@ The following table maps identified hazards to safety functions, risk levels, an
      - ``bist_cpu_csr_regs_test()`` validates critical trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), memory protection registers (PMPADDR, PMPCFG, and PMA address registers on PMA-capable SoCs), custom CSRs (MEXSTATUS, MHINT on ESP32-C5), and FPU registers (``fflags``, ``frm``, ``fcsr``) on FPU supported devices
 
    * - H3
+     - CPU instruction decode faults, ALU calculation errors, branch decision errors, register field corruption, or immediate scrambling faults causing incorrect execution
+     - High
+     - 1.2 (Instruction Decoding & Execution)
+     - ``bist_cpu_instruction_test()`` validates in-scope ISA equivalence classes across 10 groups (381 vectors total: RV32I ALU, shifts, upper immediate, control flow, loads/stores, RV32M multiply/divide, Zicsr/Zifencei, RV32A atomics, RV32F floating point, and RV32C compressed instructions)
+
+   * - H4
      - Program counter corruption causing execution outside intended code regions
      - High
      - 1.3 (Program Counter)
      - ``bist_pc_test()`` exercises PC bits by calling functions placed in IRAM, Flash, RTC, and TCM (ESP32-P4) regions, detecting stuck-at faults or unexpected jumps
 
-   * - H4
+   * - H5
      - Interrupt handling or execution failure causing missed, stuck, or incorrectly routed interrupts
      - High
      - 2 (Interrupt handling and execution)
      - ``bist_interrupt_source_map_test()`` verifies software IRQ source mapping, enable/disable, and ISR delivery; ``bist_hardware_interrupt_test()`` validates concurrent timer-group interrupt delivery via a 2:1 period ratio check
 
-   * - H5
+   * - H6
      - Clock oscillator failure causing timing violations and missed deadlines
      - High
      - 3 (Clock)
      - ``bist_ext_crystal_fail_test()`` monitors the 32 kHz crystal via XT WDT when ``SOC_XT_WDT_SUPPORTED`` is set; ``bist_main_crystal_test()`` validates the main crystal (``CONFIG_XTAL_FREQ``) within ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default 1%)
 
-   * - H6
+   * - H7
      - Flash memory corruption leading to execution of incorrect code or use of corrupted data
      - High
      - 4.1 (Invariable Memory)
      - ``bist_flash_test()`` computes CRC32 over ``.flash.text`` and ``.flash.rodata`` sections and compares against post-build injected checksums
 
-   * - H7
+   * - H8
      - RAM corruption causing data integrity loss or stack overflow
      - High
      - 4.2 (Variable Memory)
      - ``bist_ram_test_march_a()`` and ``bist_ram_test_march_x()`` detect coupling and transition faults; ``bist_ram_test_abraham()`` / ``bist_ram_test_abraham_full()`` (H.2.19.1) provide expanded pattern sensitivity and address decoder fault coverage; ``bist_cpu_stack_overflow_check()`` monitors stack sentinel with safe-stack execution isolation
 
-   * - H8
+   * - H9
      - Infinite loop or deadlock preventing watchdog feeding and system recovery
      - High
      - 6.3 (Timing)
      - Windowed watchdog (MWDT) with configurable timeout enforces periodic ``wdt_feed()`` calls; early feeds detect underflow; timeout triggers system reset
 
-   * - H9
+   * - H10
      - GPIO misconfiguration or stuck I/O lines causing incorrect system behavior
      - Medium
      - 7.1 (Digital I/O)
      - ``bist_gpio_output_test()`` and ``bist_gpio_input_test()`` verify GPIO configuration, output drive capability, and input level readback
 
-   * - H10
+   * - H11
      - ADC misconfiguration or stuck analog input lines causing incorrect sensor readings
      - Medium
      - 7.2 (Analog I/O)

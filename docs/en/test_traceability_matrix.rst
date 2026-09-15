@@ -58,6 +58,42 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 
 **Coverage**: 25 to 40 CSRs tested per SoC (2 test cases each: pass and GDB fault injection).
 
+CPU Instruction Equivalence Test (IEC 60730 ID: 1.2)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Requirement**: Validate instruction decoding and execution integrity via equivalence-class self-tests (IEC 60730-1 Annex H, Table H.1 component 1.2, measure H.2.18.5)
+
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_cpu_instructions.c`` and assembly modules:
+
+  - ``src/bist/core/cpu/bist_cpu_instructions_integer.S`` (RV32I Integer ALU, 80 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_shift.S`` (RV32I Shifts, 36 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_upperimm.S`` (RV32I Upper Immediate LUI/AUIPC, 11 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_ctrl.S`` (RV32I Control Flow Branches/Jumps, 28 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_ldst.S`` (RV32I Load/Store, 15 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_mul.S`` (RV32M Multiply/Divide, 48 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_csr.S`` (Zicsr/Zifencei CSR and Fence, 15 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_amo.S`` (RV32A Atomics, 13 vectors; excluded on ESP32-C3)
+  - ``src/bist/core/cpu/bist_cpu_instructions_fp.S`` (RV32F Floating Point, 60 vectors; on ESP32-H4 and ESP32-P4)
+  - ``src/bist/core/cpu/bist_cpu_instructions_comp.S`` (RV32C Compressed, 75 vectors)
+- Functions: ``bist_cpu_instruction_test()``, ``bist_cpu_instruction_last_failure_id()``, ``bist_cpu_instruction_last_failure_group()``
+- Design Doc: :doc:`module_design_and_coding` (CPU Instruction Equivalence Test section)
+
+**Test Implementation**:
+
+- QEMU / On-target: ``tests/cpu_instruction_test/main.c``, ``tests/cpu_instruction_test/pytest_device_cpu_instruction_test.py``
+  - Success test: All Kconfig-enabled instruction equivalence groups execute sequentially and pass without error (returning ``BIST_ESP_OK``, failure ID 0, group ``BIST_INSN_GROUP_NONE``)
+  - Negative / fault injection tests: Validated via build-time operand mutation, expected value corruption, link-resolved size witness corruption, and stack restoration verification on error exits
+- Hardware: Clean execution on supported SoCs
+
+**Test Results**:
+
+- QEMU: ``tests/cpu_instruction_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Hardware: ``tests/cpu_instruction_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+
+**Coverage**: 10 instruction groups comprising 381 hand-crafted equivalence-class test vectors total (80 Integer ALU + 36 Shifts + 11 Upper Imm + 28 Control Flow + 15 Load/Store + 48 Mul/Div + 15 CSR/Fence + 13 Atomics + 60 Floating Point + 75 Compressed)
+
 Program Counter Test (IEC 60730 ID: 1.3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -247,8 +283,8 @@ ADC Test (IEC 60730 ID: 7.2)
 Traceability Summary
 --------------------
 
-- **Total IEC 60730 Components**: 9 (1.1, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
-- **Total Test Applications**: 10 standalone target test suites + 1 host unit test suite
+- **Total IEC 60730 Components**: 10 (1.1, 1.2, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
+- **Total Test Applications**: 11 standalone target test suites + 1 host unit test suite
 - **Test Environments**: QEMU (deterministic emulation & GDB fault injection), Hardware (real-world DUT), Host (algorithmic verification)
 - **Coverage & Evidence**: Complete requirement-to-test mapping and JUnit XML report locations are tabulated in :doc:`coverage_analysis`.
 

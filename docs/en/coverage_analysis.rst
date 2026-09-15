@@ -48,6 +48,13 @@ The following table provides code coverage information for each BIST module:
      - 25–40 (fault injection)
      - :doc:`software_validation` (CPU CSR Test)
 
+   * - CPU Instructions
+     - 3
+     - 3 (100%)
+     - 1 (10 groups, 381 vectors)
+     - 3 (fault injection: ALU/shift mutation, stack restoration, size witness)
+     - :doc:`software_validation` (CPU Instruction Decoding and Execution Test)
+
    * - Program Counter
      - 1
      - 1 (100%)
@@ -163,6 +170,12 @@ Requirements Coverage Matrix
      - QEMU + Hardware (25–40 CSRs depending on SoC: 25 C3, 37 C6/H2/C61, 39 C5, 40 H4/P4; fault injection)
      - ``tests/cpu_reg_test/build/tests/*_report.xml``
 
+   * - 1.2
+     - CPU Instruction Decoding and Execution
+     - ``bist_cpu_instruction_test()``
+     - QEMU + Hardware (10 groups, 381 equivalence vectors, fault injection)
+     - ``tests/cpu_instruction_test/build/tests/*_report.xml``
+
    * - 1.3
      - Program Counter Integrity
      - ``bist_pc_test()``
@@ -243,12 +256,16 @@ Known Coverage Limitations
 
 4. **Hardware Interrupt Path (TIMG)**: QEMU does not support Timer Group 0/1 hardware alarms used by ``bist_hardware_interrupt_test()``. The software interrupt source map path is validated in QEMU (including fault injection); the dual-TIMG hardware path is validated on physical devices.
 
+5. **CPU Instruction Equivalence Exclusions**: Unaligned memory access is excluded to prevent unhandled traps; trap instructions (``c.ebreak``, ``c.unimp``) are excluded to avoid requiring an active exception vector table; compressed branch offset ranges are restricted to short displacements to guarantee 16-bit encoding without silent assembler widening.
+
 Justification
 ^^^^^^^^^^^^^
 
 All coverage limitations are justified:
 
 - **Hardware-Only Tests**: Physical hardware is required for accurate validation of clock, GPIO, ADC, and TIMG hardware-interrupt functionality. QEMU limitations are documented and hardware testing provides adequate coverage.
+
+- **CPU Instruction Equivalence Testing**: Equivalence classes cover all in-scope ALU, shift, upper immediate, control flow, load/store, multiply/divide, CSR, atomic, floating-point, and compressed formats. Exclusions of synchronous traps and unaligned accesses are safety-justified to ensure deterministic, trap-free execution.
 
 - **Test Environment**: Both QEMU (deterministic, repeatable) and hardware (real-world conditions) testing provide complementary coverage.
 

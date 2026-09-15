@@ -22,6 +22,12 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
      - Register corruption, stuck-at faults, data path errors
      - :ref:`cpu-register-test`
 
+   * - 1.2
+     - CPU - Instruction decoding and execution
+     - Periodic self-test using an equivalence class test (H.2.18.5) across 10 instruction groups (RV32I, RV32M, Zicsr/Zifencei, RV32A, RV32F, RV32C)
+     - Instruction decode errors, ALU calculation errors, branch decision faults, register field corruption, immediate value transposition/scrambling faults, FPU arithmetic and rounding errors
+     - :ref:`cpu-instruction-test`
+
    * - 1.3
      - CPU - Program Counter
      - Exercises PC bits, detects unexpected jumps or stuck PC

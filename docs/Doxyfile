@@ -26,6 +26,7 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/include/bist_metrics.h \
     $(PROJECT_PATH)/src/bist/core/include/bist_core.h \
     $(PROJECT_PATH)/src/bist/core/clock/include/bist_clock_fail.h \
+    $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_instructions.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_csr_regs.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_regs.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_stack.h \
