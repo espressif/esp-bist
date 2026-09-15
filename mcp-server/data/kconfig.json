@@ -22,7 +22,7 @@
   {
     "name": "ESP_BIST_CPU_CSR_REG_TEST",
     "type": "bool",
-    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "default": "y if !ZEPHYR_ESP_BIST_MODULE && !NUTTX_ESP_BIST_MODULE",
     "depends_on": "",
     "help": "IEC 60730 Annex H component 1.2 periodic self-test using an\nequivalence-class instruction test (H.2.18.5). Enable individual\ninstruction groups in the submenu.",
     "menu": "ESP-BIST Tests",
