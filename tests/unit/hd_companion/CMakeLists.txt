@@ -51,6 +51,12 @@ set(HD_COMPANION_SCENARIOS
     qa_late
     safe_state_latched
     runtime_fail
+    checkpoint_pass
+    checkpoint_missing
+    checkpoint_never
+    checkpoint_out_of_order
+    checkpoint_wrap
+    irq_latency_over_budget
 )
 
 foreach(scenario IN LISTS HD_COMPANION_SCENARIOS)

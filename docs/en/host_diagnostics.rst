@@ -386,7 +386,7 @@ Message Types
    * - ``CHECKPOINT`` (6)
      - HP to LP
      - Alive / deadline / logical checkpoint
-     - Defined, not handled
+     - Implemented
    * - ``SAFE_STATE_NOTIFY`` (7)
      - LP to HP
      - Companion already acting; informational only
@@ -407,6 +407,19 @@ Sequence Number Rules
   distance. Incoming is stale when it is not strictly ahead of the last accepted
   sequence in the forward half of the space (``BIST_HD_SEQ_HALF_RANGE =
   0x8000``). The agent drops stale or duplicate challenges.
+
+Checkpoint ID
+^^^^^^^^^^^^^
+
+The checkpoint ID is a private ``uint32_t`` counter inside the agent
+(``bist_hd_agent.c``). ``bist_hd_checkpoint_reached()`` takes no argument;
+each call increments the counter before sending, so the first payload is 1.
+A failed transport send still consumes the ID, guaranteeing the companion
+never sees a duplicate even after partial frame errors.
+
+The companion validates the checkpoint ID with a wrap-safe unsigned-distance
+check: the ID is rejected when ``diff == 0`` (duplicate) or ``diff > 0x80000000``
+(backwards). This handles the ``UINT32_MAX`` wrap correctly.
 
 Timeouts
 ^^^^^^^^
@@ -510,17 +523,79 @@ Ordered steps:
 Runtime Loop (``bist_hd_companion_loop``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. blockdiag::
+   :scale: 100%
+   :caption: Companion Runtime Loop Sequence
+   :align: center
+
+   blockdiag {
+       "Check Safe State" -> "Feed LP WDT" [label = "healthy"];
+       "Feed LP WDT" -> "Drain Checkpoints";
+       "Drain Checkpoints" -> "Ckpt Valid?";
+       "Ckpt Valid?" -> "Run Runtime BIST" [label = "yes"];
+       "Ckpt Valid?" -> "Safe State" [label = "no / out-of-order"];
+       "Run Runtime BIST" -> "Send LP_STATUS";
+       "Send LP_STATUS" -> "BIST Pass?";
+       "BIST Pass?" -> "Host Q&A Challenge" [label = "yes"];
+       "BIST Pass?" -> "Safe State" [label = "no"];
+       "Host Q&A Challenge" -> "Q&A Pass?";
+       "Q&A Pass?" -> "Check Checkpoint Deadline" [label = "yes"];
+       "Q&A Pass?" -> "Safe State" [label = "no / timeout / over-budget"];
+       "Check Checkpoint Deadline" -> "Deadline Met?";
+       "Deadline Met?" -> "Return Success" [label = "yes"];
+       "Deadline Met?" -> "Safe State" [label = "no / missed"];
+
+       "Check Safe State" [shape = diamond];
+       "Feed LP WDT" [shape = box];
+       "Drain Checkpoints" [shape = box];
+       "Ckpt Valid?" [shape = diamond];
+       "Run Runtime BIST" [shape = box];
+       "Send LP_STATUS" [shape = box];
+       "BIST Pass?" [shape = diamond];
+       "Host Q&A Challenge" [shape = box];
+       "Q&A Pass?" [shape = diamond];
+       "Check Checkpoint Deadline" [shape = box];
+       "Deadline Met?" [shape = diamond];
+       "Return Success" [shape = roundedbox];
+       "Safe State" [shape = box];
+   }
+
 Each iteration:
 
-#. If already in safe state: return immediately (no WDT feed).
-#. ``lp_wdt_feed()`` -- feed the watchdog.
-#. Run runtime LP BIST (CPU regs, CPU CSR, RAM March-A + Abraham, stack check).
-   OR the ``BIST_HD_BIT_RUNTIME`` flag.
-#. Send ``LP_STATUS`` with the runtime bitmask.
-#. Verify expected runtime bits. If not: ``bist_hd_safe_state()``.
-#. If ``CONFIG_ESP_BIST_HD_AUDIT_QA``: run Q&A challenge -- send ``CHALLENGE``,
-   recv ``ANSWER`` within ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``, verify seq
-   + value + elapsed time. If any check fails: ``bist_hd_safe_state()``.
+#. **Safe-State Check**: If already in safe state (``s_in_safe_state`` is set),
+   return immediately (no WDT feed).
+#. **Feed LP WDT**: ``lp_wdt_feed()`` feeds the hardware watchdog timer.
+#. **Drain Checkpoints**: If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled:
+   clear the loop-received flag (``s_checkpoint_received = false``) and drain
+   pending checkpoint messages via non-blocking receive (``drain_checkpoints()``).
+   Validate each checkpoint ID using wrap-safe unsigned-distance comparison
+   (``process_checkpoint()``). If duplicate or out-of-order: ``bist_hd_safe_state()``.
+#. **Run Runtime LP BIST**: Execute runtime self-tests (CPU registers, CPU CSR,
+   RAM March-A + Abraham time-division, stack overflow check) and OR the
+   ``BIST_HD_BIT_RUNTIME`` flag into the result bitmask.
+#. **Send LP_STATUS**: Transmit ``LP_STATUS`` message with the runtime bitmask to
+   the HP agent.
+#. **Verify Runtime BIST Status**: Verify that all expected runtime bits are set.
+   If not: ``bist_hd_safe_state()``.
+#. **Host Q&A Challenge & IRQ Latency Audit**: If ``CONFIG_ESP_BIST_HD_AUDIT_QA`` is enabled:
+
+   - Send ``CHALLENGE`` with monotonic sequence number, random payload, and
+     deadline window (``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``).
+   - Wait for ``ANSWER`` within the challenge window. If a ``CHECKPOINT`` frame
+     arrives during this wait, consume and validate it immediately via
+     ``process_checkpoint()``, then continue waiting for the ``ANSWER``.
+   - Verify sequence number match, CRC-32 answer value, and that elapsed round-trip
+     time does not exceed the challenge window.
+   - If ``CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY`` is enabled: after a correct in-window
+     answer, additionally check that elapsed round-trip time does not exceed
+     ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``.
+   - If any challenge, value, sequence, timeout, or IRQ latency check fails: ``bist_hd_safe_state()``.
+#. **Check Checkpoint Deadline**: If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled:
+   evaluate ``check_checkpoint()``. If a checkpoint was received during this loop
+   (in step 3 or step 7), reset ``s_checkpoint_miss_count = 0`` and arm ID-order
+   tracking. Otherwise, increment ``s_checkpoint_miss_count``; if it exceeds
+   ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS`` (including a host that never
+   reports from boot): ``bist_hd_safe_state()``.
 
 The application-side LP main loop calls ``bist_hd_companion_loop()`` with a
 delay between iterations (e.g. ``bist_hd_comp_port_delay_us(10000)``).
@@ -531,15 +606,15 @@ Agent Worker (``bist_hd_agent_start``)
 On the HP side, ``bist_hd_agent_start()`` performs a one-shot setup:
 
 #. ``bist_hd_platform_init()`` -- create the LP-status queue.
-#. ``bist_hd_transport_init()`` -- open the mailbox (IDF / Zephyr mbox /
-   NuttX ``/dev/lp_mailbox``).
+#. ``bist_hd_transport_init()`` -- initialize the mailbox transport and create
+   the transmission mutex (``s_tx_mutex``).
 #. ``bist_hd_transport_flush()`` -- discard mailbox state left over from a
    previous HP session. The LP companion keeps running across an HP reset, so
    pending words or frames that predate ``AGENT_READY`` must be dropped. IDF
    drains with a bounded non-blocking receive loop, Zephyr purges its RX
    message queue, and NuttX defers to a byte-level header resync inside
    ``bist_hd_transport_recv()`` because the driver lacks non-blocking reads.
-#. Send ``AGENT_READY`` to the companion.
+#. Send ``AGENT_READY`` magic word (``0xCAFECAFE``) to the companion.
 #. Start a high-priority worker thread (FreeRTOS task / Zephyr cooperative
    thread / NuttX ``SCHED_FIFO`` pthread).
 
@@ -549,11 +624,19 @@ The worker thread runs an infinite receive loop:
 #. If ``LP_STATUS``: push the bitmask into the platform queue so the
    application can retrieve it via ``bist_hd_agent_wait_lp_status()``.
 #. If ``CHALLENGE``: check for stale or duplicate sequence numbers
-   (``bist_hd_seq_is_stale()``); if fresh, compute the answer via
-   ``bist_hd_challenge_answer()`` and send ``ANSWER`` back to the companion.
-#. All other message types are silently dropped in this revision
-   (``DIAG_REQ``, ``CHECKPOINT``, and ``SAFE_STATE_NOTIFY`` handling is
-   deferred).
+   (``bist_hd_seq_is_stale()``); if fresh:
+
+   - If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled and a checkpoint is
+     pending from ``bist_hd_checkpoint_reached()``, send the ``CHECKPOINT``
+     frame first. Transmitting here guarantees the companion is blocked in its
+     receive loop, avoiding mailbox contention with LP-to-HP transmissions.
+     This is why checkpoint auditing depends on ``CONFIG_ESP_BIST_HD_AUDIT_QA``:
+     without a challenge the host never flushes the pending checkpoint, and
+     the companion would still run ``check_checkpoint()`` and enter safe state.
+   - Compute the challenge answer via ``bist_hd_challenge_answer()`` and send
+     ``ANSWER`` back to the companion.
+#. Unsupported or deferred incoming command frames (e.g. ``DIAG_REQ``,
+   ``SAFE_STATE_NOTIFY``) are dropped.
 
 On receive errors the worker yields for 1 ms to avoid spinning on a
 high-priority thread.
@@ -614,14 +697,16 @@ Because the loop stops feeding the LP WDT, the watchdog fires
 Triggers for safe state:
 
 - Wrong or late Q&A answer.
+- Answer arriving within the challenge window but exceeding the IRQ latency budget (``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``).
+- Missed host checkpoint deadline (exceeding ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS`` consecutive loops without a checkpoint, including a host that never reports).
+- Out-of-order or duplicate checkpoint ID (monotonicity violation or non-forward step).
 - Post-boot or runtime LP BIST failure.
 - Protocol / FFI violation (bad sequence, corrupted frame).
 - Transport failure during init or runtime.
 - ``AGENT_READY`` timeout or wrong frame type during init.
 
 Applications may override the weak ``bist_hd_safe_state()`` to drive
-product-specific cut-offs (GPIO, relay, power) before the WDT reset. See
-:ref:`hd-safe-state-override`.
+product-specific cut-offs (GPIO, relay, power) before the WDT reset.
 
 .. _hd-audit-catalog:
 
@@ -650,7 +735,7 @@ but no wired runtime path in this revision.
    * - Alive / deadline / logical checkpoints
      - Missed tasks, late work, wrong sequence
      - Companion checks; host reports checkpoints
-     - Declared (``BIST_HD_AUDIT_CHECKPOINT``); stub returns -1
+     - **Implemented** (``BIST_HD_AUDIT_CHECKPOINT``)
    * - Host RAM March
      - DRAM bit faults
      - Host (quiesce) under companion trigger
@@ -686,7 +771,7 @@ but no wired runtime path in this revision.
    * - Interrupt latency / storm bound
      - Host not servicing within budget
      - Companion timestamps challenge IRQ response
-     - Declared (``BIST_HD_AUDIT_IRQ_LATENCY``)
+     - **Implemented** (``BIST_HD_AUDIT_IRQ_LATENCY``)
    * - Peripheral / GPIO plausibility
      - Hazard outputs in illegal state
      - Companion reads or host reports via callback
@@ -753,7 +838,7 @@ module.
    * - ``CONFIG_ESP_BIST_HD_AUDIT_QA``
      - Q&A challenge / window
    * - ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT``
-     - Alive / deadline / logical checkpoints
+     - Alive / deadline / logical checkpoints (depends on ``CONFIG_ESP_BIST_HD_AUDIT_QA``)
    * - ``CONFIG_ESP_BIST_HD_AUDIT_RAM``
      - Host RAM March (selects ``ESP_BIST_MEMORY_RAM_TEST``)
    * - ``CONFIG_ESP_BIST_HD_AUDIT_FLASH``
@@ -804,6 +889,17 @@ Timing Parameters
      - int
      - 50000
      - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us); defined, not referenced
+   * - ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``
+     - int
+     - 5000
+     - Max acceptable Q&A round-trip time (us); must be less than the challenge
+       window. Exceeding this with a correct answer triggers safe state
+   * - ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS``
+     - int
+     - 1
+     - Max consecutive companion loops without a host checkpoint before safe
+       state. Applies from the first runtime loop, so a host that never
+       reports still fails closed
    * - ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US``
      - int
      - 1000000
@@ -842,223 +938,6 @@ Agent Thread / Task
      - 200
      - ``SCHED_FIFO`` priority (NuttX only)
 
-.. _hd-integration-guide:
-
-Integration Guide
------------------
-
-ESP-IDF
-^^^^^^^
-
-**Required Kconfig** (``sdkconfig.defaults``):
-
-.. code-block:: none
-
-   CONFIG_ULP_COPROC_ENABLED=y
-   CONFIG_ULP_COPROC_TYPE_LP_CORE=y
-   CONFIG_ULP_COPROC_RESERVE_MEM=16240
-   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y
-   CONFIG_ESP_BIST_HD_AUDIT_QA=y
-
-Plus the LP BIST test options (``CONFIG_ESP_BIST_CPU_REG_TEST``,
-``CONFIG_ESP_BIST_CPU_CSR_REG_TEST``, ``CONFIG_ESP_BIST_MEMORY_RAM_TEST``,
-``CONFIG_ESP_BIST_MEMORY_FLASH_TEST``, ``CONFIG_ESP_BIST_STACK_TEST``).
-
-**Build wiring:**
-
-The HP application registers ``esp-bist`` as a component (it is the repo root
-``CMakeLists.txt``). The LP sub-project is added via ``ulp_add_project()`` in
-the application ``main/CMakeLists.txt``:
-
-.. code-block:: cmake
-
-   idf_component_register(SRCS ${app_sources}
-                          REQUIRES ulp esp-bist
-                          WHOLE_ARCHIVE)
-   ulp_add_project("ulp_bist_sample" "${CMAKE_CURRENT_LIST_DIR}/ulp/")
-
-Inside ``ulp/CMakeLists.txt``, the LP main links the BIST library:
-
-.. code-block:: cmake
-
-   add_subdirectory(${BIST_PATH}/src/bist ${CMAKE_CURRENT_BINARY_DIR}/bist)
-   target_link_libraries(${ULP_APP_NAME} PRIVATE bist_esp)
-
-**LP entry point** (``ulp/main.c``):
-
-.. code-block:: c
-
-   #include "bist_hd_companion.h"
-   #include "bist_hd_comp_port.h"
-
-   #define RUNTIME_INTERVAL_US 10000
-
-   int main(void)
-   {
-       if (bist_hd_companion_init() != 0) {
-           return 0;
-       }
-       while (1) {
-           bist_hd_companion_loop();
-           bist_hd_comp_port_delay_us(RUNTIME_INTERVAL_US);
-       }
-   }
-
-**HP integration** (``main.c``):
-
-.. code-block:: c
-
-   #include "bist_hd_agent.h"
-   #include "bist_hd_protocol.h"
-
-   /* After loading and starting the LP core: */
-   vTaskDelay(pdMS_TO_TICKS(100));   /* mailbox settle */
-
-   if (bist_hd_agent_start() != 0) {
-       /* handle error */
-   }
-
-   uint32_t status;
-   /* Wait for post-boot LP BIST status */
-   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_POSTBOOT, 10000);
-   /* Wait for runtime LP BIST status (repeat in a loop) */
-   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_RUNTIME, 10000);
-
-See ``samples/idf/`` for the complete working sample.
-
-Zephyr
-^^^^^^
-
-Zephyr uses sysbuild with a dual-image layout (hpcore + lpcore).
-
-**Required Kconfig** (HP ``prj.conf``):
-
-.. code-block:: none
-
-   CONFIG_MBOX=y
-   CONFIG_ESP32_ULP_COPROC_ENABLED=y
-   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y
-   CONFIG_ESP_BIST_HD_AUDIT_QA=y
-
-LP ``remote/prj.conf`` additionally sets the BIST test options and timing:
-
-.. code-block:: none
-
-   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y
-   CONFIG_ESP_BIST_HD_AUDIT_QA=y
-   CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US=5000000
-
-**Sysbuild:**
-
-``sysbuild.cmake`` adds the LP remote project:
-
-.. code-block:: cmake
-
-   ExternalZephyrProject_Add(
-       APPLICATION zephyr_bist_remote
-       SOURCE_DIR ${APP_DIR}/remote
-       BOARD ${SB_CONFIG_ULP_REMOTE_BOARD}
-   )
-   sysbuild_add_dependencies(FLASH zephyr_bist_remote ${DEFAULT_IMAGE})
-
-``Kconfig.sysbuild`` maps boards to lpcore variants:
-
-.. code-block:: none
-
-   config ULP_REMOTE_BOARD
-       string
-       default "esp32c5_devkitc/esp32c5/lpcore" if $(BOARD) = "esp32c5_devkitc"
-       default "esp32c6_devkitc/esp32c6/lpcore" if $(BOARD) = "esp32c6_devkitc"
-
-**Devicetree overlays:**
-
-HP overlay (e.g. ``boards/esp32c6_devkitc_esp32c6_hpcore.overlay``):
-
-.. code-block:: dts
-
-   / {
-       chosen {
-           zephyr,ipc_shm = &ipc_shm;
-           zephyr,ipc = &mbox0;
-       };
-       mbox-consumer {
-           compatible = "vnd,mbox-consumer";
-           mboxes = <&mbox0 0>, <&mbox0 1>;
-           mbox-names = "tx", "rx";
-       };
-   };
-   &mbox0 {
-       shared-memory-size = <0x20>;
-   };
-
-LP overlay has identical nodes with **tx/rx channels swapped**:
-``mboxes = <&mbox0 1>, <&mbox0 0>``.
-
-**HP integration** (``src/main.c``):
-
-.. code-block:: c
-
-   k_msleep(200);  /* LP boot settle */
-   bist_hd_agent_start();
-   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_POSTBOOT, 10000);
-
-See ``samples/zephyr/`` for the complete working sample.
-
-NuttX
-^^^^^
-
-**Required Kconfig** (config fragment):
-
-.. code-block:: none
-
-   CONFIG_ESPRESSIF_LP_MAILBOX=y
-   CONFIG_ESPRESSIF_LP_UART=y
-   CONFIG_ESP_BIST_HOST_DIAGNOSTICS=y
-   CONFIG_ESP_BIST_HD_AUDIT_QA=y
-
-**ULP image build:**
-
-``CMakeLists.txt`` conditionally includes the ULP build when
-``CONFIG_ESPRESSIF_USE_LP_CORE`` is set, using NuttX ``esp_ulp.cmake``. The
-BIST library is added to ``ULP_APP_C_SRCS`` via ``nuttx.cmake`` or
-``nuttx.mk``.
-
-**HP integration** (``nuttx_bist_main.c``):
-
-.. code-block:: c
-
-   /* Load LP firmware */
-   int ulp_fd = open("/dev/ulp", O_WRONLY);
-   write(ulp_fd, nuttx_bist_bin, nuttx_bist_bin_len);
-   close(ulp_fd);
-
-   sleep(1);  /* mailbox settle */
-
-   bist_hd_agent_start();
-   bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_POSTBOOT, 10000);
-
-The agent transport opens ``/dev/lp_mailbox`` internally (provided by
-``CONFIG_ESPRESSIF_LP_MAILBOX``).
-
-See ``samples/nuttx/nuttx_bist/`` for the complete working sample.
-
-.. _hd-safe-state-override:
-
-Overriding Safe State
-^^^^^^^^^^^^^^^^^^^^^
-
-``bist_hd_safe_state()`` is declared ``__attribute__((weak))``. To drive a
-product-specific cut-off before the LP WDT fires, provide a strong definition:
-
-.. code-block:: c
-
-   void bist_hd_safe_state(void)
-   {
-       /* De-energize hazard outputs, open relay, etc. */
-       gpio_set_level(HAZARD_CUT_PIN, 0);
-       /* Then let the LP WDT reset the system. */
-   }
-
 .. _hd-verification:
 
 Verification Evidence
@@ -1075,7 +954,7 @@ Runs host-native via ``cmake`` + ``ctest``; no device required.
 **Companion verdict matrix** (``tests/unit/hd_companion/``):
 
 Drives the real ``bist_hd_companion.c`` state machine against a scripted fake
-agent. 13 scenarios cover the judgment logic without hardware:
+agent. 18 scenarios cover the judgment logic without hardware:
 
 .. list-table::
    :header-rows: 1
@@ -1107,6 +986,39 @@ agent. 13 scenarios cover the judgment logic without hardware:
      - Once in safe state, no further WDT feeds or challenges
    * - ``runtime_fail``
      - Runtime BIST failure triggers safe state
+   * - ``checkpoint_pass``
+     - Checkpoints arriving every loop keep the companion running
+   * - ``checkpoint_missing``
+     - Consecutive loops without a checkpoint trigger safe state
+   * - ``checkpoint_never``
+     - Host that never sends checkpoints triggers safe state on deadline
+   * - ``checkpoint_out_of_order``
+     - Decreasing checkpoint ID triggers safe state
+   * - ``checkpoint_wrap``
+     - Checkpoint ID wrapping past ``UINT32_MAX`` is accepted (not a false
+       out-of-order)
+   * - ``irq_latency_over_budget``
+     - Correct answer exceeding the IRQ latency budget triggers safe state
+
+Agent Checkpoint Counter (``tests/unit/hd_agent/``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Host-native tests for the HP agent's private checkpoint counter. Transport and
+platform adapters are stubbed; only the counter behaviour is verified.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Scenario
+     - What it proves
+   * - ``checkpoint_first_id``
+     - First call emits payload 1 (never 0, avoiding confusion with zeroed memory)
+   * - ``checkpoint_step_is_one``
+     - Five consecutive calls produce payloads whose unsigned step is exactly 1
+   * - ``checkpoint_send_failure_consumes_id``
+     - A failed transport send still consumes the ID (gap of 2), so no duplicate
+       reaches the companion after a partial frame error
 
 On-Target Fail-Closed Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1114,7 +1026,7 @@ On-Target Fail-Closed Tests
 **ESP-IDF** (``tests/integration/hd_idf/``):
 
 The test application makes the host misbehave; the companion enters safe state;
-the LP WDT resets the chip. Two configurations:
+the LP WDT resets the chip. Three configurations:
 
 - ``hd_key_mismatch``: HP is built with ``BIST_HD_CHALLENGE_KEY=0x5A5A5A5A``
   (a key the LP companion does not share), so the production answer path
@@ -1124,6 +1036,10 @@ the LP WDT resets the chip. Two configurations:
   unpinned, so the app holds every HP core above the agent priority; on a
   multi-core target, starving one core alone would let the agent answer from
   another.
+- ``hd_skip_checkpoint``: HP answers Q&A challenges correctly but never calls
+  ``bist_hd_checkpoint_reached()`` (``CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT``).
+  The companion's checkpoint deadline is the only path to safe state, proving
+  the checkpoint audit alone triggers the fail-closed reaction.
 
 The pytest (``pytest_device_hd_idf.py``) asserts:
 
@@ -1143,12 +1059,15 @@ Twister test cases:
   ``hwinfo`` for ``RESET_WATCHDOG``.
 - ``bist.hd.key_mismatch`` -- HP key mismatch causes WDT reset.
 - ``bist.hd.starved_agent`` -- starvation causes WDT reset (console harness).
+- ``bist.hd.skip_checkpoint`` -- HP answers Q&A correctly but never sends
+  checkpoints; checkpoint deadline alone causes WDT reset (console harness).
 
 Platforms: ESP32-C5, ESP32-C6.
 
 **NuttX** (``tests/integration/hd_nuttx/``):
 
-The same two faults as ESP-IDF, built as a NuttX custom-apps tree and flashed
+The same three faults as ESP-IDF (``hd_key_mismatch``, ``hd_starved_agent``,
+``hd_skip_checkpoint``), built as a NuttX custom-apps tree and flashed
 as ``nuttx.merged.bin``. Pytest asserts:
 
 #. ``test_HD_agent_ready:PASS``
@@ -1167,6 +1086,29 @@ product build differ only in the test app's code and Kconfig. If a
 The LP companion image is identical in the samples and in the test apps: it is
 the element under test, so it is always built exactly as a product would build
 it. Every difference is on the HP side.
+
+Per-Platform Verification Depth
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - Platform
+     - Device-tested evidence
+     - Coverage scope
+   * - ESP-IDF
+     - pytest happy-path + fail-closed (key mismatch, starved agent, skip
+       checkpoint); targets ESP32-C5, C6, P4
+     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+   * - Zephyr
+     - Twister ztest + console harness (selftest, reset_cause, key_mismatch,
+       starved_agent, skip_checkpoint); targets ESP32-C5, C6
+     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+   * - NuttX
+     - pytest happy-path + fail-closed (key mismatch, starved agent, skip
+       checkpoint); targets ESP32-C6, P4
+     - Q&A, checkpoint, IRQ latency — pass and fail-closed
 
 .. _hd-references:
 
@@ -1191,6 +1133,7 @@ Internal
 - ``tests/integration/hd_idf/`` -- IDF fail-closed validation
 - ``tests/integration/hd_zephyr/`` -- Zephyr fail-closed validation
 - ``tests/integration/hd_nuttx/`` -- NuttX fail-closed validation
+- ``tests/unit/hd_agent/`` -- off-target agent checkpoint counter tests
 - ``tests/unit/hd_companion/`` -- off-target companion verdict matrix
 - ``tests/unit/hd_protocol/`` -- protocol and challenge unit tests
 

@@ -10,6 +10,7 @@
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "lp_core_mailbox.h"
 
@@ -17,6 +18,7 @@
 #define LP_MAILBOX_FLUSH_MAX (2u * BIST_HD_WIRE_WORDS_MAX)
 
 static lp_mailbox_t s_mailbox;
+static SemaphoreHandle_t s_tx_mutex;
 static int s_inited;
 
 static TickType_t timeout_to_ticks(int32_t timeout_ms)
@@ -39,6 +41,12 @@ int bist_hd_transport_init(void)
     if (err != ESP_OK) {
         return -1;
     }
+
+    s_tx_mutex = xSemaphoreCreateMutex();
+    if (s_tx_mutex == NULL) {
+        return -1;
+    }
+
     s_inited = 1;
     return 0;
 }
@@ -73,12 +81,19 @@ int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)
         return -1;
     }
 
+    if (xSemaphoreTake(s_tx_mutex, ticks) != pdTRUE) {
+        return -1;
+    }
+
     for (i = 0; i < nwords; i++) {
         esp_err_t err = lp_core_mailbox_send(s_mailbox, (lp_message_t)words[i], ticks);
         if (err != ESP_OK) {
+            xSemaphoreGive(s_tx_mutex);
             return -1;
         }
     }
+
+    xSemaphoreGive(s_tx_mutex);
     return 0;
 }
 

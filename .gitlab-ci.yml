@@ -214,6 +214,20 @@ test_hd_protocol_unit:
     - cmake --build build/hd_protocol_test
     - ctest --test-dir build/hd_protocol_test --output-on-failure
 
+# Host-native unit tests for the HP agent's checkpoint counter: verifies the
+# private counter starts at 1, steps by 1, and consumes IDs on send failures.
+test_hd_agent_unit:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  rules:
+    - when: always
+  script:
+    - cmake -S tests/unit/hd_agent -B build/hd_agent_test
+    - cmake --build build/hd_agent_test
+    - ctest --test-dir build/hd_agent_test --output-on-failure
+
 # Host-native verdict tests for the LP companion state machine: a scripted fake
 # agent plays every way a host can be wrong (bad value, replayed seq, wrong
 # frame, silence, late answer) against the real companion code.
@@ -507,7 +521,7 @@ build_nuttx_samples:
         "$CI_PROJECT_DIR/samples/nuttx/nuttx_bist/configs/espressif"
       ln -sfn "$CI_PROJECT_DIR/tests/integration/hd_nuttx" "$NUTTX_WORKSPACE/apps/external"
       ls -la "$NUTTX_WORKSPACE/apps/external"
-      for HD_CONFIG in hd_key_mismatch hd_starved_agent; do
+      for HD_CONFIG in hd_key_mismatch hd_starved_agent hd_skip_checkpoint; do
         echo "Building NuttX HD fail-closed ${HD_CONFIG} (${NUTTX_BOARD}:${NUTTX_CONFIG})"
         nuttx_cmake_build "build-${HD_CONFIG}" \
           "$CI_PROJECT_DIR/tests/integration/hd_nuttx/hd_nuttx_test/configs/espressif" \
@@ -522,6 +536,7 @@ build_nuttx_samples:
       - nuttx-workspace/nuttx/build-bist/nuttx.merged.bin
       - nuttx-workspace/nuttx/build-hd_key_mismatch/nuttx.merged.bin
       - nuttx-workspace/nuttx/build-hd_starved_agent/nuttx.merged.bin
+      - nuttx-workspace/nuttx/build-hd_skip_checkpoint/nuttx.merged.bin
   tags: [build]
 
 .idf_samples_matrix: &idf_samples_matrix
@@ -544,6 +559,8 @@ build_nuttx_samples:
     - idf.py -B build_${IDF_TARGET}_hd_key_mismatch build
     - idf.py -B build_${IDF_TARGET}_hd_starved_agent -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_starved_agent" set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET}_hd_starved_agent build
+    - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_skip_checkpoint" set-target $IDF_TARGET
+    - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint build
   rules:
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
   artifacts:
@@ -553,6 +570,7 @@ build_nuttx_samples:
       - samples/idf/build_${IDF_TARGET}/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_key_mismatch/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_starved_agent/
+      - tests/integration/hd_idf/build_${IDF_TARGET}_hd_skip_checkpoint/
   tags: [build]
 
 build_idf_samples:
@@ -817,7 +835,7 @@ test_zephyr_device:
     - pytest pytest_device* --port=$ESPPORT --baud=115200
         --junitxml=$REPORT_PATH
     - |
-      for HD_CONFIG in hd_key_mismatch hd_starved_agent; do
+      for HD_CONFIG in hd_key_mismatch hd_starved_agent hd_skip_checkpoint; do
         NUTTX_HD_BIN="$CI_PROJECT_DIR/nuttx-workspace/nuttx/build-${HD_CONFIG}/nuttx.merged.bin"
         echo "Flashing NuttX HD fail-closed ${HD_CONFIG} to ${ESPPORT} (${SOC_TAG})"
         esptool --chip "${SOC_TAG}" -p "${ESPPORT}" -b 921600 \

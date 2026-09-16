@@ -93,6 +93,7 @@ int main(void)
 		if ((status & RUNTIME_EXPECTED) != RUNTIME_EXPECTED) {
 			all_pass = false;
 		}
+		bist_hd_checkpoint_reached();
 	}
 
 	if (IS_ENABLED(CONFIG_ESP_BIST_HD_AUDIT_QA)) {
@@ -103,6 +104,14 @@ int main(void)
 		printk("test_HD_challenge:%s\n", runtime_ok ? "PASS" : "FAIL");
 	}
 
+	if (IS_ENABLED(CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT)) {
+		/*
+		 * Completing all loops proves every checkpoint was accepted
+		 * by the companion.
+		 */
+		printk("test_HD_checkpoint:%s\n", runtime_ok ? "PASS" : "FAIL");
+	}
+
 	printk("BIST_RESULT:%s\n", all_pass ? "PASS" : "FAIL");
 
 	/*
@@ -110,7 +119,8 @@ int main(void)
 	 * and optional host-audit traffic). Park main so the sample stays up.
 	 */
 	while (1) {
-		k_msleep(1000);
+		k_msleep(10);
+		bist_hd_checkpoint_reached();
 	}
 
 	return 0;

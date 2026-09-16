@@ -11,4 +11,11 @@ config BIST_HD_TEST_STARVE_AGENT
 	  expires. The ESP-BIST library is built exactly as a product would build
 	  it; the fault comes from this app.
 
+config BIST_HD_TEST_SKIP_CHECKPOINT
+	bool "Never send a checkpoint to the LP companion"
+	help
+	  The host answers Q&A challenges correctly but never calls
+	  bist_hd_checkpoint_reached(), so the companion's checkpoint deadline
+	  is the only path to safe state.
+
 source "Kconfig.zephyr"

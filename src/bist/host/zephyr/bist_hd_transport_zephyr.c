@@ -36,6 +36,7 @@ static const struct mbox_dt_spec s_tx = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer),
 static const struct mbox_dt_spec s_rx = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), rx);
 
 K_MSGQ_DEFINE(s_rx_q, sizeof(bist_hd_msg_t), HD_RX_QUEUE_LEN, 4);
+K_MUTEX_DEFINE(s_tx_mutex);
 
 static bool s_inited;
 
@@ -123,12 +124,18 @@ int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)
 	struct mbox_msg out;
 	uint32_t waited_us = 0;
 	uint32_t timeout_us;
+	k_timeout_t lock_timeout;
 
 	if (!s_inited || msg == NULL) {
 		return -EINVAL;
 	}
 	if (bist_hd_msg_encode(msg, words, BIST_HD_WIRE_WORDS_MAX, &nwords) != 0) {
 		return -EINVAL;
+	}
+
+	lock_timeout = (timeout_ms < 0) ? K_FOREVER : K_MSEC(timeout_ms);
+	if (k_mutex_lock(&s_tx_mutex, lock_timeout) != 0) {
+		return -EBUSY;
 	}
 
 	out.data = words;
@@ -139,9 +146,11 @@ int bist_hd_transport_send(const bist_hd_msg_t *msg, int32_t timeout_ms)
 		int ret = mbox_send_dt(&s_tx, &out);
 
 		if (ret != -EBUSY) {
+			k_mutex_unlock(&s_tx_mutex);
 			return ret;
 		}
 		if (timeout_ms >= 0 && waited_us >= timeout_us) {
+			k_mutex_unlock(&s_tx_mutex);
 			return -EBUSY;
 		}
 		k_busy_wait(HD_MBOX_RETRY_US);

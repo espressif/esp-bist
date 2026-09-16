@@ -132,6 +132,7 @@ void app_main(void)
         if ((status & BIST_HD_RUNTIME_ALL_PASS) != BIST_HD_RUNTIME_ALL_PASS) {
             all_pass = false;
         }
+        bist_hd_checkpoint_reached();
     }
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
@@ -148,6 +149,19 @@ void app_main(void)
     }
 #endif
 
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
+    /*
+     * The companion enters safe state on a missed or out-of-order
+     * checkpoint, which stops runtime status. Completing all loops
+     * proves every checkpoint was received.
+     */
+    if (runtime_ok) {
+        ESP_LOGI(TAG, "test_HD_checkpoint:PASS\n");
+    } else {
+        ESP_LOGI(TAG, "test_HD_checkpoint:FAIL\n");
+    }
+#endif
+
     ESP_LOGI(TAG, "BIST_RESULT:%s\n", all_pass ? "PASS" : "FAIL");
 
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
@@ -158,6 +172,7 @@ void app_main(void)
      * failure). Park app_main so the agent task keeps running.
      */
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(10));
+        bist_hd_checkpoint_reached();
     }
 }

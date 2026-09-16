@@ -5,9 +5,10 @@
 Host Diagnostics fail-closed validation on NuttX hardware.
 
 The host either answers with a challenge key the LP companion does not share
-(hd_key_mismatch) or withholds its own agent past the challenge window
-(hd_starved_agent). Either way the companion enters safe state, stops feeding
-the LP watchdog, and the chip resets.
+(hd_key_mismatch), withholds its own agent past the challenge window
+(hd_starved_agent), or never sends a checkpoint (hd_skip_checkpoint). Every
+fault variant ends with the companion entering safe state, stopping the LP
+watchdog feed, and the chip resetting.
 
 The ESP-BIST library is built exactly as a product would build it; the fault
 comes from the app under tests/integration/hd_nuttx. The happy path lives in
@@ -30,10 +31,12 @@ import pytest
 _WDT_RESET = re.compile(r"(CPU has been reset by WDT|rst:0x[0-9a-fA-F]+ \([^)]*WDT)")
 
 
-@pytest.mark.parametrize("config", ["hd_key_mismatch", "hd_starved_agent"])
+@pytest.mark.parametrize(
+    "config", ["hd_key_mismatch", "hd_starved_agent", "hd_skip_checkpoint"]
+)
 def test_hd_nuttx_fail_closed(dut, config):
-    """Wrong or missing Q&A answer → companion safe state → LP WDT reset."""
-    assert config in ("hd_key_mismatch", "hd_starved_agent")
+    """Wrong/missing Q&A answer or missing checkpoint → safe state → LP WDT reset."""
+    assert config in ("hd_key_mismatch", "hd_starved_agent", "hd_skip_checkpoint")
 
     dut.write("")
     dut.expect(r"nsh>", timeout=10)

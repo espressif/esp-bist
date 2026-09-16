@@ -1,0 +1,3 @@
+# Fail-closed: the host answers Q&A correctly but never sends a checkpoint,
+# so the companion's checkpoint deadline is the only path to safe state.
+CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT=y
