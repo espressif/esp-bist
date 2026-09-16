@@ -21,10 +21,13 @@
  * RISC-V Performance Counter CSRs. Metrics include cycles,
  * instructions, hazards, and other microarchitectural events.
  *
- * Uses Performance Counter CSRs:
+ * Uses Performance Counter CSRs on C3/C6/H2:
  * - 0x7e0: PCER (performance counter event register - enables specific events)
  * - 0x7e1: PCMR (performance counter mode register - active/always counting)
  * - 0x7e2: PCCR (performance counter count register - counter value)
+ *
+ * ESP32-C5/C61/P4/H4 do not have those CSRs (0x7e1 is mexstatus). Those
+ * targets snapshot the standard ``cycle`` / ``instret`` counters instead.
  */
 
 #pragma once
@@ -32,6 +35,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "bist_conf.h"
+#include "soc/soc_caps.h"
 #include "riscv/csr.h"
 #include "bist_log.h"
 
@@ -72,6 +76,7 @@ typedef struct {
 } bist_metrics_t;
 
 /**
+ * @def BIST_METRICS_INIT
  * @brief Initialize performance counter for specific event mode
  *
  * Configures the PMU to monitor the selected event type and resets
@@ -84,12 +89,23 @@ typedef struct {
  * BIST_METRICS_INIT(BIST_METRICS_MODE_CYCLE);
  * @endcode
  */
+#if !SOC_CPU_HAS_CSR_PC
+/** @cond */
+static uint32_t s_bist_metrics_mode;
+/** @endcond */
+
+#define BIST_METRICS_INIT(mode_)                        \
+    do {                                                \
+        s_bist_metrics_mode = (uint32_t)(mode_);        \
+    } while (0)
+#else
 #define BIST_METRICS_INIT(mode_)                        \
     do {                                                \
         RV_WRITE_CSR(CSR_PCER, (1u << (mode_)));        \
         RV_WRITE_CSR(CSR_PCMR, 1u); /* count active */  \
         RV_WRITE_CSR(CSR_PCCR, 0u);                     \
     } while (0)
+#endif
 
 /**
  * @brief Start metrics collection
@@ -107,11 +123,23 @@ typedef struct {
  * BIST_METRICS_END(my_metrics);
  * @endcode
  */
+#if !SOC_CPU_HAS_CSR_PC
+#define BIST_METRICS_BEGIN(metrics_)                                           \
+    do {                                                                      \
+        (metrics_).valid = false;                                           \
+        if (s_bist_metrics_mode == (uint32_t)BIST_METRICS_MODE_INST) {         \
+            (metrics_).start_value = (uint32_t)RV_READ_CSR(instret);       \
+        } else if (s_bist_metrics_mode == (uint32_t)BIST_METRICS_MODE_CYCLE) {\
+            (metrics_).start_value = (uint32_t)RV_READ_CSR(cycle);          \
+        }                                                                     \
+    } while (0)
+#else
 #define BIST_METRICS_BEGIN(metrics_)                    \
     do {                                                \
         (metrics_).valid = false;                       \
         (metrics_).start_value = RV_READ_CSR(CSR_PCCR); \
     } while (0)
+#endif
 
 /**
  * @brief Stop metrics collection
@@ -121,11 +149,24 @@ typedef struct {
  *
  * @param metrics_ bist_metrics_t structure (must have called BIST_METRICS_BEGIN)
  */
+#if !SOC_CPU_HAS_CSR_PC
+#define BIST_METRICS_END(metrics_)                                              \
+    do {                                                                     \
+        if (s_bist_metrics_mode == (uint32_t)BIST_METRICS_MODE_INST) {        \
+            (metrics_).end_value = (uint32_t)RV_READ_CSR(instret);        \
+            (metrics_).valid = true;                                       \
+        } else if (s_bist_metrics_mode == (uint32_t)BIST_METRICS_MODE_CYCLE) {\
+            (metrics_).end_value = (uint32_t)RV_READ_CSR(cycle);           \
+            (metrics_).valid = true;                                       \
+        }                                                                    \
+    } while (0)
+#else
 #define BIST_METRICS_END(metrics_)                      \
     do {                                                \
         (metrics_).end_value = RV_READ_CSR(CSR_PCCR);   \
         (metrics_).valid = true;                        \
     } while (0)
+#endif
 
 /**
  * @brief Print metrics to console
@@ -143,6 +184,19 @@ typedef struct {
  * METRICS: ram_test Mode: 0 delta=12345
  * @endcode
  */
+#if !SOC_CPU_HAS_CSR_PC
+#define BIST_METRICS_PRINT(name_, metrics_)                                                                            \
+    do {                                                                                                               \
+        if ((metrics_).valid) {                                                                                        \
+            uint32_t _delta = (metrics_).end_value - (metrics_).start_value;                                           \
+            ESP_LOGI("bist_metrics", "METRICS: %s Mode: %d delta=%u", (name_) ? (name_) : "test",                       \
+                     (int)s_bist_metrics_mode, _delta);                                                                \
+        }                                                                                                              \
+        else {                                                                                                         \
+            ESP_LOGW("bist_metrics", "Invalid metrics: %s", (name_) ? (name_) : "test");                               \
+        }                                                                                                              \
+    } while (0)
+#else
 #define BIST_METRICS_PRINT(name_, metrics_)                                                                            \
     do {                                                                                                               \
         if ((metrics_).valid) {                                                                                        \
@@ -156,3 +210,4 @@ typedef struct {
         }                                                                                                              \
     }                                                                                                                  \
     while (0)
+#endif

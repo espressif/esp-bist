@@ -1730,11 +1730,13 @@ The metrics collection is designed for low-overhead instrumentation of BIST rout
 Hardware Basis
 ^^^^^^^^^^^^^^
 
-The metrics system leverages three RISC-V Performance Monitor CSRs:
+The metrics system leverages three RISC-V Performance Monitor CSRs on targets with ``SOC_CPU_HAS_CSR_PC`` (ESP32-C3, ESP32-C6, ESP32-H2):
 
 - **PCER:** Performance Counter Event Register - Selects which event to monitor (only one event at a time)
 - **PCMR:** Performance Counter Mode Register - Enables the counter and selects saturation behavior
 - **PCCR:** Performance Counter Count Register - Holds the counter value
+
+ESP32-C5, ESP32-C61, ESP32-P4, and ESP32-H4 do not implement these custom CSRs (``0x7e1`` is ``mexstatus`` on those chips). On those targets the macros snapshot the standard RISC-V ``cycle`` and ``instret`` counters instead.
 
 Event Modes
 ^^^^^^^^^^^
@@ -1847,6 +1849,7 @@ Design Considerations
 
 - **Non-intrusive:** Minimal overhead; CSR reads/writes do not significantly impact measured code
 - **Single Event at a Time:** Only one microarchitectural event can be monitored per initialization
+- **Limited events without CSR_PC:** On ESP32-C5/C61/P4/H4, only ``BIST_METRICS_MODE_CYCLE`` and ``BIST_METRICS_MODE_INST`` are measured. Other modes leave ``valid`` false and print a warning.
 - **Counter Overflow:** Counters are 32-bit; overflow is not handled and will cause measurement inaccuracy for very long code sections
 - **No Dynamic Memory:** Uses stack-allocated structures only
 - **Macro-based:** Inline implementation avoids function call overhead
