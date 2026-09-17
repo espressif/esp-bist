@@ -57,6 +57,13 @@ set(HD_COMPANION_SCENARIOS
     checkpoint_out_of_order
     checkpoint_wrap
     irq_latency_over_budget
+    diag_ok
+    diag_fail
+    diag_silent
+    diag_bad_seq
+    diag_wrong_type
+    diag_not_configured
+    diag_late
 )
 
 foreach(scenario IN LISTS HD_COMPANION_SCENARIOS)

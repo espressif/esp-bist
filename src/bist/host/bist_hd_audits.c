@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later
  *
- * Host-side Q&A challenge handler. Other catalog DIAG audits are deferred.
+ * Host-side diagnostic audit handlers.
  */
 
 #include "bist_hd_audits.h"
@@ -33,4 +33,28 @@ int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge)
     (void)challenge;
     return -1;
 #endif
+}
+
+int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
+{
+    bist_hd_msg_t rsp = {0};
+    uint32_t status = BIST_HD_STATUS_NOT_CONFIGURED;
+
+    if (req == NULL) {
+        return -1;
+    }
+
+    switch (req->audit_id) {
+    default:
+        status = BIST_HD_STATUS_NOT_CONFIGURED;
+        break;
+    }
+
+    rsp.type = BIST_HD_MSG_DIAG_RSP;
+    rsp.audit_id = req->audit_id;
+    rsp.seq = req->seq;
+    rsp.payload = status;
+    rsp.deadline_ticks = req->deadline_ticks;
+
+    return bist_hd_transport_send(&rsp, 10000);
 }

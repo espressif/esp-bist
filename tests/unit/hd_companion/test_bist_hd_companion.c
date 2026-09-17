@@ -39,6 +39,13 @@ typedef enum {
     AGENT_SILENT,
     AGENT_LATE,
     AGENT_OVER_BUDGET,
+    AGENT_DIAG_FAIL,
+    AGENT_DIAG_WRONG_SEQ,
+    AGENT_DIAG_WRONG_TYPE,
+    AGENT_DIAG_SILENT,
+    AGENT_DIAG_LATE,
+    AGENT_DIAG_NOT_CONFIGURED,
+    AGENT_DIAG_WRONG_AUDIT_ID,
 } agent_mode_t;
 
 static agent_mode_t g_mode;
@@ -57,6 +64,9 @@ static uint32_t g_last_lp_status;
 static int g_challenges;
 static uint16_t g_challenge_seq[ROUNDS_MAX];
 static uint32_t g_challenge_payload[ROUNDS_MAX];
+static int g_diag_reqs;
+static uint8_t g_last_diag_audit_id;
+static uint16_t g_last_diag_seq;
 static int g_wdt_inits;
 static int g_wdt_feeds;
 
@@ -136,6 +146,56 @@ static void answer_challenge(const bist_hd_msg_t *req)
     inbox_push(&answer);
 }
 
+static void answer_diag(const bist_hd_msg_t *req)
+{
+    bist_hd_msg_t rsp = {0};
+
+    g_diag_reqs++;
+    g_last_diag_audit_id = req->audit_id;
+    g_last_diag_seq = req->seq;
+
+    if (g_mode == AGENT_SILENT || g_mode == AGENT_DIAG_SILENT) {
+        /* Nothing queued, so the companion's receive must time out. */
+        return;
+    }
+
+    if (g_mode == AGENT_WRONG_TYPE || g_mode == AGENT_DIAG_WRONG_TYPE) {
+        rsp.type = BIST_HD_MSG_ANSWER;
+    } else {
+        rsp.type = BIST_HD_MSG_DIAG_RSP;
+    }
+
+    if (g_mode == AGENT_DIAG_WRONG_AUDIT_ID) {
+        rsp.audit_id = (uint8_t)(req->audit_id + 1u);
+    } else {
+        rsp.audit_id = req->audit_id;
+    }
+
+    if (g_mode == AGENT_WRONG_SEQ || g_mode == AGENT_DIAG_WRONG_SEQ) {
+        rsp.seq = (uint16_t)(req->seq - 1u);
+    } else {
+        rsp.seq = req->seq;
+    }
+
+    if (g_mode == AGENT_WRONG_VALUE || g_mode == AGENT_DIAG_FAIL) {
+        rsp.payload = BIST_HD_STATUS_FAIL;
+    } else if (g_mode == AGENT_DIAG_NOT_CONFIGURED) {
+        rsp.payload = BIST_HD_STATUS_NOT_CONFIGURED;
+    } else {
+        rsp.payload = BIST_HD_STATUS_OK;
+    }
+
+    rsp.deadline_ticks = req->deadline_ticks;
+
+    if (g_mode == AGENT_LATE || g_mode == AGENT_DIAG_LATE) {
+        g_elapsed_us = req->deadline_ticks + 1u;
+    } else {
+        g_elapsed_us = 100u;
+    }
+
+    inbox_push(&rsp);
+}
+
 /* --- companion OS port --- */
 
 int bist_hd_comp_port_init(void)
@@ -160,6 +220,9 @@ int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
     case BIST_HD_MSG_CHALLENGE:
         answer_challenge(msg);
         break;
+    case BIST_HD_MSG_DIAG_REQ:
+        answer_diag(msg);
+        break;
     default:
         break;
     }
@@ -168,12 +231,16 @@ int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
 
 int bist_hd_comp_port_recv(bist_hd_msg_t *msg, int32_t timeout_us)
 {
-    (void)timeout_us;
-
     if (msg == NULL) {
         return -1;
     }
-    return inbox_pop(msg);
+    if (inbox_pop(msg) == 0) {
+        return 0;
+    }
+    if (timeout_us > 0) {
+        g_elapsed_us += (uint32_t)timeout_us;
+    }
+    return -1;
 }
 
 uint32_t bist_hd_comp_port_tick(void)
@@ -452,6 +519,98 @@ static void scenario_irq_latency_over_budget(void)
     expect_eq_int(g_challenges, 1, "challenge was issued");
 }
 
+/* --- DIAG audit scenarios --- */
+
+static void scenario_diag_ok(void)
+{
+    const int rounds = 3;
+
+    g_mode = AGENT_CORRECT;
+    init_ok();
+
+    for (int i = 0; i < rounds; i++) {
+        queue_checkpoint((uint32_t)(i + 1));
+        expect_eq_int(bist_hd_companion_loop(), 0, "runtime round accepted");
+    }
+
+    expect_eq_int(g_challenges, rounds, "one QA challenge per round");
+    expect_eq_int(g_diag_reqs, rounds, "one DIAG_REQ per round");
+    expect_eq_int(g_safe_state_notifies, 0, "correct DIAG_RSP keeps companion running");
+    expect_true(g_wdt_feeds > 0, "watchdog fed while healthy");
+}
+
+static void scenario_diag_fail(void)
+{
+    g_mode = AGENT_DIAG_FAIL;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "DIAG_RSP FAIL triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 1, "DIAG_REQ was issued");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on DIAG FAIL");
+}
+
+static void scenario_diag_silent(void)
+{
+    g_mode = AGENT_DIAG_SILENT;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "silent host on DIAG_REQ triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 1, "DIAG_REQ was issued");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on DIAG timeout");
+}
+
+static void scenario_diag_bad_seq(void)
+{
+    g_mode = AGENT_DIAG_WRONG_SEQ;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "bad seq in DIAG_RSP triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 1, "DIAG_REQ was issued");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on bad seq");
+}
+
+static void scenario_diag_wrong_type(void)
+{
+    g_mode = AGENT_DIAG_WRONG_TYPE;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "wrong frame type on DIAG_REQ triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 1, "DIAG_REQ was issued");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on wrong type");
+}
+
+static void scenario_diag_not_configured(void)
+{
+    g_mode = AGENT_DIAG_NOT_CONFIGURED;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "STATUS_NOT_CONFIGURED triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 1, "DIAG_REQ was issued");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on NOT_CONFIGURED");
+}
+
+static void scenario_diag_late(void)
+{
+    g_mode = AGENT_DIAG_LATE;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "late DIAG_RSP triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 1, "DIAG_REQ was issued");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on late DIAG");
+}
+
 int main(int argc, char **argv)
 {
     const char *scenario;
@@ -504,6 +663,20 @@ int main(int argc, char **argv)
         scenario_checkpoint_wrap();
     } else if (strcmp(scenario, "irq_latency_over_budget") == 0) {
         scenario_irq_latency_over_budget();
+    } else if (strcmp(scenario, "diag_ok") == 0) {
+        scenario_diag_ok();
+    } else if (strcmp(scenario, "diag_fail") == 0) {
+        scenario_diag_fail();
+    } else if (strcmp(scenario, "diag_silent") == 0) {
+        scenario_diag_silent();
+    } else if (strcmp(scenario, "diag_bad_seq") == 0) {
+        scenario_diag_bad_seq();
+    } else if (strcmp(scenario, "diag_wrong_type") == 0) {
+        scenario_diag_wrong_type();
+    } else if (strcmp(scenario, "diag_not_configured") == 0) {
+        scenario_diag_not_configured();
+    } else if (strcmp(scenario, "diag_late") == 0) {
+        scenario_diag_late();
     } else {
         printf("unknown scenario '%s'\n", scenario);
         return 2;

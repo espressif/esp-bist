@@ -260,86 +260,6 @@
     "prompt": "Alive / deadline / logical checkpoints"
   },
   {
-    "name": "ESP_BIST_HD_AUDIT_RAM",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host runs March tests on an HP DRAM region under companion trigger.\nRequires HP linker symbols for the test region and safe stack (later).",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Host RAM March"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_FLASH",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host computes CRC of HP .flash.text on DIAG_REQ; companion compares\nagainst a build-injected golden. Host PASS alone is never trusted.\nNot wired yet (challenge-only Host Diagnostics).",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Host flash / image CRC"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_CPU",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host runs CPU general-purpose register tests under companion trigger.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Host CPU register test"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_CSR",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host runs CSR (and related config) diagnostics under companion trigger.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Host CSR / PMP-PMA config audit"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_STACK",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host stack integrity check, companion-demandable.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Stack overflow / canary / watermark"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_CLOCK",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Clock monitoring for the host time base (FTTI integrity). May use\ncompanion independent time-slot and/or host measurement.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Clock / crystal drift"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_WDT",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host reports armed/feed counters; companion checks the pattern.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Host WDT path check"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_PC",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host program-counter / program-flow sample under companion trigger.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "PC / program-flow sample"
-  },
-  {
     "name": "ESP_BIST_HD_AUDIT_IRQ_LATENCY",
     "type": "bool",
     "default": "",
@@ -350,64 +270,14 @@
     "prompt": "Interrupt latency / storm bound"
   },
   {
-    "name": "ESP_BIST_HD_AUDIT_GPIO",
+    "name": "ESP_BIST_HD_AUDIT",
     "type": "bool",
     "default": "",
     "depends_on": "",
-    "help": "Critical GPIO plausibility via companion read or host report.\nIf enabled without an app callback where required, fails NOT_CONFIGURED.",
+    "help": "Compile the companion DIAG_REQ / DIAG_RSP schedule. Individual audits\nare added under this option as each audit is implemented.",
     "menu": "Host Diagnostics Audits",
     "range": "",
-    "prompt": "Peripheral / GPIO plausibility"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_ADC",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Analog / supply plausibility via host or companion ADC when available.\nIf enabled without an app callback where required, fails NOT_CONFIGURED.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "ADC / supply plausibility"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_CONFIG_NVM",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host CRC over configured regions; golden from build or provisioning.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Config / NVM / partition integrity"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_IPC",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Protocol sequence/CRC enforcement and optional explicit IPC self-check.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "IPC / shared-mem integrity"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_SECURE_BOOT",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "Host reports secure-boot state; companion may gate supervision on it.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Secure-boot / image authenticity status"
-  },
-  {
-    "name": "ESP_BIST_HD_AUDIT_DUAL_CHANNEL",
-    "type": "bool",
-    "default": "",
-    "depends_on": "",
-    "help": "App-registered compare/cut-off callbacks; library invokes only.",
-    "menu": "Host Diagnostics Audits",
-    "range": "",
-    "prompt": "Dual-channel output compare"
+    "prompt": "Host diagnostic audits"
   },
   {
     "name": "ESP_BIST_HD_CHALLENGE_WINDOW_US",
@@ -443,7 +313,7 @@
     "name": "ESP_BIST_HD_DIAG_TIMEOUT_US",
     "type": "int",
     "default": "50000",
-    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "depends_on": "ESP_BIST_HD_AUDIT",
     "help": "Maximum time allowed for the host to complete a companion-triggered\ndiagnostic (DIAG_REQ \u2192 DIAG_RSP).",
     "menu": "Host Diagnostics Audits",
     "range": "100 60000000",

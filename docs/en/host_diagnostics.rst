@@ -378,11 +378,11 @@ Message Types
    * - ``DIAG_REQ`` (4)
      - LP to HP
      - Request a host-catalog diagnostic (``audit_id`` selects which)
-     - Defined, not handled
+     - Implemented
    * - ``DIAG_RSP`` (5)
      - HP to LP
      - Pass/fail + diagnostic id + sequence
-     - Defined, not handled
+     - Implemented
    * - ``CHECKPOINT`` (6)
      - HP to LP
      - Alive / deadline / logical checkpoint
@@ -442,14 +442,15 @@ Timeouts
      - 10 000 ms
    * - Diagnostic response
      - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``
-     - 50 000 us (defined, not referenced in code)
+     - 50 000 us (50 ms)
    * - Generic tick compare
      - ``bist_hd_timeout_expired()``
      - Unsigned wrap-safe comparison
 
-``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US`` is defined in Kconfig but not yet
-referenced by the companion or agent. It will be used once ``DIAG_REQ`` /
-``DIAG_RSP`` handling is implemented.
+``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US`` is used by the companion when waiting
+for ``DIAG_RSP`` after issuing a ``DIAG_REQ``. During the wait, the companion
+periodically feeds the LP watchdog to avoid triggering a reset while awaiting
+the host response.
 
 Challenge Algorithm
 ^^^^^^^^^^^^^^^^^^^
@@ -590,9 +591,23 @@ Each iteration:
      answer, additionally check that elapsed round-trip time does not exceed
      ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``.
    - If any challenge, value, sequence, timeout, or IRQ latency check fails: ``bist_hd_safe_state()``.
+#. **Host Diagnostic Catalog Audits (DIAG_REQ / DIAG_RSP)**: If
+   ``CONFIG_ESP_BIST_HD_AUDIT`` is enabled. The schedule is empty until
+   individual catalog audits (and their Kconfig symbols) are implemented.
+   For each enabled audit in the schedule:
+
+   - Send ``DIAG_REQ`` with monotonic sequence number, ``audit_id``, and
+     timeout window (``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``).
+   - Wait for ``DIAG_RSP`` while periodically feeding the LP WDT.
+   - Consume any interleaved ``CHECKPOINT`` frames immediately via
+     ``process_checkpoint()``.
+   - Validate response frame type, sequence number, ``audit_id``, deadline,
+     and payload status (``BIST_HD_STATUS_OK``).
+   - On any timeout, bad frame, mismatched sequence, or failed payload:
+     ``bist_hd_safe_state()``.
 #. **Check Checkpoint Deadline**: If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled:
    evaluate ``check_checkpoint()``. If a checkpoint was received during this loop
-   (in step 3 or step 7), reset ``s_checkpoint_miss_count = 0`` and arm ID-order
+   (in step 3, step 7, or step 8), reset ``s_checkpoint_miss_count = 0`` and arm ID-order
    tracking. Otherwise, increment ``s_checkpoint_miss_count``; if it exceeds
    ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS`` (including a host that never
    reports from boot): ``bist_hd_safe_state()``.
@@ -635,7 +650,14 @@ The worker thread runs an infinite receive loop:
      the companion would still run ``check_checkpoint()`` and enter safe state.
    - Compute the challenge answer via ``bist_hd_challenge_answer()`` and send
      ``ANSWER`` back to the companion.
-#. Unsupported or deferred incoming command frames (e.g. ``DIAG_REQ``,
+#. If ``DIAG_REQ``: check for stale or duplicate sequence numbers
+   (``bist_hd_seq_is_stale()``); if fresh:
+
+   - If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled and a checkpoint is
+     pending, send the ``CHECKPOINT`` frame first.
+   - Dispatch to ``bist_hd_audit_handle_diag()`` to execute the requested
+     catalog audit and transmit ``DIAG_RSP`` back to the companion.
+#. Unsupported or unknown incoming command frames (e.g.
    ``SAFE_STATE_NOTIFY``) are dropped.
 
 On receive errors the worker yields for 1 ms to avoid spinning on a
@@ -717,8 +739,8 @@ The companion schedules host audits from the catalog below. Product integration
 enables the required subset via Kconfig.
 
 The **Status** column distinguishes delivered mechanisms from declared
-interfaces: a ``Declared`` audit has a protocol enum value and a Kconfig symbol
-but no wired runtime path in this revision.
+interfaces: a ``Declared`` audit has a protocol enum value. Its Kconfig
+selector and companion schedule entry are added when that audit is implemented.
 
 .. list-table::
    :header-rows: 1
@@ -824,10 +846,13 @@ Master Enable
 Audit Selectors
 ^^^^^^^^^^^^^^^
 
-Each option enables one entry in the host-audit catalog. Enabling an audit that
-depends on an STL test (e.g. ``ESP_BIST_HD_AUDIT_RAM`` selects
-``ESP_BIST_MEMORY_RAM_TEST``) automatically pulls in the corresponding STL
-module.
+Each implemented option enables one entry in the host-audit catalog.
+``CONFIG_ESP_BIST_HD_AUDIT`` compiles the ``DIAG_REQ`` / ``DIAG_RSP``
+schedule; per-audit selectors (RAM, CPU, flash, …) are added under it when
+that audit is implemented. Enabling an audit that depends on an STL test
+will ``select`` the corresponding STL module.
+
+Q&A, checkpoint, and IRQ latency stay independent of ``CONFIG_ESP_BIST_HD_AUDIT``.
 
 .. list-table::
    :header-rows: 1
@@ -839,36 +864,11 @@ module.
      - Q&A challenge / window
    * - ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT``
      - Alive / deadline / logical checkpoints (depends on ``CONFIG_ESP_BIST_HD_AUDIT_QA``)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_RAM``
-     - Host RAM March (selects ``ESP_BIST_MEMORY_RAM_TEST``)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_FLASH``
-     - Host flash CRC (selects ``ESP_BIST_MEMORY_FLASH_TEST``)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_CPU``
-     - Host CPU register test (selects ``ESP_BIST_CPU_REG_TEST``)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_CSR``
-     - Host CSR audit (selects ``ESP_BIST_CPU_CSR_REG_TEST``)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_STACK``
-     - Stack overflow / canary (selects ``ESP_BIST_STACK_TEST``)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_CLOCK``
-     - Clock / crystal drift
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_WDT``
-     - Host WDT path check
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_PC``
-     - PC / program-flow sample
    * - ``CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY``
-     - Interrupt latency / storm bound
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_GPIO``
-     - GPIO plausibility (requires app callback)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_ADC``
-     - ADC plausibility (requires app callback)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_CONFIG_NVM``
-     - Config / NVM integrity
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_IPC``
-     - IPC / shared-mem integrity
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_SECURE_BOOT``
-     - Secure-boot status (requires app callback)
-   * - ``CONFIG_ESP_BIST_HD_AUDIT_DUAL_CHANNEL``
-     - Dual-channel output compare (requires app callback)
+     - Interrupt latency / storm bound (depends on ``CONFIG_ESP_BIST_HD_AUDIT_QA``)
+   * - ``CONFIG_ESP_BIST_HD_AUDIT``
+     - Master enable for catalog ``DIAG_REQ`` / ``DIAG_RSP`` (schedule empty until
+       individual audits are implemented)
 
 Timing Parameters
 ^^^^^^^^^^^^^^^^^
@@ -888,7 +888,8 @@ Timing Parameters
    * - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``
      - int
      - 50000
-     - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us); defined, not referenced
+     - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us); depends on
+       ``CONFIG_ESP_BIST_HD_AUDIT``
    * - ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``
      - int
      - 5000
@@ -954,7 +955,7 @@ Runs host-native via ``cmake`` + ``ctest``; no device required.
 **Companion verdict matrix** (``tests/unit/hd_companion/``):
 
 Drives the real ``bist_hd_companion.c`` state machine against a scripted fake
-agent. 18 scenarios cover the judgment logic without hardware:
+agent. 25 scenarios cover the judgment logic without hardware:
 
 .. list-table::
    :header-rows: 1
@@ -999,12 +1000,27 @@ agent. 18 scenarios cover the judgment logic without hardware:
        out-of-order)
    * - ``irq_latency_over_budget``
      - Correct answer exceeding the IRQ latency budget triggers safe state
+   * - ``diag_ok``
+     - Passing ``DIAG_RSP`` accepted across multiple runtime rounds
+   * - ``diag_fail``
+     - ``DIAG_RSP`` returning ``STATUS_FAIL`` triggers safe state
+   * - ``diag_silent``
+     - Missing host response to ``DIAG_REQ`` (timeout) triggers safe state
+   * - ``diag_bad_seq``
+     - Mismatched sequence number in ``DIAG_RSP`` triggers safe state
+   * - ``diag_wrong_type``
+     - Non-``DIAG_RSP`` frame on diagnostic request triggers safe state
+   * - ``diag_not_configured``
+     - ``STATUS_NOT_CONFIGURED`` response triggers safe state
+   * - ``diag_late``
+     - ``DIAG_RSP`` exceeding the diagnostic timeout window triggers safe state
 
-Agent Checkpoint Counter (``tests/unit/hd_agent/``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Agent Checkpoint and Audit Dispatch (``tests/unit/hd_agent/``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Host-native tests for the HP agent's private checkpoint counter. Transport and
-platform adapters are stubbed; only the counter behaviour is verified.
+Host-native tests for the HP agent's private checkpoint counter and command
+dispatch. Transport and platform adapters are stubbed; only the agent logic is
+verified.
 
 .. list-table::
    :header-rows: 1
@@ -1019,6 +1035,10 @@ platform adapters are stubbed; only the counter behaviour is verified.
    * - ``checkpoint_send_failure_consumes_id``
      - A failed transport send still consumes the ID (gap of 2), so no duplicate
        reaches the companion after a partial frame error
+   * - ``diag_req_handled``
+     - Incoming ``DIAG_REQ`` is dispatched to ``bist_hd_audit_handle_diag()``
+   * - ``diag_req_flushes_checkpoint``
+     - Pending checkpoint is transmitted ahead of ``DIAG_RSP`` on ``DIAG_REQ``
 
 On-Target Fail-Closed Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1062,7 +1082,7 @@ Twister test cases:
 - ``bist.hd.skip_checkpoint`` -- HP answers Q&A correctly but never sends
   checkpoints; checkpoint deadline alone causes WDT reset (console harness).
 
-Platforms: ESP32-C5, ESP32-C6.
+Platforms: ESP32-C5, ESP32-C6, ESP32-P4.
 
 **NuttX** (``tests/integration/hd_nuttx/``):
 
