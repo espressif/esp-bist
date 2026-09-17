@@ -12,7 +12,7 @@ bist_idf_hp_collect(_bist_hd_srcs _bist_hd_incs)
 idf_component_register(
     SRCS ${_bist_hd_srcs}
     INCLUDE_DIRS ${_bist_hd_incs}
-    PRIV_REQUIRES ulp
+    PRIV_REQUIRES ulp soc
 )
 
 bist_idf_hp_apply_definitions()
