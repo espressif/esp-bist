@@ -11,6 +11,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "sdkconfig.h"
+
+#if CONFIG_ESP_SYSTEM_HW_STACK_GUARD
+#include "esp_private/hw_stack_guard.h"
+#endif
 
 #ifndef CONFIG_ESP_BIST_HD_AGENT_TASK_STACK
 #define CONFIG_ESP_BIST_HD_AGENT_TASK_STACK 3072
@@ -89,4 +94,22 @@ void bist_hd_platform_sleep_ms(uint32_t ms)
 
     /* pdMS_TO_TICKS truncates to 0 below one tick period; always yield. */
     vTaskDelay((ticks == 0) ? 1 : ticks);
+}
+
+uint32_t bist_hd_platform_irq_lock(void)
+{
+    uint32_t key = (uint32_t)portSET_INTERRUPT_MASK_FROM_ISR();
+
+#if CONFIG_ESP_SYSTEM_HW_STACK_GUARD
+    esp_hw_stack_guard_monitor_stop();
+#endif
+    return key;
+}
+
+void bist_hd_platform_irq_unlock(uint32_t key)
+{
+#if CONFIG_ESP_SYSTEM_HW_STACK_GUARD
+    esp_hw_stack_guard_monitor_start();
+#endif
+    portCLEAR_INTERRUPT_MASK_FROM_ISR(key);
 }

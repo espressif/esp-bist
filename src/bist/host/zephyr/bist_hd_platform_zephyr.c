@@ -8,6 +8,7 @@
 
 #include "bist_hd_platform.h"
 
+#include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 
 #ifndef CONFIG_ESP_BIST_HD_AGENT_TASK_STACK
@@ -90,4 +91,14 @@ uint32_t bist_hd_platform_time_ms(void)
 void bist_hd_platform_sleep_ms(uint32_t ms)
 {
 	(void)k_msleep((int32_t)ms);
+}
+
+uint32_t bist_hd_platform_irq_lock(void)
+{
+	return irq_lock();
+}
+
+void bist_hd_platform_irq_unlock(uint32_t key)
+{
+	irq_unlock(key);
 }

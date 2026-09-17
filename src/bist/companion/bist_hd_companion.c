@@ -152,13 +152,16 @@ static uint16_t next_seq(void)
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT
 static const uint8_t s_scheduled_audits[] = {
-#ifdef CONFIG_ESP_BIST_HD_TEST_DIAG_SCHEDULE
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CPU
     BIST_HD_AUDIT_CPU,
+#endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CSR
+    BIST_HD_AUDIT_CSR,
 #endif
     BIST_HD_AUDIT_COUNT,
 };
 
-static int __attribute__((unused)) run_diag_audit(bist_hd_audit_id_t audit_id)
+static int run_diag_audit(bist_hd_audit_id_t audit_id)
 {
     bist_hd_msg_t req = {0};
     bist_hd_msg_t rsp;
@@ -178,10 +181,11 @@ static int __attribute__((unused)) run_diag_audit(bist_hd_audit_id_t audit_id)
     req.seq = seq;
     req.deadline_ticks = timeout_us;
 
-    t0 = bist_hd_comp_port_tick();
     if (bist_hd_comp_port_send(&req) != 0) {
         return -1;
     }
+
+    t0 = bist_hd_comp_port_tick();
 
     while (!got_rsp) {
         lp_wdt_feed();
@@ -196,14 +200,6 @@ static int __attribute__((unused)) run_diag_audit(bist_hd_audit_id_t audit_id)
         if (ret != 0) {
             continue;
         }
-#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
-        if (rsp.type == BIST_HD_MSG_CHECKPOINT) {
-            if (process_checkpoint(&rsp) != 0) {
-                return -1;
-            }
-            continue;
-        }
-#endif
         got_rsp = true;
     }
 

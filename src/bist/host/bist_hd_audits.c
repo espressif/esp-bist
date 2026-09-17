@@ -9,9 +9,25 @@
 #include "bist_hd_audits.h"
 
 #include "bist_hd_challenge.h"
+#include "bist_hd_platform.h"
 #include "bist_hd_transport.h"
 
 #include "bist_conf.h"
+#include "bist_esp_types.h"
+
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CPU
+#include "bist_cpu_regs.h"
+#endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CSR
+#include "bist_cpu_csr_regs.h"
+#endif
+
+#if defined(CONFIG_ESP_BIST_HD_AUDIT_CPU) || defined(CONFIG_ESP_BIST_HD_AUDIT_CSR)
+static uint32_t status_from_bist(bist_esp_err_t err)
+{
+    return (err == BIST_ESP_OK) ? BIST_HD_STATUS_OK : BIST_HD_STATUS_FAIL;
+}
+#endif
 
 int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge)
 {
@@ -45,6 +61,24 @@ int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
     }
 
     switch (req->audit_id) {
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CPU
+    case BIST_HD_AUDIT_CPU: {
+        uint32_t irq_key = bist_hd_platform_irq_lock();
+
+        status = status_from_bist(bist_cpu_regs_test());
+        bist_hd_platform_irq_unlock(irq_key);
+        break;
+    }
+#endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_CSR
+    case BIST_HD_AUDIT_CSR: {
+        uint32_t irq_key = bist_hd_platform_irq_lock();
+
+        status = status_from_bist(bist_cpu_csr_regs_test());
+        bist_hd_platform_irq_unlock(irq_key);
+        break;
+    }
+#endif
     default:
         status = BIST_HD_STATUS_NOT_CONFIGURED;
         break;

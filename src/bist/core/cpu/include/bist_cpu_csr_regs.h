@@ -24,7 +24,8 @@
  *   - Machine Trap Setup: MTVEC
  *   - Machine Trap Handling: MSCRATCH, MEPC, MCAUSE, MTVAL
  *
- * PMP registers on all SOCs (skipped on Zephyr):
+ * PMP registers (skipped on ULP and on HP OS ports — IDF/Zephyr/NuttX
+ * lock PMP/PMA at boot, so checkerboard writes WARL-ignore):
  *   - PMP address: PMPADDR0-PMPADDR15
  *     - C3/C6/H2: full 32-bit mask (4-byte granularity)
  *     - C5/C61: mask 0x3FFFFFE0 (25 writable bits, 128-byte granularity)
@@ -37,6 +38,8 @@
  *     WARL-clears W when R=0.
  *
  * PMA address registers on SOCs with PMA (C6, H2, C5; guarded by SOC_CPU_HAS_PMA):
+ *   skipped on ULP and on HP OS ports for the same lock/WARL reason as PMP.
+ *   When tested (bare-metal HP):
  *   - PMA address: pma_addr0-11 (mask 0x3FFFFFE0, 25 writable bits with
  *     32-byte granularity). Entries 12-15 are skipped because the ROM
  *     bootloader may configure them as active regions whose NAPOT/TOR
@@ -73,7 +76,9 @@
  * patterns (0xAAAAAAAA / 0x55555555) masked to each register's writable
  * bits. Saves original values before testing and restores them afterward.
  *
- * The number of CSRs tested varies by SOC:
+ * The number of CSRs tested varies by SOC and build:
+ *   - HP OS (IDF / Zephyr / NuttX): 5 trap CSRs (mtvec, mscratch, mepc,
+ *     mcause, mtval); PMP/PMA are locked by the runtime
  *   - ESP32-C3: 25 CSRs (5 trap + 16 pmpaddr + 4 pmpcfg)
  *   - ESP32-C6/H2: 37 CSRs (25 common + 12 pma_addr)
  *   - ESP32-C5: 39 CSRs (25 common + 12 pma_addr + mexstatus + mhint)

@@ -23,8 +23,8 @@ extern "C" {
  *
  * Initializes transport, sends AGENT_READY, and starts a high-priority
  * receive task. LP status messages are queued for
- * bist_hd_agent_wait_lp_status(). Q&A CHALLENGE frames are handled on the
- * worker path when CONFIG_ESP_BIST_HD_AUDIT_QA is enabled.
+ * bist_hd_agent_wait_lp_status(). Q&A CHALLENGE and DIAG_REQ frames are
+ * handled on the worker path.
  *
  * @return 0 on success, negative errno-style value on failure
  */
