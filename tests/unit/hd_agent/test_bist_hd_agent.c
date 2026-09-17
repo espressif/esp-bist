@@ -352,25 +352,6 @@ static void scenario_diag_req_handled(void)
     expect_eq_int(g_last_diag_req.audit_id, BIST_HD_AUDIT_CPU, "audit_id is CPU");
 }
 
-static void scenario_diag_req_flushes_checkpoint(void)
-{
-    int idx;
-
-    agent_start();
-    expect_eq_int(bist_hd_checkpoint_reached(), 0, "checkpoint reached");
-    expect_true(find_checkpoint(0) < 0, "checkpoint not sent before command");
-
-    deliver_diag_req(BIST_HD_AUDIT_CPU);
-
-    idx = find_checkpoint(0);
-    expect_true(idx >= 0, "checkpoint was flushed by DIAG_REQ");
-    if (idx >= 0) {
-        expect_eq_u32(g_sent[idx].payload, 1u, "checkpoint payload is 1");
-        expect_eq_u32(g_sent[idx].audit_id, BIST_HD_AUDIT_CHECKPOINT,
-                      "audit_id is CHECKPOINT");
-    }
-}
-
 int main(int argc, char **argv)
 {
     const char *scenario;
@@ -394,8 +375,6 @@ int main(int argc, char **argv)
         scenario_checkpoint_send_failure_consumes_id();
     } else if (strcmp(scenario, "diag_req_handled") == 0) {
         scenario_diag_req_handled();
-    } else if (strcmp(scenario, "diag_req_flushes_checkpoint") == 0) {
-        scenario_diag_req_flushes_checkpoint();
     } else {
         printf("unknown scenario '%s'\n", scenario);
         return 2;

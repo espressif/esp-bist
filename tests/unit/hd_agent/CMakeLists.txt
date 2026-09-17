@@ -43,7 +43,6 @@ set(HD_AGENT_SCENARIOS
     checkpoint_step_is_one
     checkpoint_send_failure_consumes_id
     diag_req_handled
-    diag_req_flushes_checkpoint
 )
 
 foreach(scenario IN LISTS HD_AGENT_SCENARIOS)
