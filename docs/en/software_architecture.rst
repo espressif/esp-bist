@@ -6,7 +6,7 @@ Architecture Overview and Layering
 
 This chapter describes the **standalone** bare-metal architecture
 (``samples/standalone``). For the LP-companion plus HP-agent supervision
-architecture (ESP-IDF, Zephyr, NuttX), see :doc:`host_diagnostics`.
+architecture (ESP-IDF, Zephyr), see :doc:`host_diagnostics`.
 
 The ESP-BIST standalone firmware uses a three-layer architecture:
 

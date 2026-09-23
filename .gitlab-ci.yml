@@ -28,10 +28,6 @@ spec:
       type: boolean
       default: true
       description: "Run IDF device tests"
-    run_nuttx_test:
-      type: boolean
-      default: true
-      description: "Run NuttX device tests"
     run_zephyr_test:
       type: boolean
       default: true
@@ -76,30 +72,6 @@ stages:
     QEMU_REPO="${QEMU_REPO_MIRROR}"
   fi
   echo "QEMU_REPO: ${QEMU_REPO}"
-
-.get_nuttx_repos: &get_nuttx_repos |
-  LOCAL_GIT_MIRROR="http://gitmirror.brew:6688/${CI_SERVER_HOST}:${CI_SERVER_PORT}"
-  NUTTX_OS_PATH="idf/apache/incubator-nuttx.git"
-  NUTTX_APPS_PATH="idf/apache/incubator-nuttx-apps.git"
-  ESP_HAL_PATH="espressif/esp-hal-3rdparty.git"
-  NUTTX_OS_URL_SOURCE="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${NUTTX_OS_PATH}"
-  NUTTX_APPS_URL_SOURCE="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${NUTTX_APPS_PATH}"
-  ESP_HAL_3RDPARTY_URL_SOURCE="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/${ESP_HAL_PATH}"
-  NUTTX_OS_URL_MIRROR="${LOCAL_GIT_MIRROR}/${NUTTX_OS_PATH}"
-  NUTTX_APPS_URL_MIRROR="${LOCAL_GIT_MIRROR}/${NUTTX_APPS_PATH}"
-  ESP_HAL_3RDPARTY_URL_MIRROR="${LOCAL_GIT_MIRROR}/${ESP_HAL_PATH}"
-  if [ "${USE_MIRROR}" = "false" ]; then
-    NUTTX_OS_URL="${NUTTX_OS_URL_SOURCE}"
-    NUTTX_APPS_URL="${NUTTX_APPS_URL_SOURCE}"
-    ESP_HAL_3RDPARTY_URL="${ESP_HAL_3RDPARTY_URL_SOURCE}"
-  else
-    NUTTX_OS_URL="${NUTTX_OS_URL_MIRROR}"
-    NUTTX_APPS_URL="${NUTTX_APPS_URL_MIRROR}"
-    ESP_HAL_3RDPARTY_URL="${ESP_HAL_3RDPARTY_URL_MIRROR}"
-  fi
-  echo "NUTTX_OS_URL: ${NUTTX_OS_URL}"
-  echo "NUTTX_APPS_URL: ${NUTTX_APPS_URL}"
-  echo "ESP_HAL_3RDPARTY_URL: ${ESP_HAL_3RDPARTY_URL}"
 
 .socs: &socs
   - esp32c3
@@ -377,15 +349,6 @@ build_qemu_remote:
     - ZEPHYR_BOARD: esp32p4x_function_ev_board/esp32p4/hpcore
       SOC_TAG: esp32p4
 
-.nuttx_boards_matrix: &nuttx_boards_matrix
-  matrix:
-    - NUTTX_BOARD: esp32c6-devkitc
-      NUTTX_CONFIG: ulp
-      SOC_TAG: esp32c6
-    - NUTTX_BOARD: esp32p4-function-ev-board
-      NUTTX_CONFIG: ulp
-      SOC_TAG: esp32p4
-
 build_tests:
   extends:
     - .build_template
@@ -470,73 +433,6 @@ build_zephyr_twister:
     expire_in: 1 week
     paths:
       - twister-out/
-  tags: [build]
-
-# Sample and HD fail-closed images share one NuttX/apps clone. apps/external
-# can only point at one tree at a time (both Kconfigs define
-# NUTTX_ESP_BIST_MODULE), so the symlink is switched between configures.
-# -DNXTMPDIR=ON keeps esp-hal-3rdparty in nuttx-workspace/nxtmpdir and reuses
-# it for every CMake build dir.
-build_nuttx_samples:
-  stage: Build
-  image: $CI_DOCKER_REGISTRY/nuttx/build-env-v5.5-noidf
-  before_script: []
-  timeout: 3h
-  rules:
-    - if: '"$[[ inputs.run_nuttx_test ]]" == "true"'
-  parallel: *nuttx_boards_matrix
-  variables:
-    NUTTX_WORKSPACE: "$CI_PROJECT_DIR/nuttx-workspace"
-    NUTTX_VERSION: master
-    APPS_VERSION: master
-    ESP_HAL_3RDPARTY_COMMIT: ""
-  script:
-    - *get_nuttx_repos
-    - mkdir -p "$NUTTX_WORKSPACE"
-    - |
-      echo "Cloning NuttX OS (${NUTTX_VERSION}) from ${NUTTX_OS_URL}"
-      git clone --depth 1 -b "$NUTTX_VERSION" "$NUTTX_OS_URL" "$NUTTX_WORKSPACE/nuttx"
-      echo "Cloning NuttX apps (${APPS_VERSION}) from ${NUTTX_APPS_URL}"
-      git clone --depth 1 -b "$APPS_VERSION" "$NUTTX_APPS_URL" "$NUTTX_WORKSPACE/apps"
-    - |
-      CMAKE_ARGS="-DNXTMPDIR=ON -DESP_HAL_3RDPARTY_URL=${ESP_HAL_3RDPARTY_URL}"
-      if [ -n "$ESP_HAL_3RDPARTY_COMMIT" ]; then
-        CMAKE_ARGS="$CMAKE_ARGS -DESP_HAL_3RDPARTY_VERSION=${ESP_HAL_3RDPARTY_COMMIT}"
-      fi
-      nuttx_cmake_build() {
-        local build_dir="$1"
-        shift
-        echo "Configuring ${build_dir} (${NUTTX_BOARD}:${NUTTX_CONFIG})"
-        cmake -B "${build_dir}" -DBOARD_CONFIG=${NUTTX_BOARD}:${NUTTX_CONFIG} $CMAKE_ARGS -GNinja
-        kconfig-merge -m -O "${build_dir}" "${build_dir}/.config" "$@"
-        cmake --build "${build_dir}" -t olddefconfig
-        kconfig-merge -m -O "${build_dir}" "${build_dir}/.config" "$@"
-        cmake --build "${build_dir}"
-      }
-      ln -sfn "$CI_PROJECT_DIR/samples/nuttx" "$NUTTX_WORKSPACE/apps/external"
-      ls -la "$NUTTX_WORKSPACE/apps/external"
-      cd "$NUTTX_WORKSPACE/nuttx"
-      echo "Building NuttX BIST sample (${NUTTX_BOARD}:${NUTTX_CONFIG})"
-      nuttx_cmake_build build-bist \
-        "$CI_PROJECT_DIR/samples/nuttx/nuttx_bist/configs/espressif"
-      ln -sfn "$CI_PROJECT_DIR/tests/integration/hd_nuttx" "$NUTTX_WORKSPACE/apps/external"
-      ls -la "$NUTTX_WORKSPACE/apps/external"
-      for HD_CONFIG in hd_key_mismatch hd_starved_agent hd_skip_checkpoint; do
-        echo "Building NuttX HD fail-closed ${HD_CONFIG} (${NUTTX_BOARD}:${NUTTX_CONFIG})"
-        nuttx_cmake_build "build-${HD_CONFIG}" \
-          "$CI_PROJECT_DIR/tests/integration/hd_nuttx/hd_nuttx_test/configs/espressif" \
-          "$CI_PROJECT_DIR/tests/integration/hd_nuttx/hd_nuttx_test/configs/${HD_CONFIG}"
-      done
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - nuttx-workspace/nuttx/build-bist/nuttx
-      - nuttx-workspace/nuttx/build-bist/nuttx.bin
-      - nuttx-workspace/nuttx/build-bist/nuttx.merged.bin
-      - nuttx-workspace/nuttx/build-hd_key_mismatch/nuttx.merged.bin
-      - nuttx-workspace/nuttx/build-hd_starved_agent/nuttx.merged.bin
-      - nuttx-workspace/nuttx/build-hd_skip_checkpoint/nuttx.merged.bin
   tags: [build]
 
 .idf_samples_matrix: &idf_samples_matrix
@@ -813,64 +709,6 @@ test_zephyr_device:
   extends:
     - .test_zephyr_device_template
   parallel: *zephyr_boards_matrix
-
-.test_nuttx_device_template:
-  stage: Test Device
-  image: $CI_DOCKER_REGISTRY/nuttx/build-env-v5.5-noidf
-  before_script: []
-  timeout: 2h
-  variables:
-    REPORT_PATH: 'nuttx_${SOC_TAG}_device_report.xml'
-    NUTTX_BIN: 'nuttx-workspace/nuttx/build-bist/nuttx.merged.bin'
-  script:
-    - |
-      if [ -z "${ESPPORT}" ]; then
-        echo "ESPPORT is not set on this runner"
-        exit 1
-      fi
-      echo "Flashing NuttX BIST sample to ${ESPPORT} (${SOC_TAG})"
-      esptool --chip "${SOC_TAG}" -p "${ESPPORT}" -b 921600 \
-        write-flash -fs detect -fm dio 0x0 "${NUTTX_BIN}"
-    - cd "$CI_PROJECT_DIR/samples/nuttx"
-    - pytest pytest_device* --port=$ESPPORT --baud=115200
-        --junitxml=$REPORT_PATH
-    - |
-      for HD_CONFIG in hd_key_mismatch hd_starved_agent hd_skip_checkpoint; do
-        NUTTX_HD_BIN="$CI_PROJECT_DIR/nuttx-workspace/nuttx/build-${HD_CONFIG}/nuttx.merged.bin"
-        echo "Flashing NuttX HD fail-closed ${HD_CONFIG} to ${ESPPORT} (${SOC_TAG})"
-        esptool --chip "${SOC_TAG}" -p "${ESPPORT}" -b 921600 \
-          write-flash -fs detect -fm dio 0x0 "${NUTTX_HD_BIN}"
-        cd "$CI_PROJECT_DIR/tests/integration/hd_nuttx"
-        pytest pytest_device* --port=$ESPPORT --baud=115200 \
-          --junitxml=$CI_PROJECT_DIR/tests/integration/hd_nuttx/nuttx_hd_${SOC_TAG}_${HD_CONFIG}_device_report.xml \
-          -k "${HD_CONFIG}"
-      done
-  rules:
-    - if: '"$[[ inputs.run_nuttx_test ]]" == "true"'
-  tags: [generic, $SOC_TAG]
-  needs:
-    - job: build_nuttx_samples
-      artifacts: true
-      parallel:
-        matrix:
-          - NUTTX_BOARD: ['$[[ matrix.NUTTX_BOARD ]]']
-            NUTTX_CONFIG: ['$[[ matrix.NUTTX_CONFIG ]]']
-            SOC_TAG: ['$[[ matrix.SOC_TAG ]]']
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - samples/nuttx/*_device_report.xml
-      - tests/integration/hd_nuttx/*_device_report.xml
-    reports:
-      junit:
-        - samples/nuttx/*_device_report.xml
-        - tests/integration/hd_nuttx/*_device_report.xml
-
-test_nuttx_device:
-  extends:
-    - .test_nuttx_device_template
-  parallel: *nuttx_boards_matrix
 
 # static_analysis:
 #   stage: Static-Analysis

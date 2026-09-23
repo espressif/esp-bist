@@ -24,7 +24,7 @@
  *   - Machine Trap Setup: MTVEC
  *   - Machine Trap Handling: MSCRATCH, MEPC, MCAUSE, MTVAL
  *
- * PMP registers (skipped on ULP and on HP OS ports — IDF/Zephyr/NuttX
+ * PMP registers (skipped on ULP and on HP OS ports — IDF/Zephyr
  * lock PMP/PMA at boot, so checkerboard writes WARL-ignore):
  *   - PMP address: PMPADDR0-PMPADDR15
  *     - C3/C6/H2: full 32-bit mask (4-byte granularity)
@@ -77,7 +77,7 @@
  * bits. Saves original values before testing and restores them afterward.
  *
  * The number of CSRs tested varies by SOC and build:
- *   - HP OS (IDF / Zephyr / NuttX): 5 trap CSRs (mtvec, mscratch, mepc,
+ *   - HP OS (IDF / Zephyr): 5 trap CSRs (mtvec, mscratch, mepc,
  *     mcause, mtval); PMP/PMA are locked by the runtime
  *   - ESP32-C3: 25 CSRs (5 trap + 16 pmpaddr + 4 pmpcfg)
  *   - ESP32-C6/H2: 37 CSRs (25 common + 12 pma_addr)

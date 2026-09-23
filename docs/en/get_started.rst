@@ -310,4 +310,4 @@ See also :doc:`host_diagnostics` for details on the Host Diagnostics unit tests.
 Samples
 -------
 
-The samples are located in the ``samples`` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components. For LP-companion Host Diagnostics samples (ESP-IDF, Zephyr, NuttX), see :doc:`host_diagnostics`.
+The samples are located in the ``samples`` directory. The samples demonstrate how to use the BIST library to verify the integrity and proper operation of the hardware components. For LP-companion Host Diagnostics samples (ESP-IDF, Zephyr), see :doc:`host_diagnostics`.

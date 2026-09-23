@@ -46,13 +46,10 @@ repos:
           - '--max-continuation-indent=120'
         exclude: |
           (?x)^(
-            samples/nuttx/|
             samples/zephyr/|
             tests/integration/hd_zephyr/|
             src/bist/companion/zephyr/|
-            src/bist/companion/nuttx/|
-            src/bist/host/zephyr/|
-            src/bist/host/nuttx/
+            src/bist/host/zephyr/
           )
 
   - repo: https://github.com/codespell-project/codespell

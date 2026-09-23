@@ -15,7 +15,7 @@ ESP-BIST provides a Software Test Library (STL) of Class-B-style diagnostics
 On SoCs with a low-power RISC-V core (ESP32-C5, ESP32-C6, ESP32-P4) the
 library can run on the LP-CPU as a **safety companion** that self-tests and
 then supervises the main application running on the HP-CPU under a QM
-(Quality Management) host OS (ESP-IDF, Zephyr, NuttX).
+(Quality Management) host OS (ESP-IDF, Zephyr).
 
 **Host Diagnostics** is the feature that turns this one-way observer model into
 a bidirectional supervision architecture. It adds:
@@ -130,7 +130,7 @@ Terminology
      - LP-CPU (or external MCU) that supervises the host, schedules diagnostics,
        and owns safe-state policy
    * - QM host OS
-     - Main OS on HP (ESP-IDF / Zephyr / NuttX); not ASIL/SIL-rated by itself;
+     - Main OS on HP (ESP-IDF / Zephyr); not ASIL/SIL-rated by itself;
        treated as a supervised collaborator
    * - Host Diagnostic Agent (HDA)
      - HP-side collaboration component that auto-enables with LP BIST, answers
@@ -276,7 +276,6 @@ Layering
        "Host Agent" -> "Quiesce / Exclude";
        "Quiesce / Exclude" -> "ESP-IDF";
        "Quiesce / Exclude" -> "Zephyr";
-       "Quiesce / Exclude" -> "NuttX";
        "Q&A Issuer" -> "LP WDT / Safe State";
        "Diagnostic Scheduler" -> "LP WDT / Safe State";
 
@@ -289,7 +288,6 @@ Layering
        "LP WDT / Safe State" [shape = box];
        "ESP-IDF" [shape = roundedbox];
        "Zephyr" [shape = roundedbox];
-       "NuttX" [shape = roundedbox];
 
        group {
            label = "Safety Companion";
@@ -306,7 +304,7 @@ Layering
        }
        group {
            label = "QM Host OS";
-           "ESP-IDF"; "Zephyr"; "NuttX";
+           "ESP-IDF"; "Zephyr";
        }
    }
 
@@ -625,12 +623,11 @@ On the HP side, ``bist_hd_agent_start()`` performs a one-shot setup:
 #. ``bist_hd_transport_flush()`` -- discard mailbox state left over from a
    previous HP session. The LP companion keeps running across an HP reset, so
    pending words or frames that predate ``AGENT_READY`` must be dropped. IDF
-   drains with a bounded non-blocking receive loop, Zephyr purges its RX
-   message queue, and NuttX defers to a byte-level header resync inside
-   ``bist_hd_transport_recv()`` because the driver lacks non-blocking reads.
+   drains with a bounded non-blocking receive loop, and Zephyr purges its RX
+   message queue.
 #. Send ``AGENT_READY`` magic word (``0xCAFECAFE``) to the companion.
 #. Start a high-priority worker thread (FreeRTOS task / Zephyr cooperative
-   thread / NuttX ``SCHED_FIFO`` pthread).
+   thread).
 
 The worker thread runs an infinite receive loop:
 
@@ -936,10 +933,6 @@ Agent Thread / Task
      - int
      - 1
      - ``K_PRIO_COOP()`` index (Zephyr only)
-   * - ``CONFIG_ESP_BIST_HD_AGENT_TASK_PRIO_NUTTX``
-     - int
-     - 200
-     - ``SCHED_FIFO`` priority (NuttX only)
 
 .. _hd-verification:
 
@@ -1084,19 +1077,6 @@ Twister test cases:
 
 Platforms: ESP32-C5, ESP32-C6, ESP32-P4.
 
-**NuttX** (``tests/integration/hd_nuttx/``):
-
-The same three faults as ESP-IDF (``hd_key_mismatch``, ``hd_starved_agent``,
-``hd_skip_checkpoint``), built as a NuttX custom-apps tree and flashed
-as ``nuttx.merged.bin``. Pytest asserts:
-
-#. ``test_HD_agent_ready:PASS``
-#. ``test_BIST_postboot:PASS``
-#. ``test_HD_fail_closed_armed:PASS``
-#. ROM reset-reason line containing ``WDT``
-
-Targets: ESP32-C6, ESP32-P4.
-
 **Fail-closed stimulus lives in the test application, not in the library.** The
 shipped library contains no test-only branches: a fail-closed build and a
 product build differ only in the test app's code and Kconfig. If a
@@ -1124,19 +1104,8 @@ Per-Platform Verification Depth
        starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
    * - Zephyr
      - Twister ztest + console harness (selftest, reset_cause, key_mismatch,
-       starved_agent, skip_checkpoint); targets ESP32-C5, C6, P4
-     - Q&A, checkpoint, IRQ latency, CPU/CSR — pass; fail-closed via
-       starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
-   * - NuttX
-     - pytest happy-path + fail-closed (key mismatch, starved agent, skip
-       checkpoint); targets ESP32-C6, P4
-     - Q&A, checkpoint, IRQ latency, CPU/CSR — pass; fail-closed via
-       starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
-
-Healthy silicon does not produce a CPU/CSR ``STATUS_FAIL`` payload, so
-device fail-closed for those audits is a missing ``DIAG_RSP`` (the existing
-starve configuration). Late answers, wrong sequence, wrong type, and FAIL
-payload remain unit-only on every platform.
+       starved_agent, skip_checkpoint); targets ESP32-C5, C6
+     - Q&A, checkpoint, IRQ latency — pass and fail-closed
 
 .. _hd-references:
 
@@ -1157,10 +1126,8 @@ Internal
 - ``src/bist/Kconfig`` -- Host Diagnostics configuration
 - ``samples/idf/`` -- IDF sample
 - ``samples/zephyr/`` -- Zephyr sample
-- ``samples/nuttx/nuttx_bist/`` -- NuttX sample
 - ``tests/integration/hd_idf/`` -- IDF fail-closed validation
 - ``tests/integration/hd_zephyr/`` -- Zephyr fail-closed validation
-- ``tests/integration/hd_nuttx/`` -- NuttX fail-closed validation
 - ``tests/unit/hd_agent/`` -- off-target agent checkpoint counter tests
 - ``tests/unit/hd_companion/`` -- off-target companion verdict matrix
 - ``tests/unit/hd_protocol/`` -- protocol and challenge unit tests

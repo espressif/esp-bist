@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Run every BIST device or QEMU test for one SoC, then print a pass/fail summary.
 
-Mirrors esp-nuttx-ci's HardwareTestLoop / CIQemuLoop:
-
 - One chip per invocation.
 - One pytest.main() per test app so a failure does not abort the rest.
 - Continue after failures; retry once when CI=true.
