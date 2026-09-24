@@ -36,6 +36,7 @@ Modules Architecture
 - **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks
 - **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, GPIO, timer wrappers
 - **Performance Metrics** (``include/bist_metrics.h``): Macro-based Performance Counter CSR interface for measuring CPU cycles, instruction counts, and microarchitectural events during BIST test execution
+- **Multi-core dispatch** (``core/multicore/`` API; SoC backend ``soc/esp32p4/cpu_multicore.c``): portable ``bist_multicore_call()``; P4 standalone interrupt-woken worker
 - **SoC support** (``soc/{IDF_TARGET_PATH_NAME}/``): startup, vectors, linker script, newlib stubs
 
 Hierarchy & Call Structure

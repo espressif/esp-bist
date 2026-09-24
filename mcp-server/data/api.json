@@ -96,6 +96,11 @@
         "name": "BIST_ESP_INTERRUPT_TEST_ERR",
         "value": 12,
         "description": "Interrupt test failed"
+      },
+      {
+        "name": "BIST_ESP_MULTICORE_ERR",
+        "value": 13,
+        "description": "Multi-core dispatch failed"
       }
     ]
   },
@@ -670,6 +675,34 @@
     "returns": "BIST_ESP_OK if all pairs pass; BIST_ESP_RAM_TEST_ERR if any pair fails",
     "note": "",
     "header_file": "src/bist/core/memory/include/bist_ram.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_multicore_call",
+    "signature": "bist_esp_err_t bist_multicore_call(uint32_t core_id, bist_cpu_fn_t fn, void *arg)",
+    "module": "unknown",
+    "description": "Portable multi-core function dispatch",
+    "params": [
+      {
+        "name": "arg",
+        "description": "Caller-supplied pointer."
+      },
+      {
+        "name": "core_id",
+        "description": "Target HP core."
+      },
+      {
+        "name": "fn",
+        "description": "Function to run; must not be NULL."
+      },
+      {
+        "name": "arg",
+        "description": "Pointer passed to fn. The pointed-to object must remain valid until this blocking call returns."
+      }
+    ],
+    "returns": "BIST_ESP_OK on success.; BIST_ESP_MULTICORE_ERR for an invalid core, NULL fn, or reverse dispatch.",
+    "note": "",
+    "header_file": "src/bist/core/multicore/include/bist_multicore.h",
     "kconfig_guards": []
   },
   {

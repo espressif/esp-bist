@@ -185,6 +185,7 @@ Available test applications (each in `tests/<name>/`):
 | Application         | Description |
 |---------------------|-------------|
 | `cpu_reg_test`      | CPU register integrity |
+| `multicore_test`    | Dual-HP-core function dispatch (ESP32-P4) |
 | `cpu_stack_test`    | CPU stack overflow detection |
 | `ram_test`          | Volatile memory (March A / March X / Abraham) |
 | `clock_test`        | Clock sources (32 kHz and 40 MHz oscillators) |
