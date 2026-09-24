@@ -38,7 +38,7 @@
  * the compare fails. Remapping live regions from a diagnostic task is
  * also unsafe.
  */
-#if defined(IS_ULP_COCPU) || defined(ESP_PLATFORM) || defined(__ZEPHYR__) || defined(__NuttX__)
+#if defined(IS_ULP_COCPU) || defined(ESP_PLATFORM) || defined(__ZEPHYR__)
 #define BIST_CPU_CSR_SKIP_MEM_PROTECT 1
 #endif
 

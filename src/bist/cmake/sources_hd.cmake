@@ -5,8 +5,8 @@
 #
 # Paths in outputs are relative to src/bist/.
 #
-#   bist_hd_collect_hp_sources("idf"|"zephyr"|"nuttx" out_srcs out_incs)
-#   bist_hd_collect_lp_sources("idf"|"zephyr"|"nuttx" out_srcs out_incs)
+#   bist_hd_collect_hp_sources("idf"|"zephyr" out_srcs out_incs)
+#   bist_hd_collect_lp_sources("idf"|"zephyr" out_srcs out_incs)
 #
 # Never defines IS_ULP_COCPU (callers decide).
 
@@ -44,11 +44,6 @@ function(bist_hd_collect_hp_sources os_port out_srcs out_incs)
             "host/zephyr/bist_hd_transport_zephyr.c"
             "host/zephyr/bist_hd_platform_zephyr.c"
         )
-    elseif(os_port STREQUAL "nuttx")
-        list(APPEND _srcs
-            "host/nuttx/bist_hd_transport_nuttx.c"
-            "host/nuttx/bist_hd_platform_nuttx.c"
-        )
     else()
         message(FATAL_ERROR "bist_hd_collect_hp_sources: unsupported os_port '${os_port}'")
     endif()
@@ -79,8 +74,6 @@ function(bist_hd_collect_lp_sources os_port out_srcs out_incs)
         list(APPEND _srcs "companion/idf/bist_hd_comp_port_idf.c")
     elseif(os_port STREQUAL "zephyr")
         list(APPEND _srcs "companion/zephyr/bist_hd_comp_port_zephyr.c")
-    elseif(os_port STREQUAL "nuttx")
-        list(APPEND _srcs "companion/nuttx/bist_hd_comp_port_nuttx.c")
     else()
         message(FATAL_ERROR "bist_hd_collect_lp_sources: unsupported os_port '${os_port}'")
     endif()

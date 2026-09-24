@@ -52,7 +52,6 @@
     "linker_scripts": [
       "src/soc/esp32c6/ld/idf.ld",
       "src/soc/esp32c6/ld/linker.ld",
-      "src/soc/esp32c6/ld/nuttx.ld",
       "src/soc/esp32c6/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32c6",
@@ -91,7 +90,6 @@
     "linker_scripts": [
       "src/soc/esp32p4/ld/idf.ld",
       "src/soc/esp32p4/ld/linker.ld",
-      "src/soc/esp32p4/ld/nuttx.ld",
       "src/soc/esp32p4/ld/zephyr.ld"
     ],
     "soc_dir": "src/soc/esp32p4",
