@@ -5,7 +5,8 @@
 Device smoke test for the ESP-BIST IDF sample.
 
 Checks the happy path the sample demonstrates: AGENT_READY, post-boot and
-runtime LP_STATUS, and repeated Q&A challenge/answer rounds.
+runtime LP_STATUS, host diagnostic audits (CPU, CSR, RAM) read from the
+agent context, and repeated Q&A challenge/answer rounds.
 
 Fail-closed behaviour is validated separately in tests/integration/hd_idf, so
 this sample stays a readable starting point.
@@ -34,6 +35,9 @@ def test_bist_idf_sample(dut, target):
 
     # Verify all 10 runtime loops completed with no failures in any iteration
     dut.expect("Runtime loop 10/10", timeout=30)
+    dut.expect("test_HD_audit_cpu:PASS", timeout=10)
+    dut.expect("test_HD_audit_csr:PASS", timeout=10)
+    dut.expect("test_HD_audit_ram:PASS", timeout=10)
     dut.expect("test_HD_challenge:PASS", timeout=10)
     dut.expect("test_HD_checkpoint:PASS", timeout=10)
     dut.expect("BIST_RESULT:PASS", timeout=10)

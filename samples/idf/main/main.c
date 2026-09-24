@@ -9,8 +9,9 @@
  *
  * Loads the LP companion firmware and starts the Host Diagnostic Agent.
  * The companion runs LP BIST and reports status bitmasks; the agent
- * queues them for this app to print. With CONFIG_ESP_BIST_HD_AUDIT_QA,
- * the companion also issues Q&A challenges that the agent answers on
+ * queues them for this app to print. Catalog audit results are read
+ * from the agent context. With CONFIG_ESP_BIST_HD_AUDIT_QA, the
+ * companion also issues Q&A challenges that the agent answers on
  * the worker path.
  *
  * This is the happy path only, so it stays readable as a starting point.
@@ -133,6 +134,30 @@ void app_main(void)
             all_pass = false;
         }
         bist_hd_checkpoint_reached();
+    }
+
+    bist_hd_audit_result_t audit = {0};
+
+    if (bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, &audit) != 0 ||
+            audit.valid == 0 || audit.status != BIST_HD_STATUS_OK) {
+        all_pass = false;
+        ESP_LOGI(TAG, "test_HD_audit_cpu:FAIL");
+    } else {
+        ESP_LOGI(TAG, "test_HD_audit_cpu:PASS");
+    }
+    if (bist_hd_agent_audit_get(BIST_HD_AUDIT_CSR, &audit) != 0 ||
+            audit.valid == 0 || audit.status != BIST_HD_STATUS_OK) {
+        all_pass = false;
+        ESP_LOGI(TAG, "test_HD_audit_csr:FAIL");
+    } else {
+        ESP_LOGI(TAG, "test_HD_audit_csr:PASS");
+    }
+    if (bist_hd_agent_audit_get(BIST_HD_AUDIT_RAM, &audit) != 0 ||
+            audit.valid == 0 || audit.status != BIST_HD_STATUS_OK) {
+        all_pass = false;
+        ESP_LOGI(TAG, "test_HD_audit_ram:FAIL");
+    } else {
+        ESP_LOGI(TAG, "test_HD_audit_ram:PASS");
     }
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
