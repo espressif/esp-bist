@@ -30,6 +30,7 @@
 
 #define ROUNDS_MAX 8
 #define INBOX_SIZE 8
+#define HD_DIAG_AUDITS_PER_ROUND 2
 
 typedef enum {
     AGENT_CORRECT,
@@ -534,7 +535,10 @@ static void scenario_diag_ok(void)
     }
 
     expect_eq_int(g_challenges, rounds, "one QA challenge per round");
-    expect_eq_int(g_diag_reqs, rounds, "one DIAG_REQ per round");
+    expect_eq_int(g_diag_reqs, rounds * HD_DIAG_AUDITS_PER_ROUND,
+                  "CPU and CSR DIAG_REQ once per round");
+    expect_eq_int((int)g_last_diag_audit_id, (int)BIST_HD_AUDIT_CSR,
+                  "schedule ends on CSR");
     expect_eq_int(g_safe_state_notifies, 0, "correct DIAG_RSP keeps companion running");
     expect_true(g_wdt_feeds > 0, "watchdog fed while healthy");
 }

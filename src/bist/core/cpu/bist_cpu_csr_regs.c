@@ -14,7 +14,33 @@
  */
 
 #include "bist_cpu_csr_regs.h"
+
+#if defined(__has_include)
+#if __has_include("soc/soc_caps.h")
 #include "soc/soc_caps.h"
+#endif
+#else
+#include "soc/soc_caps.h"
+#endif
+
+#ifndef SOC_CPU_HAS_PMA
+#if defined(SOC_TARGET_ESP32C3)
+#define SOC_CPU_HAS_PMA 0
+#else
+#define SOC_CPU_HAS_PMA 1
+#endif
+#endif
+
+/*
+ * PMP/PMA checkerboard writes need unlocked entries. The LP core skips
+ * them (IS_ULP_COCPU). HP OS runtimes lock the map at boot — IDF
+ * cpu_region_protect() sets PMP_L / PMA_L — so a write is ignored and
+ * the compare fails. Remapping live regions from a diagnostic task is
+ * also unsafe.
+ */
+#if defined(IS_ULP_COCPU) || defined(ESP_PLATFORM) || defined(__ZEPHYR__) || defined(__NuttX__)
+#define BIST_CPU_CSR_SKIP_MEM_PROTECT 1
+#endif
 
 #define MASK_32BIT      0xFFFFFFFF
 #define CSR_MTVEC_MASK  0xFFFFFF00
@@ -92,7 +118,7 @@
     }                                                       \
     while (0)
 
-#if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
+#if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST) || defined(CONFIG_ESP_BIST_HD_AUDIT_CSR)
 
 __attribute__((naked))
 bist_esp_err_t bist_cpu_csr_regs_test(void)
@@ -107,7 +133,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(mcause, CSR_MCAUSE_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(mtval, MASK_32BIT, errorCSR);
 
-#if !defined(IS_ULP_COCPU)
+#if !defined(BIST_CPU_CSR_SKIP_MEM_PROTECT)
     // Physical Memory Protection (PMP) address CSRs
     BIST_TEST_CSR_REG_STACKED(pmpaddr0, CSR_PMPADDR_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(pmpaddr1, CSR_PMPADDR_MASK, errorCSR);
@@ -133,7 +159,7 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     BIST_TEST_CSR_REG_STACKED(pmpcfg3, CSR_PMPCFG_MASK, errorCSR);
 #endif
 
-#if SOC_CPU_HAS_PMA && !defined(IS_ULP_COCPU)
+#if SOC_CPU_HAS_PMA && !defined(BIST_CPU_CSR_SKIP_MEM_PROTECT)
     // PMA address CSRs (entries 0-11 only; 12-15 may be active NAPOT regions)
     BIST_TEST_CSR_REG_STACKED(0xBD0, CSR_PMAADDR_MASK, errorCSR);
     BIST_TEST_CSR_REG_STACKED(0xBD1, CSR_PMAADDR_MASK, errorCSR);
@@ -172,4 +198,4 @@ bist_esp_err_t bist_cpu_csr_regs_test(void)
     ASM(" ret");
 }
 
-#endif // CONFIG_ESP_BIST_CPU_CSR_REG_TEST
+#endif /* CONFIG_ESP_BIST_CPU_CSR_REG_TEST || CONFIG_ESP_BIST_HD_AUDIT_CSR */

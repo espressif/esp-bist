@@ -274,10 +274,30 @@
     "type": "bool",
     "default": "",
     "depends_on": "",
-    "help": "Compile the companion DIAG_REQ / DIAG_RSP schedule. Individual audits\nare added under this option as each audit is implemented.",
+    "help": "Compile the companion DIAG_REQ / DIAG_RSP schedule. Individual catalog\naudits select this option when enabled.",
     "menu": "Host Diagnostics Audits",
     "range": "",
     "prompt": "Host diagnostic audits"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CPU",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host runs bist_cpu_regs_test() under companion DIAG_REQ. The STL is\ncompiled into the HP image without IS_ULP_COCPU.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host CPU register test"
+  },
+  {
+    "name": "ESP_BIST_HD_AUDIT_CSR",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Host runs bist_cpu_csr_regs_test() under companion DIAG_REQ. HP builds\ninclude the extra PMP/PMA CSRs that LP images skip.",
+    "menu": "Host Diagnostics Audits",
+    "range": "",
+    "prompt": "Host CSR / PMP-PMA config audit"
   },
   {
     "name": "ESP_BIST_HD_CHALLENGE_WINDOW_US",

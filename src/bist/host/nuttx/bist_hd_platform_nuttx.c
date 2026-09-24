@@ -12,6 +12,7 @@
 #include "bist_hd_platform.h"
 
 #include <nuttx/config.h>
+#include <nuttx/irq.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -150,4 +151,14 @@ uint32_t bist_hd_platform_time_ms(void)
 void bist_hd_platform_sleep_ms(uint32_t ms)
 {
     usleep(ms * 1000u);
+}
+
+uint32_t bist_hd_platform_irq_lock(void)
+{
+    return (uint32_t)enter_critical_section();
+}
+
+void bist_hd_platform_irq_unlock(uint32_t key)
+{
+    leave_critical_section((irqstate_t)key);
 }

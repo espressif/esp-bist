@@ -106,7 +106,7 @@
  * |    f31     |  ft11      | Temporary/scratch   |
  * ===========================
  */
-#if defined(CONFIG_ESP_BIST_CPU_REG_TEST)
+#if defined(CONFIG_ESP_BIST_CPU_REG_TEST) || defined(CONFIG_ESP_BIST_HD_AUDIT_CPU)
 
 __attribute__((naked))
 bist_esp_err_t bist_cpu_regs_test(void)
@@ -267,4 +267,4 @@ bist_esp_err_t bist_cpu_regs_test(void)
     ASM(" ret");
 }
 
-#endif // CONFIG_ESP_BIST_CPU_REG_TEST
+#endif /* CONFIG_ESP_BIST_CPU_REG_TEST || CONFIG_ESP_BIST_HD_AUDIT_CPU */

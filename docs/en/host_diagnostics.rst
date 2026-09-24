@@ -21,9 +21,8 @@ then supervises the main application running on the HP-CPU under a QM
 a bidirectional supervision architecture. It adds:
 
 - A **Host Diagnostic Agent (HDA)** on the HP side that auto-starts when the LP
-  companion is present, answers Q&A challenges, and will in future phases
-  execute companion-triggered host audits (RAM March on HP DRAM, host image
-  CRC, CPU/CSR/stack/clock checks, and more).
+  companion is present, answers Q&A challenges, and executes companion-triggered
+  host audits that are enabled in the catalog.
 - A shared **supervision protocol** with typed messages, sequence numbers,
   timeouts, and stale-frame rejection.
 - **Companion-owned safe-state policy**: the LP companion judges every answer
@@ -57,7 +56,7 @@ The companion issues timed Q&A challenges that the host must answer with a
 keyed CRC within a configurable window, proving liveness and computational
 integrity in every supervision cycle. The same channel carries a catalog of
 companion-triggered diagnostics (RAM March on HP DRAM, host image CRC,
-CPU/CSR/stack checks, and more -- see :ref:`hd-audit-catalog`) so the
+CPU/CSR checks, and more -- see :ref:`hd-audit-catalog`) so the
 companion can systematically cover the host fault space. If any answer is
 wrong, late, or missing, the companion forces safe state without host
 cooperation.
@@ -592,9 +591,9 @@ Each iteration:
      ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``.
    - If any challenge, value, sequence, timeout, or IRQ latency check fails: ``bist_hd_safe_state()``.
 #. **Host Diagnostic Catalog Audits (DIAG_REQ / DIAG_RSP)**: If
-   ``CONFIG_ESP_BIST_HD_AUDIT`` is enabled. The schedule is empty until
-   individual catalog audits (and their Kconfig symbols) are implemented.
-   For each enabled audit in the schedule:
+   ``CONFIG_ESP_BIST_HD_AUDIT`` is enabled. The schedule executes each
+   enabled catalog audit (QA stays on ``CHALLENGE`` / ``ANSWER``).
+   For each enabled audit:
 
    - Send ``DIAG_REQ`` with monotonic sequence number, ``audit_id``, and
      timeout window (``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``).
@@ -651,12 +650,15 @@ The worker thread runs an infinite receive loop:
    - Compute the challenge answer via ``bist_hd_challenge_answer()`` and send
      ``ANSWER`` back to the companion.
 #. If ``DIAG_REQ``: check for stale or duplicate sequence numbers
-   (``bist_hd_seq_is_stale()``); if fresh:
-
-   - If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled and a checkpoint is
-     pending, send the ``CHECKPOINT`` frame first.
-   - Dispatch to ``bist_hd_audit_handle_diag()`` to execute the requested
-     catalog audit and transmit ``DIAG_RSP`` back to the companion.
+   (``bist_hd_seq_is_stale()``); if fresh, dispatch to
+   ``bist_hd_audit_handle_diag()`` to execute the requested catalog audit
+   and transmit ``DIAG_RSP``. ``BIST_HD_AUDIT_CPU`` runs
+   ``bist_cpu_regs_test()``, ``BIST_HD_AUDIT_CSR`` runs
+   ``bist_cpu_csr_regs_test()`` (trap CSRs only: the HP OS has already
+   locked PMP/PMA, so those entries are not written). CPU and CSR run
+   with the OS irq lock held. Unknown or disabled ``audit_id`` values
+   return ``BIST_HD_STATUS_NOT_CONFIGURED``. Checkpoints are not flushed
+   here; they ride the Q&A window only.
 #. Unsupported or unknown incoming command frames (e.g.
    ``SAFE_STATE_NOTIFY``) are dropped.
 
@@ -769,15 +771,11 @@ selector and companion schedule entry are added when that audit is implemented.
    * - Host CPU register test
      - HP reg stuck-at / coupling
      - Host under companion trigger
-     - Declared (``BIST_HD_AUDIT_CPU``)
+     - **Implemented** (``BIST_HD_AUDIT_CPU``)
    * - Host CSR / PMP-PMA config audit
      - Bad privilege / memory protection config
-     - Host under trigger; companion checks config
-     - Declared (``BIST_HD_AUDIT_CSR``)
-   * - Stack overflow / canary / watermark
-     - Stack smash, stack pressure
-     - Host periodic + companion demand
-     - Declared (``BIST_HD_AUDIT_STACK``)
+     - Host under trigger
+     - **Implemented** (``BIST_HD_AUDIT_CSR``) wired on HP OS
    * - Clock / crystal drift
      - Wrong time base (breaks FTTI)
      - Companion time-slot and/or host measure
@@ -848,9 +846,9 @@ Audit Selectors
 
 Each implemented option enables one entry in the host-audit catalog.
 ``CONFIG_ESP_BIST_HD_AUDIT`` compiles the ``DIAG_REQ`` / ``DIAG_RSP``
-schedule; per-audit selectors (RAM, CPU, flash, …) are added under it when
-that audit is implemented. Enabling an audit that depends on an STL test
-will ``select`` the corresponding STL module.
+schedule. Individual catalog audit selectors ``select`` that framework option
+and compile the matching STL module into the HP image without
+``IS_ULP_COCPU``.
 
 Q&A, checkpoint, and IRQ latency stay independent of ``CONFIG_ESP_BIST_HD_AUDIT``.
 
@@ -867,8 +865,12 @@ Q&A, checkpoint, and IRQ latency stay independent of ``CONFIG_ESP_BIST_HD_AUDIT`
    * - ``CONFIG_ESP_BIST_HD_AUDIT_IRQ_LATENCY``
      - Interrupt latency / storm bound (depends on ``CONFIG_ESP_BIST_HD_AUDIT_QA``)
    * - ``CONFIG_ESP_BIST_HD_AUDIT``
-     - Master enable for catalog ``DIAG_REQ`` / ``DIAG_RSP`` (schedule empty until
-       individual audits are implemented)
+     - Master enable for catalog ``DIAG_REQ`` / ``DIAG_RSP`` (selected by
+       individual catalog audit options)
+   * - ``CONFIG_ESP_BIST_HD_AUDIT_CPU``
+     - Host CPU register test (``bist_cpu_regs_test()`` on DIAG_REQ)
+   * - ``CONFIG_ESP_BIST_HD_AUDIT_CSR``
+     - Host CSR / PMP-PMA test (``bist_cpu_csr_regs_test()`` on DIAG_REQ)
 
 Timing Parameters
 ^^^^^^^^^^^^^^^^^
@@ -1037,8 +1039,6 @@ verified.
        reaches the companion after a partial frame error
    * - ``diag_req_handled``
      - Incoming ``DIAG_REQ`` is dispatched to ``bist_hd_audit_handle_diag()``
-   * - ``diag_req_flushes_checkpoint``
-     - Pending checkpoint is transmitted ahead of ``DIAG_RSP`` on ``DIAG_REQ``
 
 On-Target Fail-Closed Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1120,15 +1120,23 @@ Per-Platform Verification Depth
    * - ESP-IDF
      - pytest happy-path + fail-closed (key mismatch, starved agent, skip
        checkpoint); targets ESP32-C5, C6, P4
-     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+     - Q&A, checkpoint, IRQ latency, CPU/CSR — pass; fail-closed via
+       starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
    * - Zephyr
      - Twister ztest + console harness (selftest, reset_cause, key_mismatch,
-       starved_agent, skip_checkpoint); targets ESP32-C5, C6
-     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+       starved_agent, skip_checkpoint); targets ESP32-C5, C6, P4
+     - Q&A, checkpoint, IRQ latency, CPU/CSR — pass; fail-closed via
+       starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
    * - NuttX
      - pytest happy-path + fail-closed (key mismatch, starved agent, skip
        checkpoint); targets ESP32-C6, P4
-     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+     - Q&A, checkpoint, IRQ latency, CPU/CSR — pass; fail-closed via
+       starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
+
+Healthy silicon does not produce a CPU/CSR ``STATUS_FAIL`` payload, so
+device fail-closed for those audits is a missing ``DIAG_RSP`` (the existing
+starve configuration). Late answers, wrong sequence, wrong type, and FAIL
+payload remain unit-only on every platform.
 
 .. _hd-references:
 
@@ -1146,8 +1154,8 @@ Internal
 - ``src/bist/bist_hd_challenge.c`` -- Q&A answer function
 - ``src/bist/companion/bist_hd_companion.c`` -- companion state machine
 - ``src/bist/host/bist_hd_agent.c`` -- agent worker loop
-- ``src/bist/Kconfig`` -- Host Diagnostics configuration (lines 189-377)
-- ``samples/idf/`` -- IDF sample (agent/companion, Q&A)
+- ``src/bist/Kconfig`` -- Host Diagnostics configuration
+- ``samples/idf/`` -- IDF sample
 - ``samples/zephyr/`` -- Zephyr sample
 - ``samples/nuttx/nuttx_bist/`` -- NuttX sample
 - ``tests/integration/hd_idf/`` -- IDF fail-closed validation

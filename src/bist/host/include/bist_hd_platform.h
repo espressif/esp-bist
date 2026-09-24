@@ -65,6 +65,18 @@ uint32_t bist_hd_platform_time_ms(void);
  */
 void bist_hd_platform_sleep_ms(uint32_t ms);
 
+/**
+ * @brief Mask interrupts (OS irq lock / critical section).
+ *
+ * @return Opaque key for bist_hd_platform_irq_unlock()
+ */
+uint32_t bist_hd_platform_irq_lock(void);
+
+/**
+ * @brief Restore interrupt mask from a key returned by irq_lock.
+ */
+void bist_hd_platform_irq_unlock(uint32_t key);
+
 #ifdef __cplusplus
 }
 #endif

@@ -5,11 +5,10 @@
 #
 # Paths in outputs are relative to src/bist/.
 #
-#   bist_hd_collect_hp_sources("idf"|"zephyr" out_srcs out_incs)
-#   bist_hd_collect_lp_sources("idf"|"zephyr" out_srcs out_incs)
+#   bist_hd_collect_hp_sources("idf"|"zephyr"|"nuttx" out_srcs out_incs)
+#   bist_hd_collect_lp_sources("idf"|"zephyr"|"nuttx" out_srcs out_incs)
 #
 # Never defines IS_ULP_COCPU (callers decide).
-# Catalog DIAG audits / app callbacks / HP STL slices are deferred.
 
 function(bist_hd_collect_hp_sources os_port out_srcs out_incs)
     set(_srcs
@@ -23,7 +22,17 @@ function(bist_hd_collect_hp_sources os_port out_srcs out_incs)
         "include"
         "host/include"
         "ulp_include"
+        "drivers/include"
     )
+
+    if(CONFIG_ESP_BIST_HD_AUDIT_CPU)
+        list(APPEND _srcs "core/cpu/bist_cpu_regs.c")
+        list(APPEND _incs "core/cpu/include")
+    endif()
+    if(CONFIG_ESP_BIST_HD_AUDIT_CSR)
+        list(APPEND _srcs "core/cpu/bist_cpu_csr_regs.c")
+        list(APPEND _incs "core/cpu/include")
+    endif()
 
     if(os_port STREQUAL "idf")
         list(APPEND _srcs
@@ -44,6 +53,7 @@ function(bist_hd_collect_hp_sources os_port out_srcs out_incs)
         message(FATAL_ERROR "bist_hd_collect_hp_sources: unsupported os_port '${os_port}'")
     endif()
 
+    list(REMOVE_DUPLICATES _incs)
     set(${out_srcs} "${_srcs}" PARENT_SCOPE)
     set(${out_incs} "${_incs}" PARENT_SCOPE)
 endfunction()
@@ -62,6 +72,7 @@ function(bist_hd_collect_lp_sources os_port out_srcs out_incs)
         "include"
         "companion/include"
         "ulp_include"
+        "drivers/include"
     )
 
     if(os_port STREQUAL "idf")

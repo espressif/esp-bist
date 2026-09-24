@@ -37,6 +37,11 @@ if(CONFIG_ESP_NUTTX_BIST)
     foreach(_inc IN LISTS _hd_hp_incs)
       list(APPEND _nuttx_bist_hp_incs "${BIST_DIR}/${_inc}")
     endforeach()
+    if(NOT CHIP_SERIES)
+      string(REPLACE "\"" "" CHIP_SERIES "${CONFIG_ESPRESSIF_CHIP_SERIES}")
+    endif()
+    string(TOUPPER "${CHIP_SERIES}" _bist_hd_soc_upper)
+    list(APPEND _nuttx_bist_hp_defs "SOC_TARGET_${_bist_hd_soc_upper}")
   endif()
 
   nuttx_add_application(

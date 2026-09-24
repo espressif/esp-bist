@@ -7,8 +7,9 @@
  * Transport and OS primitives come from platform adapters (IDF today).
  *
  * Handles LP_STATUS, Q&A CHALLENGE, CHECKPOINT reporting, and DIAG_REQ
- * catalog audit dispatch. SAFE_STATE_NOTIFY may arrive on the wire;
- * the companion owns safe state (e.g. stops feeding LP WDT) regardless.
+ * catalog audit dispatch.
+ * SAFE_STATE_NOTIFY may arrive on the wire; the companion owns safe
+ * state (e.g. stops feeding LP WDT) regardless.
  */
 
 #include "bist_hd_agent.h"
@@ -93,9 +94,6 @@ static void agent_worker(void *arg)
             if (!accept_seq(msg.seq)) {
                 continue;
             }
-#ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
-            send_checkpoint();
-#endif
             (void)bist_hd_audit_handle_diag(&msg);
             continue;
         }

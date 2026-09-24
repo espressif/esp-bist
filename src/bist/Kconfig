@@ -225,8 +225,22 @@ config ESP_BIST_HD_AUDIT_IRQ_LATENCY
 config ESP_BIST_HD_AUDIT
     bool "Host diagnostic audits"
     help
-      Compile the companion DIAG_REQ / DIAG_RSP schedule. Individual audits
-      are added under this option as each audit is implemented.
+      Compile the companion DIAG_REQ / DIAG_RSP schedule. Individual catalog
+      audits select this option when enabled.
+
+config ESP_BIST_HD_AUDIT_CPU
+    bool "Host CPU register test"
+    select ESP_BIST_HD_AUDIT
+    help
+      Host runs bist_cpu_regs_test() under companion DIAG_REQ. The STL is
+      compiled into the HP image without IS_ULP_COCPU.
+
+config ESP_BIST_HD_AUDIT_CSR
+    bool "Host CSR / PMP-PMA config audit"
+    select ESP_BIST_HD_AUDIT
+    help
+      Host runs bist_cpu_csr_regs_test() under companion DIAG_REQ. HP builds
+      include the extra PMP/PMA CSRs that LP images skip.
 
 endmenu # Host Diagnostics Audits
 
