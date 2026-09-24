@@ -30,7 +30,9 @@
 
 #define ROUNDS_MAX 8
 #define INBOX_SIZE 8
-#define HD_DIAG_AUDITS_PER_ROUND 2
+#define DIAG_LOG_MAX 32
+/* CPU, CSR, and one RAM request. The host marches the whole span. */
+#define HD_DIAG_AUDITS_PER_ROUND 3
 
 typedef enum {
     AGENT_CORRECT,
@@ -47,6 +49,8 @@ typedef enum {
     AGENT_DIAG_LATE,
     AGENT_DIAG_NOT_CONFIGURED,
     AGENT_DIAG_WRONG_AUDIT_ID,
+    AGENT_DIAG_FAIL_RAM,
+    AGENT_DIAG_SILENT_RAM,
 } agent_mode_t;
 
 static agent_mode_t g_mode;
@@ -67,7 +71,10 @@ static uint16_t g_challenge_seq[ROUNDS_MAX];
 static uint32_t g_challenge_payload[ROUNDS_MAX];
 static int g_diag_reqs;
 static uint8_t g_last_diag_audit_id;
+static uint32_t g_last_diag_payload;
 static uint16_t g_last_diag_seq;
+static uint8_t g_diag_ids[DIAG_LOG_MAX];
+static uint32_t g_diag_payloads[DIAG_LOG_MAX];
 static int g_wdt_inits;
 static int g_wdt_feeds;
 
@@ -153,9 +160,15 @@ static void answer_diag(const bist_hd_msg_t *req)
 
     g_diag_reqs++;
     g_last_diag_audit_id = req->audit_id;
+    g_last_diag_payload = req->payload;
     g_last_diag_seq = req->seq;
+    if (g_diag_reqs <= DIAG_LOG_MAX) {
+        g_diag_ids[g_diag_reqs - 1] = req->audit_id;
+        g_diag_payloads[g_diag_reqs - 1] = req->payload;
+    }
 
-    if (g_mode == AGENT_SILENT || g_mode == AGENT_DIAG_SILENT) {
+    if (g_mode == AGENT_SILENT || g_mode == AGENT_DIAG_SILENT ||
+            (g_mode == AGENT_DIAG_SILENT_RAM && req->audit_id == BIST_HD_AUDIT_RAM)) {
         /* Nothing queued, so the companion's receive must time out. */
         return;
     }
@@ -178,7 +191,8 @@ static void answer_diag(const bist_hd_msg_t *req)
         rsp.seq = req->seq;
     }
 
-    if (g_mode == AGENT_WRONG_VALUE || g_mode == AGENT_DIAG_FAIL) {
+    if (g_mode == AGENT_WRONG_VALUE || g_mode == AGENT_DIAG_FAIL ||
+            (g_mode == AGENT_DIAG_FAIL_RAM && req->audit_id == BIST_HD_AUDIT_RAM)) {
         rsp.payload = BIST_HD_STATUS_FAIL;
     } else if (g_mode == AGENT_DIAG_NOT_CONFIGURED) {
         rsp.payload = BIST_HD_STATUS_NOT_CONFIGURED;
@@ -536,11 +550,53 @@ static void scenario_diag_ok(void)
 
     expect_eq_int(g_challenges, rounds, "one QA challenge per round");
     expect_eq_int(g_diag_reqs, rounds * HD_DIAG_AUDITS_PER_ROUND,
-                  "CPU and CSR DIAG_REQ once per round");
-    expect_eq_int((int)g_last_diag_audit_id, (int)BIST_HD_AUDIT_CSR,
-                  "schedule ends on CSR");
+                  "CPU, CSR, and one RAM request per round");
+    expect_eq_int((int)g_last_diag_audit_id, (int)BIST_HD_AUDIT_RAM,
+                  "schedule ends on the RAM audit");
+    expect_eq_int((int)g_last_diag_payload, 0,
+                  "RAM DIAG_REQ payload stays 0");
     expect_eq_int(g_safe_state_notifies, 0, "correct DIAG_RSP keeps companion running");
     expect_true(g_wdt_feeds > 0, "watchdog fed while healthy");
+
+    {
+        int base = (rounds - 1) * HD_DIAG_AUDITS_PER_ROUND;
+
+        expect_eq_int((int)g_diag_ids[base], (int)BIST_HD_AUDIT_CPU, "CPU precedes RAM");
+        expect_eq_int((int)g_diag_ids[base + 1], (int)BIST_HD_AUDIT_CSR, "CSR precedes RAM");
+        expect_eq_int((int)g_diag_payloads[base], 0, "CPU DIAG payload stays 0");
+        expect_eq_int((int)g_diag_ids[base + 2], (int)BIST_HD_AUDIT_RAM,
+                      "one RAM audit after CSR");
+        expect_eq_int((int)g_diag_payloads[base + 2], 0,
+                      "RAM DIAG_REQ payload stays 0");
+    }
+}
+
+static void scenario_diag_ram_fail(void)
+{
+    g_mode = AGENT_DIAG_FAIL_RAM;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "RAM STATUS_FAIL triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 3, "CPU and CSR passed; the RAM request failed");
+    expect_eq_int((int)g_last_diag_audit_id, (int)BIST_HD_AUDIT_RAM, "failure is the RAM audit");
+    expect_eq_int((int)g_last_diag_payload, 0, "RAM DIAG payload stays 0");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on RAM FAIL");
+}
+
+static void scenario_diag_ram_silent(void)
+{
+    g_mode = AGENT_DIAG_SILENT_RAM;
+    init_ok();
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "silent RAM chunk triggers safe state");
+    expect_eq_int(g_challenges, 1, "QA challenge passed");
+    expect_eq_int(g_diag_reqs, 3, "CPU and CSR passed; the RAM request timed out");
+    expect_eq_int((int)g_last_diag_audit_id, (int)BIST_HD_AUDIT_RAM, "timeout is the RAM audit");
+    expect_eq_int(g_safe_state_notifies, 1, "safe state triggered on RAM timeout");
+    expect_true(g_wdt_feeds > 0, "watchdog fed while waiting for DIAG_RSP");
 }
 
 static void scenario_diag_fail(void)
@@ -681,6 +737,10 @@ int main(int argc, char **argv)
         scenario_diag_not_configured();
     } else if (strcmp(scenario, "diag_late") == 0) {
         scenario_diag_late();
+    } else if (strcmp(scenario, "diag_ram_fail") == 0) {
+        scenario_diag_ram_fail();
+    } else if (strcmp(scenario, "diag_ram_silent") == 0) {
+        scenario_diag_ram_silent();
     } else {
         printf("unknown scenario '%s'\n", scenario);
         return 2;

@@ -159,6 +159,16 @@ void bist_hd_platform_sleep_ms(uint32_t ms)
     (void)ms;
 }
 
+uint32_t bist_hd_platform_irq_lock(void)
+{
+    return 0;
+}
+
+void bist_hd_platform_irq_unlock(uint32_t key)
+{
+    (void)key;
+}
+
 /* ----- audit stub ------------------------------------------------------ */
 
 static bist_hd_msg_t g_last_diag_req;

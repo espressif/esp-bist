@@ -64,6 +64,8 @@ set(HD_COMPANION_SCENARIOS
     diag_wrong_type
     diag_not_configured
     diag_late
+    diag_ram_fail
+    diag_ram_silent
 )
 
 foreach(scenario IN LISTS HD_COMPANION_SCENARIOS)
