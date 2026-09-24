@@ -21,6 +21,9 @@
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CSR
 #include "bist_cpu_csr_regs.h"
 #endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_RAM
+#include "bist_ram.h"
+#endif
 
 static uint32_t status_from_bist(bist_esp_err_t err)
 {
@@ -78,6 +81,24 @@ int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
 
         status = status_from_bist(bist_cpu_csr_regs_test());
         bist_hd_platform_irq_unlock(irq_key);
+        break;
+    }
+#endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_RAM
+    case BIST_HD_AUDIT_RAM: {
+        uint32_t irq_key;
+
+        /*
+         * Same March A as the standalone test: one call walks the span
+         * in backup-sized chunks on the safe stack. Interrupts stay
+         * masked for that whole call. A smaller chunk makes the call
+         * take longer.
+         */
+        bist_hd_platform_preempt_lock();
+        irq_key = bist_hd_platform_irq_lock();
+        status = status_from_bist(bist_ram_test_march_a());
+        bist_hd_platform_irq_unlock(irq_key);
+        bist_hd_platform_preempt_unlock();
         break;
     }
 #endif

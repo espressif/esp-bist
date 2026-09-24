@@ -86,7 +86,7 @@ extern "C" {
 #define BIST_HD_STATUS_BAD_SEQ        4u
 
 /**
- * @brief Host-audit catalog identifiers (equal rank; product enables a subset).
+ * @brief Host-audit catalog identifiers.
  */
 typedef enum {
     BIST_HD_AUDIT_QA = 0,

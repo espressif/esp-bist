@@ -36,16 +36,20 @@ config ESP_BIST_RAM_PARTITION_SIZE
     default 256 if IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE
     default 512
     help
-        Size of each RAM test partition in 32-bit words. March A/X test one
-        partition at a time; Abraham tests pairs. Larger values reduce the
-        number of Abraham pairs C(N,2) and thus the execution time of
-        bist_ram_test_abraham_full(), at the cost of a larger safe-RAM
-        backup buffer (2 x partition_size x 4 bytes).
+        Backup size, in 32-bit words, for March A and March X on the
+        standalone image and the companion. Abraham tests pairs of the
+        same size. A smaller partition makes a full-span march take
+        longer, because each word is backed up and restored more often,
+        and it makes bist_ram_test_abraham_full() run more pairs C(N,2).
+        The safe-RAM backup buffer is 2 x partition_size x 4 bytes.
+        The host march uses ESP_BIST_HD_RAM_PARTITION_SIZE instead, so
+        this value can stay small enough for LP SRAM.
 
         Common values:
-          256  = 1 KiB partitions, 2 KiB backup buffer (LP core default)
-          512  = 2 KiB partitions, 4 KiB backup buffer (standalone default)
-          1024 = 4 KiB partitions, 8 KiB backup buffer
+          64   = 256 B partitions, 512 B backup (LP samples)
+          256  = 1 KiB partitions, 2 KiB backup (OS-module default)
+          512  = 2 KiB partitions, 4 KiB backup (standalone default)
+          1024 = 4 KiB partitions, 8 KiB backup
 
 config ESP_BIST_STACK_TEST
     bool "Stack Test"
@@ -242,6 +246,32 @@ config ESP_BIST_HD_AUDIT_CSR
       Host runs bist_cpu_csr_regs_test() under companion DIAG_REQ. HP builds
       include the extra PMP/PMA CSRs that LP images skip.
 
+config ESP_BIST_HD_AUDIT_RAM
+    bool "Host RAM March"
+    select ESP_BIST_HD_AUDIT
+    help
+      Host marches live HP DRAM under companion DIAG_REQ: from the heap
+      (or the first byte of .dram0.noinit on Zephyr) through the end of
+      the SRAM region. Mailbox context and .dram0.safe_ram stay outside
+      that span by calling bist_ram_test_march_a(). That is the same March
+      A as the standalone test. One DIAG_REQ covers the span. The call
+      takes longer when HD_RAM_PARTITION_SIZE is smaller. Interrupts stay
+      masked for the whole call, so it must finish inside the host
+      interrupt watchdog and inside DIAG_TIMEOUT_US.
+
+config ESP_BIST_HD_RAM_PARTITION_SIZE
+    int "Host RAM March partition size (words)"
+    depends on ESP_BIST_HD_AUDIT_RAM
+    default 256
+    range 4 1024
+    help
+      Backup size, in 32-bit words, for the host March A. The companion
+      keeps using RAM_PARTITION_SIZE, so a shared HP/LP configuration can
+      give the LP image a small partition and the host its own. A smaller
+      partition makes the host march take longer, because each word is
+      backed up and restored more often. The safe-RAM backup buffer is
+      2 x partition_size x 4 bytes.
+
 endmenu # Host Diagnostics Audits
 
 config ESP_BIST_HD_CHALLENGE_WINDOW_US
@@ -277,7 +307,7 @@ config ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS
 config ESP_BIST_HD_DIAG_TIMEOUT_US
     int "Diagnostic response timeout (us)"
     depends on ESP_BIST_HD_AUDIT
-    default 50000
+    default 1000000
     range 100 60000000
     help
       Maximum time allowed for the host to complete a companion-triggered
@@ -295,7 +325,7 @@ config ESP_BIST_HD_AGENT_READY_TIMEOUT_US
 config ESP_BIST_HD_AGENT_TASK_STACK
     int "Host Diagnostic Agent stack size (bytes)"
     depends on ESP_BIST_HOST_DIAGNOSTICS
-    default 3072
+    default 4096
     range 1024 16384
     help
       Stack for the high-priority HP thread/task that answers companion

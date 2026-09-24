@@ -158,6 +158,9 @@ static const uint8_t s_scheduled_audits[] = {
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CSR
     BIST_HD_AUDIT_CSR,
 #endif
+#ifdef CONFIG_ESP_BIST_HD_AUDIT_RAM
+    BIST_HD_AUDIT_RAM,
+#endif
     BIST_HD_AUDIT_COUNT,
 };
 

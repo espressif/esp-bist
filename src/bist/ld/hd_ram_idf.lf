@@ -1,0 +1,21 @@
+# Host Diagnostics safe RAM (HP DRAM).
+#
+# .dram0.safe_ram holds the March backup buffer and the safe stack. It lands
+# in .dram0.bss, which ends before _heap_start. The live march span is
+# [_bist_hp_ram_start, _bist_hp_ram_end) from hd_ram_idf_span.ld.in, so this
+# section and the mailbox stay outside it. ALIGN is outside SURROUND so
+# padding is not part of the safe-RAM symbols.
+
+[sections:bist_hd_safe_ram]
+entries:
+    .dram0.safe_ram+
+
+[scheme:bist_hd_ram]
+entries:
+    bist_hd_safe_ram -> dram0_bss
+
+[mapping:bist_hd_ram]
+archive: *
+entries:
+    * (bist_hd_ram);
+        bist_hd_safe_ram -> dram0_bss KEEP() ALIGN(16) SURROUND(safe_ram)
