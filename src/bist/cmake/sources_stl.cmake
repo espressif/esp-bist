@@ -15,6 +15,7 @@ function(bist_include_dirs out_var)
         "include"
         "core/include"
         "core/cpu/include"
+        "core/multicore/include"
         "core/memory/include"
         "core/clock/include"
         "core/wdt/include"

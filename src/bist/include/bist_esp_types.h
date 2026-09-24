@@ -58,4 +58,5 @@ typedef enum {
     BIST_ESP_IO_TEST_ERR =  10,         /**< GPIO input/output test failed */
     BIST_ESP_ADC_TEST_ERR = 11,         /**< ADC test failed */
     BIST_ESP_INTERRUPT_TEST_ERR = 12,   /**< Interrupt test failed */
+    BIST_ESP_MULTICORE_ERR = 13,        /**< Multi-core dispatch failed */
 } bist_esp_err_t;

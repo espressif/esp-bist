@@ -31,6 +31,7 @@
 #include "bist_cpu_regs.h"
 #include "bist_cpu_csr_regs.h"
 #include "bist_cpu_stack.h"
+#include "bist_multicore.h"
 #include "bist_pc.h"
 #include "bist_ram.h"
 #include "bist_flash.h"

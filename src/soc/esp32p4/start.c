@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <string.h>
 #include "sdkconfig.h"
+#include "bist_conf.h"
+#include "bist_soc_multicore.h"
 #include "rom/ets_sys.h"
 #include "esp_rom_serial_output.h"
 #include "esp_log.h"
@@ -99,13 +101,13 @@ void __start(void)
     memset(_iram_bss_start, 0, (size_t)(_iram_bss_end - _iram_bss_start));
 
     cache_hal_config_t config = {
-        .core_nums = 1,
+        .core_nums = SOC_CPU_CORES_NUM,
         .l2_cache_size = CONFIG_CACHE_L2_CACHE_SIZE,
         .l2_cache_line_size = CONFIG_CACHE_L2_CACHE_LINE_SIZE,
     };
     cache_hal_init(&config);
     mmu_hal_config_t mmu_config = {
-        .core_nums = 1,
+        .core_nums = SOC_CPU_CORES_NUM,
     };
     mmu_hal_ctx_init(&mmu_config);
 
@@ -132,9 +134,11 @@ void __start(void)
     map_tcm_segment(_app_tcm_start, _app_tcm_vaddr, _app_tcm_size);
     map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr, _app_irom_size);
 
+#ifndef CONFIG_ESP_BIST_MULTICORE
     REG_CLR_BIT(HP_SYS_CLKRST_CPU_WAITI_CTRL0_REG, HP_SYS_CLKRST_REG_CORE1_WAITI_ICG_EN);
     REG_CLR_BIT(HP_SYS_CLKRST_SOC_CLK_CTRL0_REG, HP_SYS_CLKRST_REG_CORE1_CPU_CLK_EN);
     REG_SET_BIT(HP_SYS_CLKRST_HP_RST_EN0_REG, HP_SYS_CLKRST_REG_RST_EN_CORE1_GLOBAL);
+#endif
 
     esp_rtc_init();
     esp_clk_init();
@@ -145,6 +149,10 @@ void __start(void)
 
     ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
     init_stack_pattern();
+
+#ifdef CONFIG_ESP_BIST_MULTICORE
+    bist_cpu_start_core1();
+#endif
 
     ESP_EARLY_LOGI(TAG, "Calling main...");
     main();
