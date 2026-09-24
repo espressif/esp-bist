@@ -22,12 +22,10 @@
 #include "bist_cpu_csr_regs.h"
 #endif
 
-#if defined(CONFIG_ESP_BIST_HD_AUDIT_CPU) || defined(CONFIG_ESP_BIST_HD_AUDIT_CSR)
 static uint32_t status_from_bist(bist_esp_err_t err)
 {
     return (err == BIST_ESP_OK) ? BIST_HD_STATUS_OK : BIST_HD_STATUS_FAIL;
 }
-#endif
 
 int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge)
 {
@@ -55,10 +53,14 @@ int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
 {
     bist_hd_msg_t rsp = {0};
     uint32_t status = BIST_HD_STATUS_NOT_CONFIGURED;
+    uint32_t start_ms;
+    uint32_t duration_ms;
 
     if (req == NULL) {
         return -1;
     }
+
+    start_ms = bist_hd_platform_time_ms();
 
     switch (req->audit_id) {
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CPU
@@ -84,11 +86,14 @@ int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
         break;
     }
 
+    duration_ms = bist_hd_platform_time_ms() - start_ms;
+
     rsp.type = BIST_HD_MSG_DIAG_RSP;
     rsp.audit_id = req->audit_id;
     rsp.seq = req->seq;
     rsp.payload = status;
     rsp.deadline_ticks = req->deadline_ticks;
+    bist_hd_ctx_commit(req->audit_id, status, duration_ms);
 
     return bist_hd_transport_send(&rsp, 10000);
 }

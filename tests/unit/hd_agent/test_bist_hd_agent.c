@@ -19,6 +19,7 @@
  */
 
 #include "bist_hd_agent.h"
+#include "bist_hd_audits.h"
 #include "bist_hd_platform.h"
 #include "bist_hd_protocol.h"
 
@@ -352,6 +353,32 @@ static void scenario_diag_req_handled(void)
     expect_eq_int(g_last_diag_req.audit_id, BIST_HD_AUDIT_CPU, "audit_id is CPU");
 }
 
+static void scenario_audit_ctx(void)
+{
+    bist_hd_audit_result_t result = {0};
+
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, &result), 0,
+                  "get before any commit succeeds");
+    expect_eq_int(result.valid, 0, "unread audit is not valid");
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, NULL), -1,
+                  "NULL out is rejected");
+    expect_eq_int(bist_hd_agent_audit_get(0xFFu, &result), -1,
+                  "id outside the catalog is rejected");
+
+    bist_hd_ctx_commit(BIST_HD_AUDIT_CPU, BIST_HD_STATUS_OK, 12u);
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, &result), 0,
+                  "get after commit succeeds");
+    expect_eq_int(result.valid, 1, "committed audit is valid");
+    expect_eq_u32(result.status, BIST_HD_STATUS_OK, "status is OK");
+    expect_eq_u32(result.duration_ms, 12u, "duration is the committed value");
+
+    bist_hd_ctx_commit(BIST_HD_AUDIT_CPU, BIST_HD_STATUS_FAIL, 3u);
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, &result), 0,
+                  "get after second commit succeeds");
+    expect_eq_u32(result.status, BIST_HD_STATUS_FAIL, "status is the latest value");
+    expect_eq_u32(result.duration_ms, 3u, "duration is the latest value");
+}
+
 int main(int argc, char **argv)
 {
     const char *scenario;
@@ -375,6 +402,8 @@ int main(int argc, char **argv)
         scenario_checkpoint_send_failure_consumes_id();
     } else if (strcmp(scenario, "diag_req_handled") == 0) {
         scenario_diag_req_handled();
+    } else if (strcmp(scenario, "audit_ctx") == 0) {
+        scenario_audit_ctx();
     } else {
         printf("unknown scenario '%s'\n", scenario);
         return 2;

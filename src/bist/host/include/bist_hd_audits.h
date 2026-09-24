@@ -36,6 +36,15 @@ int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge);
  */
 int bist_hd_audit_handle_diag(const bist_hd_msg_t *req);
 
+/**
+ * @brief Record one completed catalog audit in the agent context.
+ *
+ * @p audit_id outside the catalog is ignored. Called after the audit has
+ * released its own irq and preempt locks. Applications read the record
+ * with bist_hd_agent_audit_get().
+ */
+void bist_hd_ctx_commit(uint8_t audit_id, uint32_t status, uint32_t duration_ms);
+
 #ifdef __cplusplus
 }
 #endif
