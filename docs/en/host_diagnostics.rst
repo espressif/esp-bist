@@ -341,7 +341,8 @@ All other message types use a 4-word frame:
    * - word1
      - ``[seq:16 in low bits]``
    * - word2
-     - Payload: challenge value, answer, status bitmask, or checkpoint id
+     - Payload: challenge value, answer, status bitmask, or checkpoint id.
+       A RAM ``DIAG_REQ`` sends 0; the host marches the whole span
    * - word3
      - ``deadline_ticks``: window end in microseconds (0 if unused)
 
@@ -653,14 +654,54 @@ The worker thread runs an infinite receive loop:
    ``bist_cpu_regs_test()``, ``BIST_HD_AUDIT_CSR`` runs
    ``bist_cpu_csr_regs_test()`` (trap CSRs only: the HP OS has already
    locked PMP/PMA, so those entries are not written). CPU and CSR run
-   with the OS irq lock held. Unknown or disabled ``audit_id`` values
-   return ``BIST_HD_STATUS_NOT_CONFIGURED``. Checkpoints are not flushed
-   here; they ride the Q&A window only.
+   with the OS irq lock held. ``BIST_HD_AUDIT_RAM`` locks the scheduler,
+   masks interrupts, and calls ``bist_ram_test_march_a()`` on the live
+   span. That is the same March A as the standalone test: it backs up,
+   marches, and restores one chunk at a time, and it stays on the safe
+   stack until the span is done, so interrupts stay masked for the whole
+   call. ``CONFIG_ESP_BIST_HD_RAM_PARTITION_SIZE`` is that backup size.
+   The companion keeps ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE``, so a shared
+   HP/LP configuration can size the two images separately. A smaller host
+   partition makes the call take longer. The scheduler lock leaves
+   the agent thread running. Unknown or disabled
+   ``audit_id`` values return ``BIST_HD_STATUS_NOT_CONFIGURED``.
+   The handler then records that status and the elapsed milliseconds
+   in the agent audit context.
+   Checkpoints are not flushed here; they ride the Q&A window only.
+
+   The marched span is live HP DRAM. On ESP-IDF it runs from
+   ``_heap_start`` to the end of ``sram_seg`` (task stacks, including
+   the agent, are allocated from that heap). On Zephyr it runs from the
+   first byte of ``.dram0.noinit`` to the end of ``sram0_0_seg`` (static
+   stacks, ``.dram0.bss``, and the heap). The March backup buffer and safe stack
+   live in ``.dram0.safe_ram``, and the mailbox stays below the span, so
+   covered. A march mismatch is ``BIST_HD_STATUS_FAIL``. The scheduler
+   lock does not stop DMA; a peripheral writing a buffer inside the span
+   during the march is not covered.
 #. Unsupported or unknown incoming command frames (e.g.
    ``SAFE_STATE_NOTIFY``) are dropped.
 
 On receive errors the worker yields for 1 ms to avoid spinning on a
 high-priority thread.
+
+Audit context
+^^^^^^^^^^^^^
+
+Each completed ``DIAG_REQ`` is stored in a table owned by the agent, one
+slot per ``bist_hd_audit_id_t``. The slot holds the latest
+``BIST_HD_STATUS_*`` value and the duration of that run in milliseconds
+from ``bist_hd_platform_time_ms()``. CPU and CSR runs are often 0 ms at
+that resolution.
+
+``bist_hd_agent_audit_get()`` copies one slot. An audit that has not run
+yet is copied with ``valid == 0``. The samples copy the
+CPU, CSR, and RAM slots with ``bist_hd_agent_audit_get()`` after the
+runtime loop and print ``test_HD_audit_cpu:PASS`` (and the CSR and RAM
+lines) from the application thread.
+
+Publish and copy take ``bist_hd_platform_irq_lock()`` after the audit
+has released its own irq and preempt locks. That lock is not recursive,
+so ``get`` is for application context, not from inside a march.
 
 LP BIST Status Bitmask
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -759,8 +800,9 @@ selector and companion schedule entry are added when that audit is implemented.
      - **Implemented** (``BIST_HD_AUDIT_CHECKPOINT``)
    * - Host RAM March
      - DRAM bit faults
-     - Host (quiesce) under companion trigger
-     - Declared (``BIST_HD_AUDIT_RAM``); STL exists, HP region not wired
+     - Host under companion trigger
+     - **Implemented** (``BIST_HD_AUDIT_RAM``); live HP DRAM,
+       ``bist_ram_test_march_a()`` on one ``DIAG_REQ``
    * - Host flash / image CRC
      - Corrupted or wrong firmware
      - Host computes CRC; companion checks golden
@@ -868,6 +910,13 @@ Q&A, checkpoint, and IRQ latency stay independent of ``CONFIG_ESP_BIST_HD_AUDIT`
      - Host CPU register test (``bist_cpu_regs_test()`` on DIAG_REQ)
    * - ``CONFIG_ESP_BIST_HD_AUDIT_CSR``
      - Host CSR / PMP-PMA test (``bist_cpu_csr_regs_test()`` on DIAG_REQ)
+   * - ``CONFIG_ESP_BIST_HD_AUDIT_RAM``
+     - Host RAM March (``bist_ram_test_march_a()`` on DIAG_REQ)
+   * - ``CONFIG_ESP_BIST_HD_RAM_PARTITION_SIZE``
+     - Host March A backup size, in 32-bit words (default 256). The
+       companion keeps ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE``. One RAM
+       ``DIAG_REQ`` still marches the whole host span. A smaller
+       partition makes that call take longer.
 
 Timing Parameters
 ^^^^^^^^^^^^^^^^^
@@ -886,9 +935,11 @@ Timing Parameters
      - Max time for host to answer a Q&A challenge (us)
    * - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``
      - int
-     - 50000
-     - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us); depends on
-       ``CONFIG_ESP_BIST_HD_AUDIT``
+     - 50000 (1000000 if RAM audit)
+     - Max time for ``DIAG_REQ`` to ``DIAG_RSP`` (us). The companion
+       feeds the LP WDT during the wait. The RAM audit raises the
+       default because one request marches the whole span. That time
+       depends on the span and on ``CONFIG_ESP_BIST_HD_RAM_PARTITION_SIZE``.
    * - ``CONFIG_ESP_BIST_HD_IRQ_LATENCY_BUDGET_US``
      - int
      - 5000
@@ -923,8 +974,9 @@ Agent Thread / Task
      - Description
    * - ``CONFIG_ESP_BIST_HD_AGENT_TASK_STACK``
      - int
-     - 3072
-     - Agent stack size (bytes); all OSes
+     - 3072 (4096 if RAM audit)
+     - Agent stack size (bytes); all OSes. The March runs on a separate
+       256-byte safe stack.
    * - ``CONFIG_ESP_BIST_HD_AGENT_TASK_PRIO``
      - int
      - 23
@@ -950,7 +1002,7 @@ Runs host-native via ``cmake`` + ``ctest``; no device required.
 **Companion verdict matrix** (``tests/unit/hd_companion/``):
 
 Drives the real ``bist_hd_companion.c`` state machine against a scripted fake
-agent. 25 scenarios cover the judgment logic without hardware:
+agent. 27 scenarios cover the judgment logic without hardware:
 
 .. list-table::
    :header-rows: 1
@@ -996,7 +1048,8 @@ agent. 25 scenarios cover the judgment logic without hardware:
    * - ``irq_latency_over_budget``
      - Correct answer exceeding the IRQ latency budget triggers safe state
    * - ``diag_ok``
-     - Passing ``DIAG_RSP`` accepted across multiple runtime rounds
+     - Passing ``DIAG_RSP`` accepted across multiple runtime rounds; one
+       RAM request per round marches the whole span
    * - ``diag_fail``
      - ``DIAG_RSP`` returning ``STATUS_FAIL`` triggers safe state
    * - ``diag_silent``
@@ -1009,6 +1062,12 @@ agent. 25 scenarios cover the judgment logic without hardware:
      - ``STATUS_NOT_CONFIGURED`` response triggers safe state
    * - ``diag_late``
      - ``DIAG_RSP`` exceeding the diagnostic timeout window triggers safe state
+   * - ``diag_ram_fail``
+     - CPU and CSR pass; ``STATUS_FAIL`` on the RAM audit request triggers
+       safe state
+   * - ``diag_ram_silent``
+     - CPU and CSR pass; no ``DIAG_RSP`` for the RAM audit request triggers
+       safe state. The companion feeds the LP WDT during the wait
 
 Agent Checkpoint and Audit Dispatch (``tests/unit/hd_agent/``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1100,12 +1159,20 @@ Per-Platform Verification Depth
    * - ESP-IDF
      - pytest happy-path + fail-closed (key mismatch, starved agent, skip
        checkpoint); targets ESP32-C5, C6, P4
-     - Q&A, checkpoint, IRQ latency, CPU/CSR — pass; fail-closed via
-       starve (DIAG timeout) and unit ``diag_fail`` (FAIL payload)
+     - Q&A, checkpoint, IRQ latency, CPU/CSR, RAM March — pass; fail-closed
+       via starve (DIAG timeout) and unit ``diag_fail`` / ``diag_ram_fail``
    * - Zephyr
      - Twister ztest + console harness (selftest, reset_cause, key_mismatch,
-       starved_agent, skip_checkpoint); targets ESP32-C5, C6
-     - Q&A, checkpoint, IRQ latency — pass and fail-closed
+       starved_agent, skip_checkpoint); targets ESP32-C5, C6, P4
+     - Q&A, checkpoint, IRQ latency, CPU/CSR, RAM March — pass; fail-closed
+       via starve (DIAG timeout) and unit ``diag_fail`` / ``diag_ram_fail``
+
+Healthy silicon does not produce a CPU/CSR or RAM ``STATUS_FAIL`` payload,
+so device fail-closed for those audits is a missing ``DIAG_RSP`` (the
+existing starve configuration). A RAM audit that returns ``STATUS_FAIL``,
+or that never answers while earlier audits did, is covered by
+``diag_ram_fail`` and ``diag_ram_silent``. Late answers, wrong sequence,
+wrong type, and FAIL payload remain unit-only on every platform.
 
 .. _hd-references:
 
