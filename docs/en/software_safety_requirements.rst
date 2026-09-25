@@ -18,8 +18,8 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 1.1
      - CPU - Registers
-     - Verifies integrity of CPU general-purpose registers; on FPU supported devices, also single-precision FPU registers (f0–f31)
-     - Register corruption, stuck-at faults, data path errors
+     - Verifies integrity of CPU general-purpose registers and Control and Status Registers (static single-core walk or dual-core reciprocal comparison); on FPU supported devices, also single-precision FPU registers (f0–f31) and FPU CSRs
+     - Register corruption, stuck-at faults, data path errors, CSR configuration faults
      - :ref:`cpu-register-test`
 
    * - 1.2

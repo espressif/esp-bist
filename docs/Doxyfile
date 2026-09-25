@@ -27,8 +27,10 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/core/include/bist_core.h \
     $(PROJECT_PATH)/src/bist/core/clock/include/bist_clock_fail.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_instructions.h \
-    $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_csr_regs.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_regs.h \
+    $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_regs_reciprocal.h \
+    $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_csr_regs.h \
+    $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_csr_regs_reciprocal.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_cpu_stack.h \
     $(PROJECT_PATH)/src/bist/core/cpu/include/bist_pc.h \
     $(PROJECT_PATH)/src/bist/core/interrupt/include/bist_interrupt.h \

@@ -144,10 +144,15 @@ Device FAIL cases in ``pytest_device_*`` use the same test labels and assertions
 CPU Register Integrity Test
 ---------------------------
 
-**Purpose:** Verify that all CPU general-purpose registers (X1-X31) maintain integrity and can retain both 0 and 1 patterns without corruption.
+**Purpose:** Verify that CPU general-purpose registers (X1-X31) maintain integrity and can retain both 0 and 1 patterns without corruption. Static mode runs a single-core checkerboard walk. Reciprocal mode (ESP32-P4) adds dual-core reciprocal comparison between HP Core 0 and HP Core 1.
+
+Static CPU Register Test
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify register integrity on the executing core using checkerboard write/read-back of ``0xAAAAAAAA`` and ``0x55555555``.
 
 QEMU/Emulation Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
 
@@ -222,7 +227,7 @@ Breakpoint is placed at ``testFRegA_<freg_name>``, and GDB corrupts the register
     test_BIST_Cpu_Regs:FAIL
 
 Hardware Validation
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
 
@@ -294,13 +299,195 @@ FPU registers use ``test_freg_error_device`` on ESP32-H4/P4.
 
     test_BIST_Cpu_Regs:FAIL
 
+Reciprocal CPU Register Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify CPU register integrity in dual-core configuration (ESP32-P4) using reciprocal comparison and cross-validation between HP Core 0 and HP Core 1.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py``
+
+**Execution:**
+
+1. QEMU starts in dual-core mode, executing ``bist_cpu_regs_test()`` in reciprocal configuration.
+2. Core 0 executes the register walk into shared SRAM slot 0.
+3. Core 0 validates its own recorded read-backs.
+4. Core 0 dispatches the register walk to Core 1 via ``bist_multicore_call()`` into shared SRAM slot 1.
+5. Core 0 dispatches validation of Core 1 results to Core 1 via ``bist_multicore_call()``.
+6. Core 0 dispatches validation of Core 0 results to Core 1 via ``bist_multicore_call()``.
+7. Core 0 validates Core 1 results directly.
+8. Test returns ``BIST_ESP_OK`` and prints "test_BIST_Cpu_Regs:PASS".
+9. pytest validates output presence within timeout.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:PASS
+
+**Failure Test: ``test_reg_error`` (Parameterized, 31 general-purpose registers)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to QEMU debug server
+    target remote :1234
+
+    # Set temporary breakpoint at register test label
+    tb bist_cc_test_gpr_a_<reg_name>
+    commands
+        set $<reg_name>=0x55555555
+        continue
+    end
+    continue
+
+**Script Parameterization:**
+
+The script is executed for each general-purpose integer register:
+
+- ``ra``, ``sp``, ``gp``, ``tp``
+- ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
+- ``s0``, ``s1``, ``s2``, ``s3``, ``s4``, ``s5``, ``s6``, ``s7``, ``s8``, ``s9``, ``s10``, ``s11``
+- ``a0``, ``a1``, ``a2``, ``a3``, ``a4``, ``a5``, ``a6``, ``a7``
+
+Each test replaces ``<reg_name>`` with the specific register name.
+
+**Failure Test: ``test_freg_error`` (Parameterized, 32 FPU registers)**
+
+Breakpoint is placed at ``bist_cc_test_fpr_a_<freg_name>``, and GDB corrupts the register value to ``0x55555555``, verifying that the reciprocal comparison detects the fault:
+
+- ``ft0``–``ft11``
+- ``fs0``–``fs11``
+- ``fa0``–``fa7``
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at label ``bist_cc_test_gpr_a_<reg_name>`` (or ``bist_cc_test_fpr_a_<freg_name>``)
+2. When breakpoint hits, register is forcibly set to wrong value (0x55555555)
+3. Test continues and verifies register against expected pattern (0xAAAAAAAA)
+4. Mismatch detected, test fails
+5. Test prints "test_BIST_Cpu_Regs:FAIL"
+
+**Test Coverage:** 63 test cases (31 GPRs + 32 FPRs)
+
+**Expected Output per Register:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:FAIL
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 device with both HP cores running in bare-metal standalone mode
+- Shared memory region configured in HP SRAM
+
+**Execution:**
+
+1. Flash firmware to ESP32-P4 device
+2. Run ``pytest pytest_device_cpu_reg_test_reciprocal.py`` to capture serial output
+3. Application initializes both cores and executes ``bist_cpu_regs_test()`` and ``bist_cpu_csr_regs_test()``
+4. Dual-core register walk and mutual cross-validation complete
+5. Serial monitor captures "test_BIST_Cpu_Regs:PASS" and "test_BIST_Cpu_Csr_Regs:PASS"
+6. pytest validates presence in output
+
+**Expected Behavior:**
+
+- Both HP cores pass register integrity and reciprocal cross-validation on real hardware
+- No stuck-at faults, register corruption, or inter-core communication faults detected
+
+**Failure Test: ``test_reg_error_device`` (Parameterized across Core 0 and Core 1, 31 registers)**
+
+**GDB Fault Injection Scripts:**
+
+*Core 0 Fault Injection:*
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_cc_test_gpr_a_<reg_name>
+    commands
+        set $<reg_name>=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+*Core 1 Fault Injection:*
+
+OpenOCD groups both HP cores into one SMP group and arms a hardware breakpoint across both cores. GDB attaches to Core 0, which hits the label first. For Core 1 injection, GDB single-steps Core 0 past the label, waits for Core 1's hit, and writes the corrupted value directly to Core 1 target (``esp32p4.hp.cpu1``):
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    hbreak bist_cc_test_gpr_a_<reg_name>
+    continue
+    monitor step
+    continue
+    monitor targets esp32p4.hp.cpu1
+    monitor reg <reg_name> 0x55555555
+    disable breakpoints
+    monitor targets esp32p4.hp.cpu0
+    monitor resume
+
+**Script Parameterization:**
+
+Executed for both cores (Core 0 and Core 1) across all 31 general-purpose registers:
+
+- ``ra``, ``sp``, ``gp``, ``tp``
+- ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
+- ``s0`` (mapped to ``fp`` in OpenOCD), ``s1``–``s11``
+- ``a0``–``a7``
+
+**Failure Test: ``test_freg_error_device`` (Parameterized across Core 0 and Core 1, 32 FPU registers)**
+
+Breakpoint is placed at ``bist_cc_test_fpr_a_<freg_name>``, and register is corrupted to ``0x55555555`` on Core 0 or Core 1 across all 32 single-precision floating-point registers (``ft0``–``ft11``, ``fs0``–``fs11``, ``fa0``–``fa7``).
+
+**Fault Injection Method:**
+
+1. GDB/OpenOCD halts execution and sets breakpoint at ``bist_cc_test_gpr_a_<reg_name>`` (or ``bist_cc_test_fpr_a_<freg_name>``)
+2. On Core 0 injection, GDB sets register to 0x55555555 upon temporary breakpoint hit
+3. On Core 1 injection, Core 0 is stepped past the label and OpenOCD sets register on Core 1 target
+4. Cross-validation detects the mismatch between expected and actual register values
+5. Test returns error and prints "test_BIST_Cpu_Regs:FAIL"
+
+**Test Coverage:** 126 test cases (63 on Core 0 + 63 on Core 1: 31 GPRs + 32 FPRs per core)
+
+**Expected Output per Register:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:FAIL
+
 CPU CSR Integrity Test
 ----------------------
 
-**Purpose:** Verify that CPU Control and Status Registers maintain integrity and can be read/written reliably. Tested CSRs include trap registers (MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers (pma_addr0–11) on PMA-capable SoCs (C6, H2, C5), and MEXSTATUS/MHINT on C5 only.
+**Purpose:** Verify that CPU Control and Status Registers maintain integrity and can be read/written reliably. Tested CSRs include trap registers (MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers (pma_addr0–11) on PMA-capable SoCs (C6, H2, C5), and MEXSTATUS/MHINT on C5 only. Static mode runs a single-core test. Reciprocal mode (ESP32-P4) adds dual-core reciprocal comparison between HP Core 0 and HP Core 1.
+
+Static CPU CSR Test
+^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify CSR integrity on the executing core by writing alternating bit patterns (``0xAAAAAAAA`` and ``0x55555555``) masked to writable bits and verifying read-backs.
 
 QEMU/Emulation Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
 
@@ -368,7 +555,7 @@ Each test replaces ``<csr_name>`` with the specific CSR name or number.
     test_BIST_Cpu_Csr_Regs:FAIL
 
 Hardware Validation
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
 
@@ -433,6 +620,172 @@ Each test replaces ``<csr_name>`` with the specific CSR name or number.
 5. Returns ``BIST_ESP_CPU_CSR_TEST_ERR``
 
 **Test Coverage:** 25 test cases on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2/C61 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint), 40 on ESP32-H4/P4 (adds 12 pma_addr + ``fflags``, ``frm``, ``fcsr``)
+
+**Expected Output per CSR:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:FAIL
+
+Reciprocal CPU CSR Test
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify CPU CSR integrity in dual-core configuration (ESP32-P4) using reciprocal comparison and cross-validation between HP Core 0 and HP Core 1.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py``
+
+**Execution:**
+
+1. QEMU starts in dual-core mode, executing ``bist_cpu_csr_regs_test()`` in reciprocal configuration.
+2. Core 0 executes the CSR walk into shared SRAM slot 0.
+3. Core 0 validates its own recorded read-backs.
+4. Core 0 dispatches the CSR walk to Core 1 via ``bist_multicore_call()`` into shared SRAM slot 1.
+5. Core 0 dispatches validation of Core 1 results to Core 1 via ``bist_multicore_call()``.
+6. Core 0 dispatches validation of Core 0 results to Core 1 via ``bist_multicore_call()``.
+7. Core 0 validates Core 1 results directly.
+8. Test returns ``BIST_ESP_OK`` and prints "test_BIST_Cpu_Csr_Regs:PASS".
+9. pytest validates output presence within timeout.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:PASS
+
+**Failure Test: ``test_reg_csr_error`` (Parameterized, 37 CSRs)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to QEMU debug server
+    target remote :1234
+
+    # Set temporary breakpoint at CSR test label
+    tb bist_cc_test_csr_a_<csr_name>
+    commands
+        set $t0=0x55555555
+        continue
+    end
+    continue
+
+**Script Parameterization:**
+
+Executed for all 37 trap, PMP, and PMA CSRs tested in reciprocal mode on ESP32-P4:
+
+- **Trap CSRs**: ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
+- **PMP Address CSRs**: ``pmpaddr0``–``pmpaddr15``
+- **PMP Configuration CSRs**: ``pmpcfg0``–``pmpcfg3``
+- **PMA Address CSRs**: ``pmaaddr0``–``pmaaddr11``
+
+Each test replaces ``<csr_name>`` with the specific CSR name.
+
+**Failure Test: ``test_freg_csr_error`` (Parameterized, 3 FPU CSRs)**
+
+Breakpoint is placed at ``bist_cc_test_csr_a_<fcsr_name>`` for FPU CSRs (``fflags``, ``frm``, ``fcsr``), and temporary register ``t0`` is set to ``0x55555555``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at CSR test label (``bist_cc_test_csr_a_<csr_name>``)
+2. When hit, modifies temporary register (t0) to incorrect value (0x55555555)
+3. Test logic uses t0 to verify CSR contents
+4. Mismatch detected, test fails
+5. Test prints "test_BIST_Cpu_Csr_Regs:FAIL"
+
+**Test Coverage:** 40 test cases (37 trap/PMP/PMA CSRs + 3 FPU CSRs)
+
+**Expected Output per CSR:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:FAIL
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 device with both HP cores running in bare-metal standalone mode
+- Shared memory region configured in HP SRAM
+
+**Execution:**
+
+1. Flash firmware to ESP32-P4 device
+2. Run ``pytest pytest_device_cpu_reg_test_reciprocal.py`` to capture serial output
+3. Application initializes both cores and executes ``bist_cpu_regs_test()`` and ``bist_cpu_csr_regs_test()``
+4. Dual-core CSR walk and mutual cross-validation complete
+5. Serial monitor captures "test_BIST_Cpu_Regs:PASS" and "test_BIST_Cpu_Csr_Regs:PASS"
+6. pytest validates presence in output
+
+**Expected Behavior:**
+
+- Both HP cores pass CSR integrity and reciprocal cross-validation on real hardware
+- No stuck-at faults, CSR corruption, or inter-core communication faults detected
+
+**Failure Test: ``test_reg_csr_error_device`` (Parameterized across Core 0 and Core 1, 37 CSRs)**
+
+**GDB Fault Injection Scripts:**
+
+*Core 0 Fault Injection:*
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_cc_test_csr_a_<csr_name>
+    commands
+        set $t0=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+*Core 1 Fault Injection:*
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    hbreak bist_cc_test_csr_a_<csr_name>
+    continue
+    monitor step
+    continue
+    monitor targets esp32p4.hp.cpu1
+    monitor reg t0 0x55555555
+    disable breakpoints
+    monitor targets esp32p4.hp.cpu0
+    monitor resume
+
+**Script Parameterization:**
+
+Executed for both cores (Core 0 and Core 1) across all 37 CSRs (5 trap + 16 PMP address + 4 PMP config + 12 PMA address).
+
+**Failure Test: ``test_freg_csr_error_device`` (Parameterized across Core 0 and Core 1, 3 FPU CSRs)**
+
+Breakpoint is placed at ``bist_cc_test_csr_a_<fcsr_name>`` for FPU CSRs (``fflags``, ``frm``, ``fcsr``), and temporary register ``t0`` is corrupted on Core 0 or Core 1.
+
+**Fault Injection Method:**
+
+1. GDB/OpenOCD sets breakpoint at CSR test label (``bist_cc_test_csr_a_<csr_name>``)
+2. On Core 0, GDB modifies register ``t0`` upon breakpoint hit
+3. On Core 1, OpenOCD modifies register ``t0`` on target ``esp32p4.hp.cpu1``
+4. Test logic uses corrupted ``t0`` for CSR comparison, detecting mismatch
+5. Test fails and prints "test_BIST_Cpu_Csr_Regs:FAIL"
+
+**Test Coverage:** 80 test cases (40 on Core 0 + 40 on Core 1: 37 CSRs + 3 FPU CSRs per core)
 
 **Expected Output per CSR:**
 

@@ -197,14 +197,14 @@ Runtime Tests
 1. **CPU Register Test** (``bist_cpu_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU Registers)
-   - **Purpose**: Verifies all 32 general-purpose registers maintain integrity; on FPU supported devices, also verifies all 32 single-precision FPU registers (f0–f31)
+   - **Purpose**: Verifies all 32 general-purpose registers maintain integrity; on FPU supported devices, also verifies all 32 single-precision FPU registers (f0–f31). In static mode, runs a single-core checkerboard walk. In reciprocal mode (available on ESP32-P4 with ``CONFIG_ESP_BIST_CPU_REG_TEST_RECIPROCAL=y``), executes a dual-core reciprocal comparison across both HP cores using shared SRAM and cross-core function dispatch.
    - **Rationale**: Register corruption can cause incorrect computation or control flow errors
    - **Execution Frequency**: Called in main loop (every iteration)
 
 2. **CPU CSR Test** (``bist_cpu_csr_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU CSRs)
-   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6, H2, C5, C61, P4, and H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4).
+   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6, H2, C5, C61, P4, and H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4). In static mode, runs a single-core pattern test. In reciprocal mode (available on ESP32-P4 with ``CONFIG_ESP_BIST_CPU_CSR_REG_TEST_RECIPROCAL=y``), executes a dual-core reciprocal comparison across both HP cores using shared SRAM and cross-core function dispatch.
    - **Rationale**: CSR corruption can cause exception handling failures or memory protection violations
    - **Execution Frequency**: Called in main loop (every iteration)
 

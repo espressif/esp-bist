@@ -9,6 +9,42 @@
     "content_type": "source"
   },
   {
+    "function_name": "bist_cpu_csr_regs_test_cc_job",
+    "body": "static void bist_cpu_csr_regs_test_cc_job(void *arg)\n{\n    volatile bist_cpu_csr_regs_result_cc_t *out = (volatile bist_cpu_csr_regs_result_cc_t *)arg;\n\n    if (out == NULL) {\n        return;\n    }\n\n    volatile uint32_t *words = (volatile uint32_t *)out;\n    for (uint32_t i = 0; i < (sizeof(*out) / sizeof(*words)); ++i) {\n        words[i] = 0;\n    }\n\n    out->status = (uint32_t)bist_cc_cpu_csr_regs_walk(out);\n}",
+    "file": "src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c",
+    "line_start": 187,
+    "line_end": 201,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_cpu_csr_regs_test_result",
+    "body": "static bist_esp_err_t verify_bist_cpu_csr_regs_test_result(volatile bist_cpu_csr_regs_result_cc_t *result)\n{\n    if (result == NULL || result->status != (uint32_t)BIST_ESP_OK) {\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    for (uint32_t i = 0; i < BIST_CPU_CSR_REGS_RESULT_CC_CSR_COUNT; ++i) {\n        const uint32_t mask = s_csr_masks[i];\n        const uint32_t expected_a = BIST_CPU_CSR_REGS_RESULT_CC_PATTERN_A & mask;\n        const uint32_t expected_5 = BIST_CPU_CSR_REGS_RESULT_CC_PATTERN_5 & mask;\n\n        if ((result->csr[i].pattern_a & mask) != expected_a ||\n                (result->csr[i].pattern_5 & mask) != expected_5) {\n            return BIST_ESP_CPU_CSR_TEST_ERR;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c",
+    "line_start": 203,
+    "line_end": 221,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_cpu_csr_regs_test_result_job",
+    "body": "static void verify_bist_cpu_csr_regs_test_result_job(void *arg)\n{\n    volatile bist_cpu_csr_regs_result_cc_t *result = (volatile bist_cpu_csr_regs_result_cc_t *)arg;\n\n    if (result == NULL) {\n        return;\n    }\n\n    result->status = (uint32_t)verify_bist_cpu_csr_regs_test_result(result);\n}",
+    "file": "src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c",
+    "line_start": 223,
+    "line_end": 232,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_csr_regs_test",
+    "body": "bist_esp_err_t bist_cpu_csr_regs_test(void)\n{\n    volatile bist_cpu_csr_regs_result_cc_t *test_result_core_0 = &bist_cpu_csr_regs_shared_results_cc[0];\n    volatile bist_cpu_csr_regs_result_cc_t *test_result_core_1 = &bist_cpu_csr_regs_shared_results_cc[1];\n    bist_esp_err_t status;\n    int ret;\n\n    bist_cpu_csr_regs_test_cc_job((void *)test_result_core_0);\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute CSR walk on core 0\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    status = verify_bist_cpu_csr_regs_test_result(test_result_core_0);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 CSR results on core 0\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, bist_cpu_csr_regs_test_cc_job, (void *)test_result_core_1);\n    if (ret != 0) {\n        ESP_LOGE(TAG, \"Failed to dispatch CSR walk to core 1\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute CSR walk on core 1\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, verify_bist_cpu_csr_regs_test_result_job, (void *)test_result_core_1);\n    if (ret != 0) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 1 CSR results to core 1\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 CSR results on core 1\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, verify_bist_cpu_csr_regs_test_result_job, (void *)test_result_core_0);\n    if (ret != 0) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 0 CSR results to core 1\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 CSR results on core 1\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    status = verify_bist_cpu_csr_regs_test_result(test_result_core_1);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 CSR results on core 0\");\n        return BIST_ESP_CPU_CSR_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c",
+    "line_start": 234,
+    "line_end": 290,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
     "function_name": "bist_cpu_instruction_test",
     "body": "bist_esp_err_t bist_cpu_instruction_test(void)\n{\n    bist_esp_err_t err = BIST_ESP_OK;\n\n    bist_cpu_instruction_failure_id = 0;\n    bist_cpu_instruction_failure_group = BIST_INSN_GROUP_NONE;\n\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_INTEGER)\n    err = bist_cpu_instruction_integer();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_INTEGER;\n        ESP_LOGE(TAG, \"integer ALU failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"integer ALU tests passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_SHIFT)\n    err = bist_cpu_instruction_shift();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_SHIFT;\n        ESP_LOGE(TAG, \"shifts failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"shifts tests passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_UPPERIMM)\n    err = bist_cpu_instruction_upperimm();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_UPPERIMM;\n        ESP_LOGE(TAG, \"LUI/AUIPC failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"LUI/AUIPC tests passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CTRL)\n    err = bist_cpu_instruction_ctrl();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CTRL;\n        ESP_LOGE(TAG, \"control flow failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"control flow passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_LDST)\n    err = bist_cpu_instruction_ldst();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_LDST;\n        ESP_LOGE(TAG, \"load/store failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"load/store tests passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_MUL)\n    err = bist_cpu_instruction_mul();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_MUL;\n        ESP_LOGE(TAG, \"multiply/divide failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"multiply/divide tests passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_CSR)\n    err = bist_cpu_instruction_csr();\n    if (err != BIST_ESP_OK) {\n        bist_cpu_instruction_failure_group = BIST_INSN_GROUP_CSR;\n        ESP_LOGE(TAG, \"CSR/fence failed, vector %lu\",\n                 (unsigned long)bist_cpu_instruction_failure_id);\n        return err;\n    }\n    ESP_LOGD(TAG, \"CSR/fence tests passed\");\n#endif\n#if defined(CONFIG_ESP_BIST_CPU_INSTRUCTION_AMO) && !defined(SOC_TARGET_ESP32C3)\n    err \n    // ... (truncated)",
     "file": "src/bist/core/cpu/bist_cpu_instructions.c",
@@ -41,6 +77,42 @@
     "file": "src/bist/core/cpu/bist_cpu_regs.c",
     "line_start": 112,
     "line_end": 268,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_regs_test_cc",
+    "body": "static void bist_cpu_regs_test_cc(volatile bist_cpu_regs_result_cc_t *out)\n{\n    if (out == NULL) {\n        out->status = BIST_ESP_CPU_TEST_ERR;\n        return;\n    }\n\n    volatile uint32_t *words = (volatile uint32_t *)out;\n    for (uint32_t i = 0; i < (sizeof(*out) / sizeof(*words)); ++i) {\n        words[i] = 0;\n    }\n\n    bist_esp_err_t status = bist_cc_cpu_regs_walk(out);\n    out->status = (uint32_t)status;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_regs_reciprocal.c",
+    "line_start": 271,
+    "line_end": 285,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_cpu_regs_test_result",
+    "body": "static bist_esp_err_t verify_bist_cpu_regs_test_result(volatile bist_cpu_regs_result_cc_t *result)\n{\n    /* x0 is hardwired zero and is not walked. */\n    for (uint32_t i = 1; i < BIST_CPU_REGS_RESULT_CC_GPR_COUNT; ++i) {\n        if (result->gpr[i].pattern_a != BIST_CPU_REGS_RESULT_CC_PATTERN_A ||\n                result->gpr[i].pattern_5 != BIST_CPU_REGS_RESULT_CC_PATTERN_5) {\n            ESP_LOGE(TAG, \"GPR %d failed check\", i);\n            return BIST_ESP_CPU_TEST_ERR;\n        }\n    }\n\n    /* Check if floating-point registers were tested */\n\n    if ((result->feature_flags & BIST_CPU_REGS_RESULT_CC_FEATURE_FPR_TESTED) == 0) {\n        return BIST_ESP_OK;\n    }\n\n    for (uint32_t i = 0; i < BIST_CPU_REGS_RESULT_CC_FPR_COUNT; ++i) {\n        if (result->fpr[i].pattern_a != BIST_CPU_REGS_RESULT_CC_PATTERN_A ||\n                result->fpr[i].pattern_5 != BIST_CPU_REGS_RESULT_CC_PATTERN_5) {\n            ESP_LOGE(TAG, \"FPR %d failed check\", i);\n            return BIST_ESP_CPU_TEST_ERR;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_regs_reciprocal.c",
+    "line_start": 287,
+    "line_end": 313,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_cpu_regs_test_result_job",
+    "body": "static void verify_bist_cpu_regs_test_result_job(void *arg)\n{\n    volatile bist_cpu_regs_result_cc_t *result = (volatile bist_cpu_regs_result_cc_t *)arg;\n\n    result->status = (uint32_t)verify_bist_cpu_regs_test_result(result);\n}",
+    "file": "src/bist/core/cpu/bist_cpu_regs_reciprocal.c",
+    "line_start": 315,
+    "line_end": 320,
+    "module": "cpu",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_cpu_regs_test",
+    "body": "bist_esp_err_t bist_cpu_regs_test(void)\n{\n    volatile bist_cpu_regs_result_cc_t *test_result_core_0 = &bist_cpu_regs_shared_results_cc[0];\n    volatile bist_cpu_regs_result_cc_t *test_result_core_1 = &bist_cpu_regs_shared_results_cc[1];\n    bist_esp_err_t status;\n    int ret;\n\n    /* Execute and validate test on core 0 */\n\n    bist_cpu_regs_test_cc(test_result_core_0);\n    if (test_result_core_0->status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute register walk on core 0\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n\n    status = verify_bist_cpu_regs_test_result(test_result_core_0);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 results on core 0\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n\n    /* Execute and validate test on core 1 */\n\n    ret = bist_multicore_call(1, (void *)bist_cpu_regs_test_cc, (void *)test_result_core_1);\n    if (ret != 0) {\n        ESP_LOGE(TAG, \"Failed to dispatch register walk to core 1\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute register walk on core 1\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, verify_bist_cpu_regs_test_result_job, (void *)test_result_core_1);\n    if (ret != 0) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 1 results to core 1\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 results on core 1\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n\n    /* Validate core 0 results on core 1 */\n\n    ret = bist_multicore_call(1, verify_bist_cpu_regs_test_result_job, (void *)test_result_core_0);\n    if (ret != 0) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 0 results to core 1\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 results on core 1\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n\n    /* Validate core 1 results on core 0 */\n\n    status = verify_bist_cpu_regs_test_result(test_result_core_1);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 results on core 0\");\n        return BIST_ESP_CPU_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/cpu/bist_cpu_regs_reciprocal.c",
+    "line_start": 322,
+    "line_end": 386,
     "module": "cpu",
     "content_type": "source"
   },
