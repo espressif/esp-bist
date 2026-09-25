@@ -36,13 +36,13 @@ The following table maps identified hazards to safety functions, risk levels, an
      - CPU register corruption leading to incorrect computation or control flow
      - High
      - 1.1 (CPU Registers)
-     - ``bist_cpu_regs_test()`` verifies all general-purpose registers can store and retrieve 0/1 patterns, detecting stuck-at faults and data path errors; on FPU supported devices, also tests all 32 single-precision FPU registers
+     - ``bist_cpu_regs_test()`` verifies all general-purpose registers can store and retrieve 0/1 patterns, detecting stuck-at faults and data path errors; on FPU supported devices, also tests all 32 single-precision FPU registers; on ESP32-P4 with reciprocal testing enabled, performs dual-core reciprocal comparison across both HP cores
 
    * - H2
      - CPU CSR corruption causing incorrect exception handling or memory protection failures
      - High
      - 1.1 (CPU CSRs)
-     - ``bist_cpu_csr_regs_test()`` validates critical trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), memory protection registers (PMPADDR, PMPCFG, and PMA address registers on PMA-capable SoCs), custom CSRs (MEXSTATUS, MHINT on ESP32-C5), and FPU registers (``fflags``, ``frm``, ``fcsr``) on FPU supported devices
+     - ``bist_cpu_csr_regs_test()`` validates critical trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), memory protection registers (PMPADDR, PMPCFG, and PMA address registers on PMA-capable SoCs), custom CSRs (MEXSTATUS, MHINT on ESP32-C5), and FPU registers (``fflags``, ``frm``, ``fcsr``) on FPU supported devices; on ESP32-P4 with reciprocal testing enabled, performs dual-core reciprocal comparison across both HP cores
 
    * - H3
      - CPU instruction decode faults, ALU calculation errors, branch decision errors, register field corruption, or immediate scrambling faults causing incorrect execution

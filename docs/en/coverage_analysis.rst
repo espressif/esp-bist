@@ -44,7 +44,7 @@ The following table provides code coverage information for each BIST module:
    * - CPU CSRs
      - 1
      - 1 (100%)
-     - 1 (25–40 CSRs depending on SoC)
+     - 1 (25–40 CSRs depending on SoC: 25 C3, 37 C6/H2/C61, 39 C5, 40 H4/P4)
      - 25–40 (fault injection)
      - :doc:`software_validation` (CPU CSR Test)
 

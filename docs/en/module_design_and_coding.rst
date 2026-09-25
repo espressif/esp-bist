@@ -8,9 +8,19 @@ For each BIST test, this chapter captures implementation structure, defensive te
 CPU Register Test
 -----------------
 
+The CPU Register Test verifies the integrity of CPU general-purpose registers (GPRs x1–x31) and, on FPU-supported devices (such as ESP32-P4 and ESP32-H4), floating-point registers (FPRs f0–f31). The test ensures registers can accurately store and retrieve both ``0xAAAAAAAA`` and ``0x55555555`` checkerboard bit patterns to detect stuck-at faults and data path corruption.
+
+Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Walk)**: Default implementation running entirely on the executing core.
+- **Reciprocal (Dual-Core Comparison)**: Available on dual-core targets (ESP32-P4) using cross-core dispatch, shared memory, and mutual verification.
+
+Static Single-Core Register Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
     :scale: 50%
-    :caption: CPU Register Test
+    :caption: CPU Register Test (Static)
     :align: center
 
     blockdiag {
@@ -38,14 +48,61 @@ CPU Register Test
         Success [label = "Return\nBIST_ESP_OK"];
     }
 
-This diagram shows the generic logic for all tested CPU registers: save original value if needed, write test patterns (``0xAAAAAAAA`` and ``0x55555555``), verify, restore, and return error on any mismatch. On FPU supported devices, the same flow applies to FPU registers.
+This diagram shows the generic logic for all tested CPU registers in static mode: save original value if needed, write test patterns (``0xAAAAAAAA`` and ``0x55555555``), verify, restore, and return error on any mismatch. On FPU supported devices, the same flow applies to FPU registers.
+
+Reciprocal Dual-Core Register Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: CPU Register Test (Reciprocal)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> "Core 0: Register Walk" -> "Core 0: Validate Core 0" -> "Core 1: Register Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: Register Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: Register Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: Register Walk" [label = "Core 0: Walk regs\nWrite to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0:\nValidate slot 0", shape = diamond];
+        "Core 1: Register Walk" [label = "Core 1: Walk regs\nWrite to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1:\nValidate slot 1 (IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1:\nValidate slot 0 (IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0:\nValidate slot 1", shape = diamond];
+        Error [label = "Return\nBIST_ESP_CPU_TEST_ERR"];
+        Success [label = "Return\nBIST_ESP_OK"];
+    }
+
+For dual-core reciprocal comparison (e.g. IEC 60730 Class C / Annex H Table H.1 / H.2.18.15), ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation:
+
+1. **Independent Execution (Core 0)**: Core 0 executes a full register walk (x1–x31 and f0–f31 on FPU-supported hardware) and writes the raw read-back values directly into shared memory slot 0 (``bist_cpu_regs_shared_results_cc[0]``).
+2. **Local Validation (Core 0 on Core 0)**: Core 0 verifies that its own recorded read-backs match the expected checkerboard patterns (``0xAAAAAAAA`` and ``0x55555555``).
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the register walk to HP Core 1 via ``bist_multicore_call()``. Core 1 executes the walk and writes its raw read-backs into shared memory slot 1 (``bist_cpu_regs_shared_results_cc[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of Core 1's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates its own register data.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of Core 0's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates Core 0's evidence.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates Core 1's recorded read-backs directly.
+
+Fixed-Layout Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal test exchanges evidence using a fixed-layout structure (``bist_cpu_regs_result_cc_t``) placed in statically allocated HP SRAM (``bist_cpu_regs_shared_results_cc``):
+
+- Exactly 520 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers, ensuring deterministic memory layout across cores and compiler configurations.
+- Verified at compile time via ``_Static_assert`` on total structure size, field offsets, and read-back entry sizes.
+- Contains ``feature_flags``, execution ``status``, 32 GPR read-back entries, and 32 FPR read-back entries (each entry storing the raw value after writing ``0xAAAAAAAA`` and ``0x55555555``).
 
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_cpu_regs_test
-
 
 
 Source Files
@@ -61,31 +118,44 @@ Source Files
    * - ``src/bist/core/cpu/bist_cpu_regs.c``
      - v1.1.0
      - 42ff66a500bca7c845c5c15dcb9bba56
+   * - ``src/bist/core/cpu/bist_cpu_regs_reciprocal.c``
+     - N/A
+     - 5378a61dffd9f5145feb7c96f23d2fcc
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Macros enforce identical pattern/write/read/restore for each register
+- Macros enforce identical pattern/write/read/restore for each register.
 - Explicit error handling: If a register value does not match the expected pattern, the test jumps to a labeled error handler.
-- No pointer dereferencing or dynamic memory is used, reducing risk of undefined behavior.
-- Single public API declared in ``bist_cpu_regs.h``
-- This test is self-contained and does not call other modules. It only depends on the BIST error code definitions and configuration macros.
-- All operations are performed on CPU registers directly.
-- The function is declared ``__attribute__((naked))`` and manages its own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path). This is necessary because the function body is pure inline assembly that manually issues ``ret``; without ``naked``, the compiler may or may not generate a prologue depending on the optimization level (e.g. ``-Os`` omits it), which would cause a mismatch with the hand-written epilogue and corrupt the caller's stack.
-- The main function has a single entry and, under normal conditions, a single exit. Error handling uses a label (``errorCPU``) for early exit on failure, which is documented and justified for low-level assembly.
+- No dynamic memory allocation is used, reducing risk of undefined behavior.
+- Single public API declared in ``bist_cpu_regs.h`` (Static) or ``bist_cpu_regs_reciprocal.h`` (Reciprocal).
+- In static mode, this test is self-contained and only depends on BIST error code definitions and configuration macros. All operations are performed on CPU registers directly with no pointer dereferencing.
+- In reciprocal mode, register results are recorded into statically allocated shared HP SRAM. No pointers are stored within the structure, and layout is verified with compile-time assertions.
+- The walk functions are declared ``__attribute__((naked))`` and manage their own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path). This is necessary because the function body is pure inline assembly with manual ``ret``.
+- In reciprocal mode, cross-core dispatch uses ``bist_multicore_call()`` with dedicated job callbacks (``verify_bist_cpu_regs_test_result_job`` and wrapper jobs). Only Core 0 initiates dispatch to Core 1.
+- The main function has a single entry and, under normal conditions, a single exit. Error handling uses dedicated assembly labels for early exit on failure.
 - Branching is limited to error detection and is implemented via macro-generated assembly. There is no deep nesting or complex logic.
-- No explicit C loops are used; the test iterates over registers via repeated macro invocations. All operations are statically bounded.
-- Only bitwise and equality operations are performed on integer registers. For FPU register tests on FPU supported devices, no floating-point arithmetic is executed in C.
-- No interrupts are used or manipulated by this test.
-- No pointers are used in this test. All operations are on CPU registers.
+- No explicit C loops are used during the register walk; iteration is performed via repeated macro invocations. All operations are statically bounded.
+- Only bitwise and equality operations are performed on integer registers. For FPU register tests on FPU supported devices, floating-point equality (``feq.s``) is performed in assembly.
+- In static mode, no interrupts are used. In reciprocal mode, Core 1 idle wake-up uses a dedicated cross-core software interrupt.
 - No recursion is used in this test.
 
 CPU CSR Register Test
 ---------------------
 
+The CPU Control and Status Register (CSR) Test verifies the integrity of critical machine-mode and floating-point CSRs by writing alternating bit patterns (``0xAAAAAAAA`` and ``0x55555555``) masked to each register's writable bits, verifying read-backs, and restoring original values.
+
+Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Test)**: Default implementation running entirely on the executing core.
+- **Reciprocal (Dual-Core Comparison)**: Available on dual-core targets (ESP32-P4) using cross-core dispatch, shared memory, and mutual verification.
+
+Static Single-Core CSR Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
     :scale: 50%
-    :caption: CPU CSR Register Test
+    :caption: CPU CSR Register Test (Static)
     :align: center
 
     blockdiag {
@@ -113,7 +183,7 @@ CPU CSR Register Test
         Success [label = "Return\nBIST_ESP_OK"];
     }
 
-This diagram shows the generic logic for all tested CSRs: save original value, write test patterns (``0xAAAAAAAA`` and ``0x55555555`` masked as needed), verify, and restore. Any mismatch returns an error.
+This diagram shows the generic logic for all tested CSRs in static mode: save original value, write test patterns (``0xAAAAAAAA`` and ``0x55555555`` masked as needed), verify, and restore. Any mismatch returns an error.
 
 The CSR groups tested vary by SoC capability:
 
@@ -127,12 +197,59 @@ PMA address entries 12–15 are skipped because the ROM bootloader may configure
 
 Total CSRs tested: 25 on ESP32-C3, 37 on ESP32-C6/H2/C61, 39 on ESP32-C5, 40 on ESP32-H4/P4 (adds 12 ``pma_addr`` + ``fflags``, ``frm``, ``fcsr`` on FPU-capable SoCs).
 
+Reciprocal Dual-Core CSR Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: CPU CSR Register Test (Reciprocal)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> "Core 0: CSR Walk" -> "Core 0: Validate Core 0" -> "Core 1: CSR Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: CSR Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: CSR Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: CSR Walk" [label = "Core 0: Walk CSRs\nWrite to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0:\nValidate slot 0", shape = diamond];
+        "Core 1: CSR Walk" [label = "Core 1: Walk CSRs\nWrite to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1:\nValidate slot 1 (IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1:\nValidate slot 0 (IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0:\nValidate slot 1", shape = diamond];
+        Error [label = "Return\nBIST_ESP_CPU_CSR_TEST_ERR"];
+        Success [label = "Return\nBIST_ESP_OK"];
+    }
+
+For dual-core reciprocal comparison (e.g. IEC 60730 Class C / Annex H Table H.1 / H.2.18.15), ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation on 40 CSRs (5 trap + 16 PMP address + 4 PMP config + 12 PMA address + 3 FPU CSRs):
+
+1. **Independent Execution (Core 0)**: Core 0 executes the CSR walk and writes raw read-back values directly into shared memory slot 0 (``bist_cpu_csr_regs_shared_results_cc[0]``).
+2. **Local Validation (Core 0 on Core 0)**: Core 0 verifies that its own recorded read-backs match the expected masked patterns.
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the CSR walk to HP Core 1 via ``bist_multicore_call()``. Core 1 executes the walk and writes its raw read-backs into shared memory slot 1 (``bist_cpu_csr_regs_shared_results_cc[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of Core 1's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates its own CSR data.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of Core 0's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates Core 0's evidence.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates Core 1's recorded read-backs directly.
+
+Fixed-Layout CSR Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal CSR test exchanges evidence using a fixed-layout structure (``bist_cpu_csr_regs_result_cc_t``) placed in statically allocated HP SRAM (``bist_cpu_csr_regs_shared_results_cc``):
+
+- Exactly 324 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers, ensuring deterministic memory layout across cores and compiler configurations.
+- Verified at compile time via ``_Static_assert`` on total structure size, field offsets, and read-back entry sizes.
+- Contains execution ``status`` followed by an array of 40 CSR read-back entries (``bist_cpu_csr_reg_readback_cc_t``), each storing raw ``pattern_a`` and ``pattern_5`` values.
+
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_cpu_csr_regs_test
-
 
 
 Source Files
@@ -148,20 +265,24 @@ Source Files
    * - ``src/bist/core/cpu/bist_cpu_csr_regs.c``
      - v1.1.0
      - eef84263fbb91e68b8bbbd2ddd19afd6
+   * - ``src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c``
+     - N/A
+     - b3cdf9446c26d77cab9cd3873ca4e90b
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
 - The CPU CSR test uses macros to ensure all test operations are performed in a controlled, repeatable way.
 - Error code ``BIST_ESP_CPU_CSR_TEST_ERR`` on mismatch
-- Single API in ``bist_cpu_csr_regs.h``
-- This test is self-contained and does not call other modules. It only depends on the BIST error code definitions and configuration macros.
-- No dynamic or static data structures are used. All operations are performed on CPU CSRs directly.
-- The function is declared ``__attribute__((naked))`` and manages its own 16-byte stack frame explicitly, for the same reason as ``bist_cpu_regs_test`` (see above): the function body is pure inline assembly with manual ``ret``, so the compiler must not generate a prologue or epilogue.
-- The main function has a single entry and, under normal conditions, a single exit. Error handling uses a label (``errorCSR``) for early exit on failure, which is documented and justified for low-level assembly.
-- No explicit C loops are used; the test iterates over CSRs via repeated macro invocations. All operations are statically bounded.
+- Single API in ``bist_cpu_csr_regs.h`` (Static) or ``bist_cpu_csr_regs_reciprocal.h`` (Reciprocal).
+- In static mode, this test is self-contained and only depends on BIST error code definitions and configuration macros. All operations are performed on CPU CSRs directly.
+- In reciprocal mode, CSR results are recorded into statically allocated shared HP SRAM. No pointers are stored within the structure, and layout is verified with compile-time assertions.
+- The walk functions are declared ``__attribute__((naked))`` and manage their own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path) because the function body is pure inline assembly with manual ``ret``.
+- In reciprocal mode, cross-core dispatch uses ``bist_multicore_call()`` with dedicated job callbacks. Only Core 0 initiates dispatch to Core 1.
+- The main function has a single entry and, under normal conditions, a single exit. Error handling uses dedicated assembly labels for early exit on failure.
+- No explicit C loops are used during the walk; the test iterates over CSRs via repeated macro invocations. All operations are statically bounded.
 - Only bitwise and equality operations are performed on integer CSRs. FPU CSR tests use ``csrr``/``csrw`` only; no floating-point arithmetic is executed in C.
-- No interrupts are used or manipulated by this test.
+- In static mode, no interrupts are used. In reciprocal mode, Core 1 idle wake-up uses a dedicated cross-core software interrupt.
 - No recursion is used in this test.
 
 .. _cpu-instruction-test:
