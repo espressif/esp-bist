@@ -17,11 +17,57 @@ config ESP_BIST_CPU_REG_TEST
     help
       Enable tests for CPU registers.
 
+choice ESP_BIST_CPU_REG_TEST_TYPE
+    prompt "CPU Register Test Selection"
+    depends on ESP_BIST_CPU_REG_TEST
+    default ESP_BIST_CPU_REG_TEST_STATIC
+    help
+      Select which CPU Register test to use.
+
+    config ESP_BIST_CPU_REG_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static memory test for CPU registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class B.
+
+    config ESP_BIST_CPU_REG_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal tests for CPU registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
 config ESP_BIST_CPU_CSR_REG_TEST
     bool "CPU CSR Register Test"
     default y if !ZEPHYR_ESP_BIST_MODULE
     help
       Enable tests for CPU Control and Status Registers (CSRs).
+
+choice ESP_BIST_CPU_CSR_REG_TEST_TYPE
+    prompt "CPU CSR Register Test Selection"
+    depends on ESP_BIST_CPU_CSR_REG_TEST
+    default ESP_BIST_CPU_CSR_REG_TEST_STATIC
+    help
+      Select which CPU CSR Register test to use.
+
+    config ESP_BIST_CPU_CSR_REG_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static memory test for CPU CSR registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class B.
+
+    config ESP_BIST_CPU_CSR_REG_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal tests for CPU CSR registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
 
 menuconfig ESP_BIST_CPU_INSTRUCTION_TEST
     bool "CPU Instruction Equivalence Test"
