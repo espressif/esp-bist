@@ -32,6 +32,11 @@ for test_dir in "$TESTS_DIR"/*/; do
     test_name="$(basename "$test_dir")"
     build_dir="$test_dir/build"
 
+    # Reciprocal tests are ESP32-P4 only
+    if [[ "$test_name" == *reciprocal* && "$TARGET" != "esp32p4" ]]; then
+        continue
+    fi
+
     echo ""
     echo "========================================"
     echo "  Building: $test_name for $TARGET"

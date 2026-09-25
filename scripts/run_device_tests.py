@@ -38,13 +38,30 @@ MODE_DEVICE = "device"
 MODE_QEMU = "qemu"
 
 
-def discover_test_apps(mode: str) -> tuple[str, ...]:
-    """tests/<name>_test directories that have pytest_<mode>*.py."""
+def app_supports_target(app_dir: Path, target: str) -> bool:
+    """Optional tests/<app>/supported_targets lists allowed SoCs; missing file = all."""
+    path = app_dir / "supported_targets"
+    if not path.is_file():
+        return True
+    allowed = {
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    }
+    return target in allowed
+
+
+def discover_test_apps(mode: str, target: str) -> tuple[str, ...]:
+    """tests/<name> dirs with pytest_<mode>*.py that support the given SoC."""
     pattern = f"pytest_{mode}*.py"
     apps = []
-    for path in sorted(TESTS_DIR.glob("*_test")):
-        if path.is_dir() and next(path.glob(pattern), None):
-            apps.append(path.name)
+    for path in sorted(TESTS_DIR.iterdir()):
+        if not path.is_dir() or next(path.glob(pattern), None) is None:
+            continue
+        if not app_supports_target(path, target):
+            logger.info("Skipping %s (not supported on %s)", path.name, target)
+            continue
+        apps.append(path.name)
     return tuple(apps)
 
 
@@ -136,7 +153,7 @@ class AppTestLoop:
         self.target = target
         self.mode = mode
         self.skip_flash = skip_flash
-        self.apps = discover_test_apps(mode)
+        self.apps = discover_test_apps(mode, target)
         self.in_ci = bool(os.getenv("CI") or os.getenv("GITLAB_CI"))
         self.failed: list[str] = []
         self.passed: list[str] = []
@@ -145,7 +162,7 @@ class AppTestLoop:
     def test_loop(self) -> None:
         if not self.apps:
             raise RuntimeError(
-                f"No tests/*_test apps with pytest_{self.mode}*.py under {TESTS_DIR}"
+                f"No {self.mode} test apps for {self.target} under {TESTS_DIR}"
             )
         logger.info("%s test apps: %s", self.mode.capitalize(), ", ".join(self.apps))
         start = time.time()
