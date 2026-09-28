@@ -3140,9 +3140,9 @@
     "function": "bist_interrupt_source_map_test",
     "signature": "bist_esp_err_t bist_interrupt_source_map_test(void)",
     "module": "interrupt",
-    "description": "Software and hardware interrupt tests (IEC 60730 Table H.1 ID 2)",
+    "description": "Stable API for the software and hardware interrupt tests",
     "params": [],
-    "returns": "BIST_ESP_OK if every software source maps, fires, and unmaps correctly; BIST_ESP_INTERRUPT_TEST_ERR if enable-mask or ISR-count checks fail",
+    "returns": "BIST_ESP_OK if the selected mode completes and all count, enable-mask, completion, and reciprocal validations pass; BIST_ESP_INTERRUPT_TEST_ERR on any walk, dispatch, mapping, count, enable-mask, completion, or evidence-verification failure",
     "note": "",
     "header_file": "src/bist/core/interrupt/include/bist_interrupt.h",
     "kconfig_guards": []
@@ -3151,11 +3151,22 @@
     "function": "bist_hardware_interrupt_test",
     "signature": "bist_esp_err_t bist_hardware_interrupt_test(void)",
     "module": "interrupt",
-    "description": "Test concurrent hardware interrupt delivery via dual timer groups",
+    "description": "Test hardware interrupt delivery via dual timer groups",
     "params": [],
-    "returns": "BIST_ESP_OK if both timers deliver interrupts at the expected ratio; BIST_ESP_INTERRUPT_TEST_ERR if setup fails or the period ratio check fails",
+    "returns": "BIST_ESP_OK if the selected mode completes and all timer-count, ratio, and reciprocal validations pass; BIST_ESP_INTERRUPT_TEST_ERR on any timer setup, walk, dispatch, ratio, or evidence-verification failure",
     "note": "",
     "header_file": "src/bist/core/interrupt/include/bist_interrupt.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_interrupt_reciprocal",
+    "signature": "",
+    "module": "interrupt",
+    "description": "Fixed-layout evidence for reciprocal interrupt tests",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/interrupt/include/bist_interrupt_reciprocal.h",
     "kconfig_guards": []
   },
   {

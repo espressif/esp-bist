@@ -150,21 +150,33 @@ Program Counter Test (IEC 60730 ID: 1.3)
 Interrupt Test (IEC 60730 ID: 2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Validate interrupt handling, matrix routing for software IRQ sources, and concurrent hardware interrupt delivery.
+**Requirement**: Validate interrupt handling and execution — interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery. For reciprocal testing on ESP32-P4, execute the walks on both HP cores and reciprocally cross-validate results (H.2.18.15).
 
-**Design**: ``src/bist/core/interrupt/bist_interrupt_sw.c``, ``src/bist/core/interrupt/bist_interrupt.c`` (``bist_interrupt_source_map_test()``, ``bist_hardware_interrupt_test()``; :ref:`interrupt-test`)
+**Design**:
+
+- Modules: ``src/bist/core/interrupt/bist_interrupt_sw.c`` / ``bist_interrupt.c`` (Static), ``bist_interrupt_sw_reciprocal.c`` / ``bist_interrupt_reciprocal.c`` (Reciprocal)
+- Functions: ``bist_interrupt_source_map_test()``, ``bist_hardware_interrupt_test()``
+- Design Doc: :doc:`module_design_and_coding` (Interrupt Handling and Execution Test section)
 
 **Test Implementation**:
 
-- QEMU: ``tests/interrupt_test/pytest_qemu_interrupt_test.py`` (software source map pass and GDB count corruption)
-- Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py`` (software source map and dual-timer 2:1 period ratio validation and GDB count corruption)
+- Static:
+
+  - QEMU: ``tests/interrupt_test/pytest_qemu_interrupt_test.py`` (software source map pass and GDB count corruption)
+  - Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py`` (software source map and dual-timer 2:1 period ratio validation and GDB count corruption)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/interrupt_test_reciprocal/pytest_qemu_interrupt_test_reciprocal.py`` (dual-core software source-map pass and fault injection on Core 0/1)
+  - Hardware: ``tests/interrupt_test_reciprocal/pytest_device_interrupt_test_reciprocal.py`` (dual-core software source map and sequential dual-timer hardware tests with fault injection)
 
 **Test Results**:
 
-- QEMU: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
-- Hardware: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Static QEMU: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Static Hardware: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Reciprocal QEMU/Hardware: ``tests/interrupt_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml`` and ``{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: Software interrupt matrix routing covered in QEMU and hardware; dual-timer delivery validated on hardware.
+**Coverage**: Static: 2 functions (software source map and hardware dual-timer) with pass and fault-injection test cases. Reciprocal: 2 functions exercised across both HP cores (QEMU covers software path with 1 pass and 14 fault cases; hardware covers both paths with 1 pass and 5 fault cases).
 
 Clock Test (IEC 60730 ID: 3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

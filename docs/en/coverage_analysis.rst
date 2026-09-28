@@ -66,7 +66,7 @@ The following table provides code coverage information for each BIST module:
      - 2
      - 2 (100%)
      - 2 (SW source map, HW dual-timer)
-     - 1 (GDB fault injection)
+     - 1 (fault injection; 14 on P4 reciprocal)
      - :doc:`software_validation` (Interrupt Handling and Execution Test)
 
    * - Stack Overflow
@@ -185,14 +185,14 @@ Requirements Coverage Matrix
    * - 2
      - Interrupt Source Map
      - ``bist_interrupt_source_map_test()``
-     - QEMU + Hardware (``CPU_INTR_FROM_CPU_0..3``; fault injection)
-     - ``tests/interrupt_test/build/tests/*_report.xml``
+     - QEMU + Hardware (fault injection; dual-core reciprocal on P4)
+     - ``tests/interrupt_test*/build/tests/*_report.xml``
 
    * - 2
      - Hardware Interrupt Delivery
      - ``bist_hardware_interrupt_test()``
-     - Hardware (dual-timer TIMG 2:1 period ratio; QEMU TIMG unsupported)
-     - ``tests/interrupt_test/build/tests/*_report.xml``
+     - Hardware (dual-timer TIMG 2:1 period ratio; sequential dual-core reciprocal on P4)
+     - ``tests/interrupt_test*/build/tests/*_report.xml``
 
    * - 3
      - Clock Source Validation

@@ -243,6 +243,114 @@
     "content_type": "source"
   },
   {
+    "function_name": "bist_hw_interrupt_check_ratio",
+    "body": "static void bist_hw_interrupt_check_ratio(void)\n{\n    uint32_t expected = 2 * hw_interrupt_count_2;\n    uint32_t diff = (hw_interrupt_count_1 > expected)\n                    ? (hw_interrupt_count_1 - expected)\n                    : (expected - hw_interrupt_count_1);\n    if (diff > 1U) {\n        hw_interrupt_test_failed = true;\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 81,
+    "line_end": 90,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer_ack",
+    "body": "static void bist_hw_timer_ack(bist_hw_timer_t *timer)\n{\n    uint32_t event = TIMER_LL_EVENT_ALARM(timer->timer_id);\n\n    if (timer_ll_get_intr_status(timer->hal.dev) & event) {\n        timer_ll_clear_intr_status(timer->hal.dev, event);\n        timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, true);\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 92,
+    "line_end": 100,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer0_isr",
+    "body": "static void bist_hw_timer0_isr(void *arg)\n{\n    bist_hw_timer_t *timer = (bist_hw_timer_t *)arg;\n    bist_hw_timer_ack(timer);\n    hw_interrupt_count_1++;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 102,
+    "line_end": 107,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer1_isr",
+    "body": "static void bist_hw_timer1_isr(void *arg)\n{\n    bist_hw_timer_t *timer = (bist_hw_timer_t *)arg;\n    bist_hw_timer_ack(timer);\n    hw_interrupt_count_2++;\n    hw_check_divider++;\n    if (hw_check_divider >= BIST_HW_CHECK_EVERY_N) {\n        hw_check_divider = 0;\n        bist_hw_interrupt_check_ratio();\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 109,
+    "line_end": 119,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer_start",
+    "body": "static bist_esp_err_t bist_hw_timer_start(bist_hw_timer_t *timer)\n{\n    const uint32_t core_id = esp_cpu_get_core_id();\n    const uint32_t divider = CONFIG_XTAL_FREQ;\n    const uint32_t cpu_intr_mask = 1U << timer->cpu_intr;\n    esp_cpu_intr_handler_t isr = (timer->group_id == 0) ? bist_hw_timer0_isr : bist_hw_timer1_isr;\n\n    if (divider < 2U) {\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API\n    periph_module_enable((timer->group_id == 0) ? PERIPH_TIMG0_MODULE : PERIPH_TIMG1_MODULE);\n#else\n    _timg_ll_enable_bus_clock(timer->group_id, true);\n#endif\n\n    timer_hal_init(&timer->hal, timer->group_id, timer->timer_id);\n\n    PERIPH_RCC_ATOMIC() {\n        timer_ll_enable_clock(timer->group_id, timer->timer_id, true);\n        timer_ll_set_clock_source(timer->group_id, timer->timer_id, GPTIMER_CLK_SRC_XTAL);\n    }\n    timer_ll_set_clock_prescale(timer->hal.dev, timer->timer_id, divider);\n    timer_ll_set_count_direction(timer->hal.dev, timer->timer_id, GPTIMER_COUNT_UP);\n    timer_ll_enable_auto_reload(timer->hal.dev, timer->timer_id, true);\n    timer_ll_set_reload_value(timer->hal.dev, timer->timer_id, 0);\n    timer_hal_set_counter_value(&timer->hal, 0);\n    timer_ll_set_alarm_value(timer->hal.dev, timer->timer_id, timer->period_us);\n    timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), false);\n    timer_ll_clear_intr_status(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id));\n\n    esp_cpu_intr_disable(cpu_intr_mask);\n    esp_rom_route_intr_matrix(core_id, timer->intr_source, timer->cpu_intr);\n    esp_cpu_intr_set_type(timer->cpu_intr, ESP_CPU_INTR_TYPE_LEVEL);\n    esp_cpu_intr_set_priority(timer->cpu_intr, SOC_INTERRUPT_LEVEL_MEDIUM);\n    esp_cpu_intr_set_handler(timer->cpu_intr, isr, timer);\n    esp_cpu_intr_enable(cpu_intr_mask);\n\n    timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), true);\n    timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, true);\n    timer_ll_enable_counter(timer->hal.dev, timer->timer_id, true);\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 121,
+    "line_end": 165,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timer_deinit",
+    "body": "static void bist_hw_timer_deinit(bist_hw_timer_t *timer)\n{\n    const uint32_t cpu_intr_mask = 1U << timer->cpu_intr;\n\n    if (timer->hal.dev == NULL) {\n        return;\n    }\n\n    timer_ll_enable_counter(timer->hal.dev, timer->timer_id, false);\n    timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, false);\n    timer_ll_clear_intr_status(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id));\n    timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), false);\n    esp_cpu_intr_disable(cpu_intr_mask);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), timer->intr_source, ETS_INVALID_INUM);\n    timer_hal_deinit(&timer->hal);\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 167,
+    "line_end": 182,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hw_timers_deinit",
+    "body": "static void bist_hw_timers_deinit(void)\n{\n    for (int i = 0; i < BIST_HW_TIMER_COUNT; i++) {\n        bist_hw_timer_deinit(&hw_timers[i]);\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 184,
+    "line_end": 189,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hardware_interrupt_walk_init",
+    "body": "static bist_esp_err_t bist_hardware_interrupt_walk_init(void)\n{\n    bist_esp_err_t ret;\n\n    hw_check_divider = 0;\n    hw_interrupt_count_1 = 0;\n    hw_interrupt_count_2 = 0;\n    hw_interrupt_test_failed = false;\n\n    hw_timers[0] = (bist_hw_timer_t) {\n        .group_id = 0,\n        .cpu_intr = BIST_HW_TIMER_CPU_INTR_0,\n        .timer_id = 0,\n        .intr_source = soc_timg_gptimer_signals[0][0].irq_id,\n        .period_us = BIST_HARDWARE_INTERRUPT_PERIOD_US_1,\n    };\n    hw_timers[1] = (bist_hw_timer_t) {\n        .group_id = 1,\n        .cpu_intr = BIST_HW_TIMER_CPU_INTR_1,\n        .timer_id = 0,\n        .intr_source = soc_timg_gptimer_signals[1][0].irq_id,\n        .period_us = BIST_HARDWARE_INTERRUPT_PERIOD_US_2,\n    };\n\n    for (int i = 0; i < BIST_HW_TIMER_COUNT; i++) {\n        ret = bist_hw_timer_start(&hw_timers[i]);\n        if (ret != BIST_ESP_OK) {\n            bist_hw_timers_deinit();\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 191,
+    "line_end": 224,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "clear_interrupt_hw_result",
+    "body": "static void clear_interrupt_hw_result(volatile bist_interrupt_hw_result_t *out)\n{\n    volatile uint32_t *words = (volatile uint32_t *)out;\n    for (uint32_t i = 0; i < (sizeof(*out) / sizeof(*words)); ++i) {\n        words[i] = 0;\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 226,
+    "line_end": 232,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_interrupt_hw_result",
+    "body": "static bist_esp_err_t verify_bist_interrupt_hw_result(volatile bist_interrupt_hw_result_t *result)\n{\n    uint32_t expected;\n    uint32_t diff;\n\n    if (result == NULL || result->status != (uint32_t)BIST_ESP_OK) {\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    /* Peer rechecks the published counts against the same 2:1 property. */\n    expected = 2U * result->count_2;\n    diff = (result->count_1 > expected) ? (result->count_1 - expected) : (expected - result->count_1);\n    if (diff > 2U) {\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 269,
+    "line_end": 286,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_interrupt_hw_result_job",
+    "body": "static void verify_bist_interrupt_hw_result_job(void *arg)\n{\n    volatile bist_interrupt_hw_result_t *result = (volatile bist_interrupt_hw_result_t *)arg;\n\n    if (result == NULL) {\n        return;\n    }\n\n    result->status = (uint32_t)verify_bist_interrupt_hw_result(result);\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 288,
+    "line_end": 297,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_hardware_interrupt_test",
+    "body": "bist_esp_err_t bist_hardware_interrupt_test(void)\n{\n    volatile bist_interrupt_hw_result_t *test_result_core_0 = &bist_interrupt_hw_shared_results[0];\n    volatile bist_interrupt_hw_result_t *test_result_core_1 = &bist_interrupt_hw_shared_results[1];\n    bist_esp_err_t status;\n    bist_esp_err_t ret;\n\n    bist_interrupt_hw_walk_job((void *)test_result_core_0);\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute HW interrupt walk on core 0: %d\", test_result_core_0->status);\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    status = verify_bist_interrupt_hw_result(test_result_core_0);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 HW interrupt results on core 0\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, bist_interrupt_hw_walk_job, (void *)test_result_core_1);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to dispatch HW interrupt walk to core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute HW interrupt walk on core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, verify_bist_interrupt_hw_result_job, (void *)test_result_core_1);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 1 HW interrupt results to core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 HW interrupt results on core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    BIST_ADD_LABEL(\"bist_interrupt_hw_verify_core0_on_core1\");\n    ret = bist_multicore_call(1, verify_bist_interrupt_hw_result_job, (void *)test_result_core_0);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 0 HW interrupt results to core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 HW interrupt results on core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    BIST_ADD_LABEL(\"bist_interrupt_hw_verify_core1_on_core0\");\n    status = verify_bist_interrupt_hw_result(test_result_core_1);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 HW interrupt results on core 0\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_reciprocal.c",
+    "line_start": 299,
+    "line_end": 357,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
     "function_name": "bist_interrupt_callback",
     "body": "static void bist_interrupt_callback(void *arg)\n{\n    REG_WRITE((uint32_t)arg, 0U);\n    interrupt_count++;\n}",
     "file": "src/bist/core/interrupt/bist_interrupt_sw.c",
@@ -257,6 +365,51 @@
     "file": "src/bist/core/interrupt/bist_interrupt_sw.c",
     "line_start": 53,
     "line_end": 112,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_interrupt_sw_callback",
+    "body": "static void bist_interrupt_sw_callback(void *arg)\n{\n    REG_WRITE((uint32_t)arg, 0U);\n    s_interrupt_count++;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c",
+    "line_start": 70,
+    "line_end": 74,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "clear_interrupt_sw_result",
+    "body": "static void clear_interrupt_sw_result(volatile bist_interrupt_sw_result_t *out)\n{\n    volatile uint32_t *words = (volatile uint32_t *)out;\n    for (uint32_t i = 0; i < (sizeof(*out) / sizeof(*words)); ++i) {\n        words[i] = 0;\n    }\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c",
+    "line_start": 76,
+    "line_end": 82,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_interrupt_sw_result",
+    "body": "static bist_esp_err_t verify_bist_interrupt_sw_result(volatile bist_interrupt_sw_result_t *result)\n{\n    const uint32_t cpu_intr_mask = 1U << BIST_INTERRUPT_SW_CPU_NUMBER;\n\n    if (result == NULL || result->status != (uint32_t)BIST_ESP_OK ||\n            result->completion_mask != BIST_INTERRUPT_SW_RESULT_COMPLETE_MASK) {\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    for (uint32_t src = 0; src < BIST_INTERRUPT_SW_SOURCE_COUNT; src++) {\n        if (result->interrupt_count[src] != BIST_INTERRUPT_SW_LOOP_COUNT) {\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n        if ((result->enabled_mask_active[src] & cpu_intr_mask) == 0U) {\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n        if ((result->enabled_mask_cleared[src] & cpu_intr_mask) != 0U) {\n            return BIST_ESP_INTERRUPT_TEST_ERR;\n        }\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c",
+    "line_start": 131,
+    "line_end": 153,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_bist_interrupt_sw_result_job",
+    "body": "static void verify_bist_interrupt_sw_result_job(void *arg)\n{\n    volatile bist_interrupt_sw_result_t *result = (volatile bist_interrupt_sw_result_t *)arg;\n\n    if (result == NULL) {\n        return;\n    }\n\n    result->status = (uint32_t)verify_bist_interrupt_sw_result(result);\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c",
+    "line_start": 155,
+    "line_end": 164,
+    "module": "interrupt",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_interrupt_source_map_test",
+    "body": "bist_esp_err_t bist_interrupt_source_map_test(void)\n{\n    volatile bist_interrupt_sw_result_t *test_result_core_0 = &bist_interrupt_sw_shared_results[0];\n    volatile bist_interrupt_sw_result_t *test_result_core_1 = &bist_interrupt_sw_shared_results[1];\n    bist_esp_err_t status;\n    bist_esp_err_t ret;\n\n    bist_interrupt_sw_walk_job((void *)test_result_core_0);\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute SW interrupt walk on core 0\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    status = verify_bist_interrupt_sw_result(test_result_core_0);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 SW interrupt results on core 0\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, bist_interrupt_sw_walk_job, (void *)test_result_core_1);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to dispatch SW interrupt walk to core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to execute SW interrupt walk on core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    ret = bist_multicore_call(1, verify_bist_interrupt_sw_result_job, (void *)test_result_core_1);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 1 SW interrupt results to core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 SW interrupt results on core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    BIST_ADD_LABEL(\"bist_interrupt_sw_verify_core0_on_core1\");\n    ret = bist_multicore_call(1, verify_bist_interrupt_sw_result_job, (void *)test_result_core_0);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to dispatch validation of core 0 SW interrupt results to core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 0 SW interrupt results on core 1\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    BIST_ADD_LABEL(\"bist_interrupt_sw_verify_core1_on_core0\");\n    status = verify_bist_interrupt_sw_result(test_result_core_1);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to validate core 1 SW interrupt results on core 0\");\n        return BIST_ESP_INTERRUPT_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c",
+    "line_start": 166,
+    "line_end": 224,
     "module": "interrupt",
     "content_type": "source"
   },

@@ -28,6 +28,7 @@ Interrupt Tests
 ---------------
 
 .. include-build-file:: inc/bist_interrupt.inc
+.. include-build-file:: inc/bist_interrupt_reciprocal.inc
 
 Memory Tests
 ------------

@@ -29,7 +29,7 @@ Modules Architecture
 
 - **CPU tests** (``core/cpu/``): general-purpose and FPU register integrity (static single-core walk and dual-core reciprocal comparison), trap/PMP/PMA/FPU CSR integrity (static and reciprocal), instruction decoding and execution equivalence-class self-tests (``bist_cpu_instructions`` across 10 ISA groups: integer ALU, shifts, upper immediate LUI/AUIPC, control flow, load/store, RV32M multiply/divide, Zicsr/Zifencei CSR and fence, RV32A atomics, RV32F floating point, RV32C compressed instructions), PC integrity (functions placed in IRAM, Flash, RTC, and TCM on ESP32-P4), stack overflow sentinel protection
 - **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC32 validation
-- **Interrupt tests** (``core/interrupt/``): software IRQ source mapping and dual timer-group hardware interrupt delivery
+- **Interrupt tests** (``core/interrupt/``): software IRQ source mapping (static single-core walk and dual-core reciprocal comparison) and dual timer-group hardware interrupt delivery
 - **Clock tests** (``core/clock/``): XT WDT 32 kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); main-crystal drift measurement at ``CONFIG_XTAL_FREQ``
 - **WDT tests** (``core/wdt/``): hardware watchdog timeout test and core reset verification
 - **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks

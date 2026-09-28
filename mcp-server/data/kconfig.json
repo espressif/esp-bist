@@ -282,12 +282,32 @@
   {
     "name": "ESP_BIST_INTERRUPT_TEST",
     "type": "bool",
-    "default": "n",
-    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
-    "help": "Enable tests for software and hardware interrupts.",
+    "default": "ESP_BIST_INTERRUPT_TEST_STATIC",
+    "depends_on": "ESP_BIST_INTERRUPT_TEST",
+    "help": "Select which Interrupt test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "Interrupt Test"
+  },
+  {
+    "name": "ESP_BIST_INTERRUPT_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static interrupt test for software source mapping and\nhardware timer delivery.\nMatches IEC60730 Table H.1 component 2 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_INTERRUPT_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Use the reciprocal interrupt tests.\nMatches IEC60730 Table H.1 component 2 for Class C,\nbut requires dual-core support (currently only ESP32-P4) and standalone build.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal Tests"
   },
   {
     "name": "ESP_BIST_WDT_TIMEOUT_US",

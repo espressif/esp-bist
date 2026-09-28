@@ -60,7 +60,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - Interrupt handling or execution failure causing missed, stuck, or incorrectly routed interrupts
      - High
      - 2 (Interrupt handling and execution)
-     - ``bist_interrupt_source_map_test()`` verifies software IRQ source mapping, enable/disable, and ISR delivery; ``bist_hardware_interrupt_test()`` validates concurrent timer-group interrupt delivery via a 2:1 period ratio check
+     - ``bist_interrupt_source_map_test()`` verifies software IRQ source mapping, enable/disable, and ISR delivery; ``bist_hardware_interrupt_test()`` validates concurrent timer-group interrupt delivery via a 2:1 period ratio check; on ESP32-P4 with reciprocal testing enabled, performs dual-core reciprocal execution and mutual cross-validation across both HP cores
 
    * - H6
      - Clock oscillator failure causing timing violations and missed deadlines

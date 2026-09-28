@@ -36,7 +36,7 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 2
      - Interrupt handling and execution
-     - Validates interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery via dual timer-group alarms
+     - Validates interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery via dual timer-group alarms (static single-core walk or dual-core reciprocal comparison)
      - Stuck or missed interrupts, incorrect interrupt-matrix routing, enable/disable faults, incorrect interrupt frequency or period
      - :ref:`interrupt-test`
 
@@ -138,7 +138,7 @@ The BIST library interfaces with hardware through a HAL layer; low-level access 
   - RAM direct access: Direct memory read/write for March A/X RAM tests (``src/bist/core/memory/bist_ram.c``)
   - RTC memory: RTC memory region for PC test function placement (``src/bist/core/cpu/bist_pc.c``, ``src/bist/core/cpu/bist_pc_reciprocal.c``)
   - Linker-defined memory regions: IRAM, Flash, RTC memory, and (ESP32-P4) TCM sections via linker scripts (``src/soc/{IDF_TARGET_PATH_NAME}/ld/linker.ld``)
-  - Shared HP SRAM (ESP32-P4 reciprocal tests): statically allocated result slots exchanged between HP cores by the CPU register, CSR, and PC reciprocal tests
+  - Shared HP SRAM (ESP32-P4 reciprocal tests): statically allocated result slots exchanged between HP cores by the CPU register, CSR, PC, and interrupt reciprocal tests
 
 Build System
 ------------

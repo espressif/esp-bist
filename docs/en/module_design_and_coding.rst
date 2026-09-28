@@ -1326,12 +1326,20 @@ Coding and Interfaces
 Interrupt Handling and Execution Test
 -------------------------------------
 
+The Interrupt Handling and Execution Test verifies interrupt-matrix routing and ISR delivery for software IRQ sources, and concurrent hardware interrupt delivery via dual timer-group alarms. Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Walk)**: Default implementation running entirely on the executing core (``bist_interrupt_sw.c``, ``bist_interrupt.c``).
+- **Reciprocal (Dual-Core Comparison)**: Available on ESP32-P4 (``bist_interrupt_sw_reciprocal.c``, ``bist_interrupt_reciprocal.c``). Both HP cores run the same walks and cross-validate each other's fixed-layout evidence.
+
 Software Interrupt Source Map Test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Static Single-Core Software Interrupt Test
+""""""""""""""""""""""""""""""""""""""""""
+
 .. blockdiag::
     :scale: 60%
-    :caption: Software Interrupt Source Map Test
+    :caption: Software Interrupt Source Map Test (Static)
     :align: center
 
     blockdiag {
@@ -1387,14 +1395,107 @@ Software Interrupt Source Map Test
         IrqRet [label = "Return from ISR", shape = roundedbox];
     }
 
-``bist_interrupt_source_map_test()`` exercises interrupt-matrix routing and ISR delivery using the four SoC software interrupt sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_3``. These are dedicated software-triggered interrupt sources (not peripheral IRQs): software raises each by writing its ``CPU_INTR_FROM_CPU_n`` register, which asserts that interrupt source into the interrupt matrix. Each source is routed to free CPU interrupt line 9, triggered eight times, then unmapped. The test fails if the enable mask is wrong or the ISR count is not exactly eight. The IRQ callback runs asynchronously when hardware asserts the source; it clears the interrupt request and increments the ISR count used by the test.
+``bist_interrupt_source_map_test()`` (Static) exercises interrupt-matrix routing and ISR delivery using the four SoC software interrupt sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_3``. These are dedicated software-triggered interrupt sources (not peripheral IRQs): software raises each by writing its ``CPU_INTR_FROM_CPU_n`` register, which asserts that interrupt source into the interrupt matrix. Each source is routed to free CPU interrupt line 9, triggered eight times, then unmapped. The test fails if the enable mask is wrong or the ISR count is not exactly eight. The IRQ callback runs asynchronously when hardware asserts the source; it clears the interrupt request and increments the ISR count used by the test.
+
+Reciprocal Dual-Core Software Interrupt Test (ESP32-P4)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+For dual-core reciprocal comparison, ESP32-P4 utilizes both HP cores to perform mutual cross-validation:
+
+- Sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_2`` are exercised; ``CPU_INTR_FROM_CPU_3`` is reserved for cross-core IPC wake-up.
+- Each core records execution evidence (ISR counts, active enable masks, cleared enable masks, and completion status) into fixed-layout shared memory slots (``bist_interrupt_sw_shared_results[0]`` for Core 0 and ``bist_interrupt_sw_shared_results[1]`` for Core 1).
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Software Interrupt Walk Job (Per-Core Execution & Evidence Logging)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 35;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> ClearSlot -> SrcLoop;
+        SrcLoop -> Route [label = "Next"];
+        Route -> Enable -> Trigger -> RecordActive -> Disable -> RecordCleared -> SetBit -> SrcLoop;
+        SrcLoop -> Done [label = "Done"];
+
+        Start [label = "bist_interrupt_sw_walk_job(slot)", shape = roundedbox];
+        ClearSlot [label = "Clear result slot buffer\nSet status = TEST_ERR"];
+        SrcLoop [label = "For each SW source\nsources 0..2", shape = diamond];
+        Route [label = "Route source to\nCPU intr 9"];
+        Enable [label = "Set handler and\nenable CPU intr 9"];
+        Trigger [label = "Trigger source 8 times\n(ISR increments count)"];
+        RecordActive [label = "Record enabled_mask_active\nand interrupt_count in slot"];
+        Disable [label = "Disable and unmap\nCPU intr 9"];
+        RecordCleared [label = "Record enabled_mask_cleared\nin slot"];
+        SetBit [label = "Set completion_mask bit\nfor this source"];
+        Done [label = "Set slot status = BIST_ESP_OK\nReturn", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Software Interrupt Source Map Test (Reciprocal Cross-Validation Protocol)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: SW Walk" -> "Core 0: Validate Core 0" -> "Core 1: SW Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: SW Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: SW Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: SW Walk" [label = "Core 0: Map/trigger 3 sources\nWrite results to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0\n(Local check)", shape = diamond];
+        "Core 1: SW Walk" [label = "Core 1: Map/trigger 3 sources\nWrite results to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1\n(Remote check via IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0\n(Cross-check via IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1\n(Cross-check local)", shape = diamond];
+        Error [label = "Return\nBIST_ESP_INTERRUPT_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+1. **Independent Execution (Core 0)**: Core 0 clears shared slot 0 (``bist_interrupt_sw_shared_results[0]``), maps, triggers, and unmaps software sources ``CPU_INTR_FROM_CPU_0..2``, and records counts and enable masks.
+2. **Local Validation (Core 0 on Core 0)**: Core 0 validates slot 0 against expected counts and enable masks.
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the walk to HP Core 1 via ``bist_multicore_call()``. Core 1 writes slot 1 (``bist_interrupt_sw_shared_results[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of slot 1 to Core 1.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of slot 0 to Core 1.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates slot 1 directly.
+
+Each validator requires ``status == BIST_ESP_OK`` and a complete ``completion_mask``, then checks that every ``interrupt_count`` equals eight and that CPU interrupt line 9 is set in ``enabled_mask_active`` and clear in ``enabled_mask_cleared``. Any walk, dispatch, or validation failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
+
+Fixed-Layout Result Buffer (Software)
+"""""""""""""""""""""""""""""""""""""
+
+The reciprocal software interrupt test exchanges evidence using ``bist_interrupt_sw_result_t`` in statically allocated HP SRAM (``bist_interrupt_sw_shared_results``):
+
+- Exactly 44 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers; counts and masks are stored as ``uint32_t`` values.
+- Verified at compile time via ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status``, a ``completion_mask``, three ``interrupt_count`` entries, and per-source enable masks.
+
+Fault-injection labels are provided at the walk (``bist_interrupt_sw_walk``), after each source trigger loop (``bist_interrupt_source_map_count``), and before each cross-validation (``bist_interrupt_sw_verify_core0_on_core1``, ``bist_interrupt_sw_verify_core1_on_core0``).
 
 Hardware Interrupt Test
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+Static Single-Core Hardware Interrupt Test
+""""""""""""""""""""""""""""""""""""""""""
+
 .. blockdiag::
     :scale: 60%
-    :caption: Hardware Interrupt Test
+    :caption: Hardware Interrupt Test (Static)
     :align: center
 
     blockdiag {
@@ -1431,9 +1532,99 @@ Hardware Interrupt Test
         End [label = "End", shape = roundedbox];
     }
 
-``bist_hardware_interrupt_test()`` configures GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10) with the counters left stopped. After both timers are routed and any debug logging from setup has completed, both counters are armed together and the ISR counts are cleared. Starting the timers only after configuration avoids init latency (in particular slow UART debug prints between consecutive ``timer_ll_enable_counter`` calls) from giving TIMG0 a multi-millisecond head start that would break the expected 2:1 ISR ratio under debug log levels.
+``bist_hardware_interrupt_test()`` (Static) starts GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10). While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for possible synchronization skew between the two independent timer interrupts. Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
 
-While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for residual synchronization skew between the two independent timer interrupts (for example, sampling the counters while one ISR has run and the other has not yet). Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
+Reciprocal Dual-Core Hardware Interrupt Test (ESP32-P4)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+For dual-core reciprocal comparison, ESP32-P4 runs the hardware timer walk sequentially on each HP core (as TIMG0 and TIMG1 are shared peripherals) and cross-validates evidence:
+
+- Each core independently runs the dual-timer walk, checks that ``|count_1 - 2*count_2| <= 1`` during execution until 1000 interrupts are received, and records final counts into its shared slot.
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Hardware Interrupt Walk Job (Per-Core Execution & Evidence Logging)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 35;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> ClearSlot -> InitTimers -> Arm -> Poll -> CheckDone;
+        CheckDone -> Poll [label = "No"];
+        CheckDone -> RecordCounts [label = "Yes"];
+        RecordCounts -> Deinit;
+        Deinit -> CheckStatus;
+        CheckStatus -> Pass [label = "Yes"];
+        CheckStatus -> Fail [label = "No"];
+
+        Start [label = "bist_interrupt_hw_walk_job(slot)", shape = roundedbox];
+        ClearSlot [label = "Clear result slot buffer\nSet status = TEST_ERR"];
+        InitTimers [label = "Route TIMG0/TIMG1 to\nCPU intr 9 and 10"];
+        Arm [label = "Arm 500 us / 1000 us timers\nClear ISR counts"];
+        Poll [label = "Delay 10 us\n(ISR checks 2:1 ratio)"];
+        CheckDone [label = "Ratio failed or\ncount >= 1000?", shape = diamond];
+        RecordCounts [label = "Record count_1 and count_2\nin shared slot"];
+        Deinit [label = "Stop timers and\nunmap interrupts"];
+        CheckStatus [label = "Ratio check passed\nthroughout run?", shape = diamond];
+        Pass [label = "Set slot status = BIST_ESP_OK\nReturn", shape = roundedbox];
+        Fail [label = "Leave status = TEST_ERR\nReturn", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Hardware Interrupt Test (Reciprocal Cross-Validation Protocol)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: HW Walk" -> "Core 0: Validate Core 0" -> "Core 1: HW Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: HW Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: HW Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: HW Walk" [label = "Core 0: TIMG0/TIMG1 walk\nWrite results to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0\n(Local check)", shape = diamond];
+        "Core 1: HW Walk" [label = "Core 1: TIMG0/TIMG1 walk\nWrite results to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1\n(Remote check via IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0\n(Cross-check via IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1\n(Cross-check local)", shape = diamond];
+        Error [label = "Return\nBIST_ESP_INTERRUPT_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+1. **Independent Execution (Core 0)**: Core 0 executes ``bist_interrupt_hw_walk_job()`` on TIMG0/TIMG1, records ISR counts and status into ``bist_interrupt_hw_shared_results[0]``, and deinitializes the timers.
+2. **Local Validation (Core 0 on Core 0)**: Core 0 validates slot 0 against expected ratio bounds (``status == BIST_ESP_OK`` and ``|count_1 - 2*count_2| <= 2``).
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches ``bist_interrupt_hw_walk_job()`` to HP Core 1 via ``bist_multicore_call()``. Core 1 runs the timer walk, records results into ``bist_interrupt_hw_shared_results[1]``, and deinitializes the timers.
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of slot 1 to Core 1.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of slot 0 to Core 1.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates slot 1 directly.
+
+Any walk, dispatch, or validation failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``. Exact count values are not compared across cores.
+
+Fixed-Layout Result Buffer (Hardware)
+"""""""""""""""""""""""""""""""""""""
+
+The reciprocal hardware interrupt test exchanges evidence using ``bist_interrupt_hw_result_t`` placed in statically allocated HP SRAM (``bist_interrupt_hw_shared_results``):
+
+- Exactly 12 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers; counts and status are stored as ``uint32_t`` values.
+- Verified at compile time via ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status``, ``count_1``, and ``count_2``.
+
+Fault-injection labels are provided at the walk (``bist_interrupt_hw_walk``) and before each cross-validation (``bist_interrupt_hw_verify_core0_on_core1``, ``bist_interrupt_hw_verify_core1_on_core0``).
 
 Module API
 ^^^^^^^^^^
@@ -1441,13 +1632,10 @@ Module API
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_interrupt_source_map_test, bist_hardware_interrupt_test
 
-
-
 .. note::
 
-   The v1.0.0 manual published one unlabelled interrupt timing set. Those
-   figures are not in this table. ``bist_hardware_interrupt_test()`` waits
-   for 1000 interrupts, so its cycle count is dominated by that wait.
+   Static interrupt test measurements were taken on ESP32-C3 at 160 MHz.
+   The hardware interrupt test execution time is dominated by waiting for 1000 timer interrupts.
 
 Source Files
 ^^^^^^^^^^^^
@@ -1465,19 +1653,26 @@ Source Files
    * - ``src/bist/core/interrupt/bist_interrupt.c``
      - v1.1.0
      - cfb8f700c25bd21f8e1420feff585cdd
+   * - ``src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c``
+     - N/A
+     - a07d0e51bed3633d734936c8ddbf47e1
+   * - ``src/bist/core/interrupt/bist_interrupt_reciprocal.c``
+     - N/A
+     - dd2f4b1cb00e82da89642460e1262c59
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Explicit error handling: any enable-mask, ISR-count, or period-ratio failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
+- Explicit error handling: any enable-mask, ISR-count, period-ratio, dispatch, or cross-validation failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
 - Uses ``esp_cpu_intr_*`` and ``esp_rom_route_intr_matrix`` for CPU interrupt control and interrupt-matrix routing; hardware path also uses TIMG HAL/LL (``timer_hal``, ``timer_ll``, ``timg_ll``).
-- Hardware path configures both TIMG instances with counters stopped, then arms them together and clears ISR counts so setup latency cannot skew the 2:1 period ratio.
-- Static volatile state holds ISR counters and failure flag; timer contexts are static with no dynamic memory allocation.
+- The public functions remain ``bist_interrupt_source_map_test()`` and ``bist_hardware_interrupt_test()`` (declared in ``bist_interrupt.h``), while ``bist_interrupt_reciprocal.h`` defines the fixed-layout result structures and shared buffers. ``src/bist/cmake/sources_stl.cmake`` selects the static or reciprocal translation units based on ``CONFIG_ESP_BIST_INTERRUPT_TEST_STATIC`` or ``CONFIG_ESP_BIST_INTERRUPT_TEST_RECIPROCAL``.
+- The reciprocal implementation depends on ``bist_multicore_call()`` and shared HP SRAM. Only Core 0 initiates dispatch to Core 1. Walks are sequential so shared TIMG peripherals are not owned by both cores at once.
+- Static state holds ISR counters and timer contexts; Reciprocal mode additionally uses two fixed-size static result slots with no embedded pointers. No dynamic memory allocation.
 - Public APIs have a single entry; early returns are used for error paths. Hardware path always deinitializes timers before exit.
 - Branching is limited to setup checks, enable-mask checks, count checks, and the period-ratio check. No deep nesting.
 - Only integer comparisons and assignments are used for pass/fail decisions.
 - Interrupts are intentionally installed, enabled, and torn down by this test; CPU lines 9 and 10 are used as free test lines.
-- Pointers are used for ISR arguments (source register or timer context). Usage is explicit and bounded to the test lifetime.
+- Pointers are used for ISR arguments (source register or timer context) and for shared result slots passed to jobs. Usage is explicit and bounded to the test lifetime.
 - No recursion is used.
 - No goto or label-based jumps are used.
 - No division operations are present in the pass/fail logic (ratio check uses multiply-by-two and absolute difference).

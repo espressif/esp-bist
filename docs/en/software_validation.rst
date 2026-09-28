@@ -1550,7 +1550,7 @@ CI Test Results
 Interrupt Handling and Execution Test
 -------------------------------------
 
-**Purpose:** Verify interrupt-matrix routing and ISR delivery for software interrupt sources, and concurrent hardware interrupt delivery via dual timer-group alarms (IEC 60730 Table H.1 ID 2).
+**Purpose:** Verify interrupt-matrix routing and ISR delivery for software interrupt sources, and concurrent hardware interrupt delivery via dual timer-group alarms (IEC 60730 Table H.1 ID 2). Static and reciprocal (ESP32-P4) implementations share the same public APIs.
 
 QEMU/Emulation Validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1670,6 +1670,121 @@ Hardware Validation
 
     test_BIST_Interrupt_Source_Map:FAIL
 
+Reciprocal QEMU/Emulation Validation (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/interrupt_test_reciprocal/pytest_qemu_interrupt_test_reciprocal.py`` (ESP32-P4 only; skipped on other targets)
+
+**Note:** QEMU validates the software source-map path (``CPU_INTR_FROM_CPU_0..2``); hardware timer testing requires real hardware.
+
+**Execution:**
+
+1. Core 0 executes the software source-map walk for sources 0..2 into shared slot 0 (``bist_interrupt_sw_shared_results[0]``) and validates it.
+2. Core 0 dispatches the walk to Core 1 via ``bist_multicore_call()``, which writes shared slot 1.
+3. Core 0 dispatches validation of slot 1 to Core 1 via ``bist_multicore_call()``.
+4. Core 0 dispatches validation of slot 0 to Core 1 via ``bist_multicore_call()``.
+5. Core 0 validates slot 1 directly.
+6. The test returns ``BIST_ESP_OK`` only if both walks and all four validations pass, and prints ``test_BIST_Interrupt_Source_Map:PASS``.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:PASS
+
+**Fault Injection:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Test
+     - GDB injection
+     - Expected output
+   * - ``test_interrupt_source_map_count_error``
+     - At ``bist_interrupt_source_map_count`` (first hit, Core 0), set ``s_interrupt_count=0``
+     - ``Failed to validate core 0 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_walk_core1_count_error``
+     - At ``bist_interrupt_source_map_count`` (Core 1 hit, after ignoring Core 0 hits), set ``s_interrupt_count=0``
+     - ``Failed to validate core 1 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot0_cross_check_error[field]``
+     - At ``bist_interrupt_sw_verify_core0_on_core1``, flip bit 2 (XOR 4) of ``bist_interrupt_sw_shared_results[0].<field>`` for each of ``status``, ``completion_mask``, and ``interrupt_count[0..2]``
+     - ``Failed to validate core 0 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot1_cross_check_error[field]``
+     - At ``bist_interrupt_sw_verify_core1_on_core0``, flip bit 2 (XOR 4) of ``bist_interrupt_sw_shared_results[1].<field>`` for each of ``status``, ``completion_mask``, and ``interrupt_count[0..2]``
+     - ``Failed to validate core 1 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot0_enable_mask_cross_check_error``
+     - At ``bist_interrupt_sw_verify_core0_on_core1``, clear CPU interrupt bit 9 in ``bist_interrupt_sw_shared_results[0].enabled_mask_active[0]``
+     - ``Failed to validate core 0 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot1_cleared_mask_cross_check_error``
+     - At ``bist_interrupt_sw_verify_core1_on_core0``, set CPU interrupt bit 9 in ``bist_interrupt_sw_shared_results[1].enabled_mask_cleared[0]``
+     - ``Failed to validate core 1 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+
+The slot corruptions are injected after local validations have completed, verifying that cross-core checks independently detect evidence tampering.
+
+Reciprocal Hardware Validation (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/interrupt_test_reciprocal/pytest_device_interrupt_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 device in standalone bare-metal mode with both HP cores initialized
+- Shared HP SRAM accessible by both cores for evidence exchange
+- Two Timer Groups (TIMG0 and TIMG1) available for sequential hardware testing
+
+**Execution:**
+
+1. Flash firmware to ESP32-P4 device
+2. Run ``pytest pytest_device_interrupt_test_reciprocal.py``
+3. Application initializes multicore environment and executes ``bist_interrupt_source_map_test()`` and ``bist_hardware_interrupt_test()``
+4. Reciprocal software source map test executes on Core 0, dispatches to Core 1, and performs mutual cross-validation
+5. Reciprocal hardware interrupt test executes sequential TIMG0/TIMG1 walks on Core 0 then Core 1, deinitializing timers between cores, and cross-validates ISR count ratios
+6. Serial monitor captures test outputs
+
+**Expected Behavior:**
+
+- Both HP cores pass software interrupt matrix routing and hardware dual-timer ratio checks and reciprocal cross-validation on real hardware
+- Serial output reports ``test_BIST_Interrupt_Source_Map:PASS`` and ``test_BIST_Hardware_Interrupt:PASS``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:PASS
+    test_BIST_Hardware_Interrupt:PASS
+
+**Fault Injection:**
+
+``pytest --injection`` runs the following cases against the same firmware:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Test
+     - GDB injection
+     - Expected output
+   * - ``test_interrupt_source_map_count_error_device``
+     - At ``bist_interrupt_source_map_count`` (first hit, Core 0), set ``s_interrupt_count=0``
+     - ``Failed to validate core 0 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core0-sw]``
+     - At ``bist_interrupt_sw_verify_core0_on_core1``, set ``bist_interrupt_sw_shared_results[0].interrupt_count[0]=0``
+     - ``Failed to validate core 0 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core1-sw]``
+     - At ``bist_interrupt_sw_verify_core1_on_core0``, set ``bist_interrupt_sw_shared_results[1].interrupt_count[0]=0``
+     - ``Failed to validate core 1 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core0-hw]``
+     - At ``bist_interrupt_hw_verify_core0_on_core1``, set ``bist_interrupt_hw_shared_results[0].count_1=0``
+     - ``Failed to validate core 0 HW interrupt results on core 1`` and ``test_BIST_Hardware_Interrupt:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core1-hw]``
+     - At ``bist_interrupt_hw_verify_core1_on_core0``, set ``bist_interrupt_hw_shared_results[1].count_1=0``
+     - ``Failed to validate core 1 HW interrupt results on core 0`` and ``test_BIST_Hardware_Interrupt:FAIL``
+
+Local fault injection verifies detection on the executing core, while
+shared-slot corruption verifies that peer cross-validation independently
+detects evidence tampering across both software and hardware paths.
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1678,10 +1793,20 @@ CI Test Results
 .. xml-junit-test-results:: tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
     :title: Interrupt QEMU Test Results
 
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/interrupt_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+        :title: Interrupt Reciprocal QEMU Test Results
+
 **Device Test:**
 
 .. xml-junit-test-results:: tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Interrupt Device Test Results
+
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/interrupt_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+        :title: Interrupt Reciprocal Device Test Results
 
 Clock Integrity Test
 --------------------
