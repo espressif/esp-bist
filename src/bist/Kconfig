@@ -169,6 +169,24 @@ config ESP_BIST_STACK_PROTECTION_BLOCK_SIZE
       the stack from overflow and underflow conditions. A value of 0 means no protection
       block is allocated.
 
+config ESP_BIST_MULTICORE
+    bool "Multi-core function dispatch (HP core 1)"
+    depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default n
+    help
+      Bring up HP core 1 during startup and enable bist_multicore_call() so
+      tests can be dispatched to it. Only available on dual-core standalone
+      bare-metal targets (ESP32-P4).
+
+config ESP_BIST_CPU1_STACK_SIZE
+    hex "HP Core 1 Stack Size"
+    depends on ESP_BIST_MULTICORE
+    default 0x2000
+    help
+      Size in bytes of the dedicated HP core 1 stack on dual-core standalone
+      targets (ESP32-P4). Reserved at the top of HP SRAM so RAM march tests
+      on core 0 cannot overwrite core 1's live stack. Unused on single-core SoCs.
+
 config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
     int "WDT Windowed Underflow Timeout (us)"
     depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE

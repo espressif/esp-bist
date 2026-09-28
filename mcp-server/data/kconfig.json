@@ -210,6 +210,26 @@
     "prompt": "Stack Protection Block Size"
   },
   {
+    "name": "ESP_BIST_MULTICORE",
+    "type": "bool",
+    "default": "n",
+    "depends_on": "ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
+    "help": "Bring up HP core 1 during startup and enable bist_multicore_call() so\ntests can be dispatched to it. Only available on dual-core standalone\nbare-metal targets (ESP32-P4).",
+    "menu": "",
+    "range": "",
+    "prompt": "Multi-core function dispatch (HP core 1)"
+  },
+  {
+    "name": "ESP_BIST_CPU1_STACK_SIZE",
+    "type": "hex",
+    "default": "0x2000",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Size in bytes of the dedicated HP core 1 stack on dual-core standalone\ntargets (ESP32-P4). Reserved at the top of HP SRAM so RAM march tests\non core 0 cannot overwrite core 1's live stack. Unused on single-core SoCs.",
+    "menu": "",
+    "range": "",
+    "prompt": "HP Core 1 Stack Size"
+  },
+  {
     "name": "ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US",
     "type": "int",
     "default": "10",

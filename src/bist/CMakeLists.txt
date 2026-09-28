@@ -143,6 +143,7 @@ target_include_directories(
     include
     core/include
     core/cpu/include
+    core/multicore/include
     core/memory/include
     core/clock/include
     core/wdt/include

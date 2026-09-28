@@ -13,6 +13,14 @@
 #define FLASH_SIZE         (0x400000)
 #endif
 
+#ifdef CONFIG_ESP_BIST_MULTICORE
+#ifdef CONFIG_ESP_BIST_CPU1_STACK_SIZE
+#define CPU1_STACK_SIZE    CONFIG_ESP_BIST_CPU1_STACK_SIZE
+#else
+#define CPU1_STACK_SIZE    (0x2000)
+#endif
+#endif
+
 /* HP SRAM: 0x4FF00000 - 0x4FFC0000 (768 kB) */
 
 #define SRAM_SEG_START       (0x4FF00000 + CONFIG_CACHE_L2_CACHE_SIZE)
@@ -237,6 +245,7 @@ SECTIONS
     *(.iram1 .iram1.*)
     *(.iram0.literal .iram.literal .iram.text.literal .iram0.text .iram.text)
     *start.*(.literal .text .literal.* .text.*)
+    *cpu_multicore.*(.literal .text .literal.* .text.*)
     *panic.*(.literal .text .literal.* .text.*)
     *panic_handler.*(.literal .text .literal.* .text.*)
     *loader.*(.literal .text .literal.* .text.*)
@@ -472,12 +481,32 @@ SECTIONS
   } >sram
 
   _sram_end = ORIGIN(sram) + LENGTH(sram);
+
+#ifdef CONFIG_ESP_BIST_MULTICORE
+  /*
+   * HP core 1 stack sits at the top of SRAM and is excluded from the RAM
+   * march region so core 0 cannot overwrite the live worker stack.
+   */
+  _stack_top_cpu1 = _sram_end;
+  _stack_overflow_protection_start_cpu1 = _stack_top_cpu1 - CPU1_STACK_SIZE;
+  _stack_overflow_protection_end_cpu1 =
+      _stack_overflow_protection_start_cpu1 - CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE;
+  _stack_top = _stack_overflow_protection_end_cpu1;
+  _bist_ram_test_end = _stack_top;
+#else
   _bist_ram_test_end = _sram_end;
   _stack_top = _sram_end;
+#endif
 
   _image_ram_start = _iram_start;
 
   ASSERT(((_heap_end - ORIGIN(sram)) <= LENGTH(sram)), "DRAM segment data does not fit.")
+#ifdef CONFIG_ESP_BIST_MULTICORE
+  ASSERT((_stack_overflow_protection_start < _stack_top),
+         "HP core 0 stack does not fit below core 1 stack")
+  ASSERT((_stack_overflow_protection_end_cpu1 >= _stack_overflow_protection_start),
+         "HP core 1 stack overlaps core 0 overflow guard")
+#endif
 
   /* --- END OF DRAM --- */
 

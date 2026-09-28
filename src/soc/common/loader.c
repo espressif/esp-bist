@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "bist_conf.h"
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 #include "hal/mmu_hal.h"
@@ -27,6 +28,9 @@
 #define CACHE_LEVEL CACHE_LL_LEVEL_EXT_MEM
 
 extern uint32_t _stack_top, _stack_overflow_protection_start;
+#if defined(CONFIG_ESP_BIST_MULTICORE) && defined(SOC_TARGET_ESP32P4)
+extern uint32_t _stack_top_cpu1, _stack_overflow_protection_start_cpu1;
+#endif
 
 static const char *TAG = "loader";
 
@@ -67,7 +71,7 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
     bus_mask = cache_ll_l1_get_bus(0, app_irom_vaddr_aligned, app_irom_size);
     cache_ll_l1_enable_bus(0, bus_mask);
 
-#if CONFIG_MP_MAX_NUM_CPUS > 1
+#if SOC_CPU_CORES_NUM > 1
     bus_mask = cache_ll_l1_get_bus(1, app_drom_vaddr_aligned, app_drom_size);
     cache_ll_l1_enable_bus(1, bus_mask);
     bus_mask = cache_ll_l1_get_bus(1, app_irom_vaddr_aligned, app_irom_size);
@@ -173,4 +177,12 @@ void init_stack_pattern(void)
     for (uint32_t *p = stack_bottom; p < stack_top; p++) {
         *p = 0xBADC0FFE;
     }
+
+#if defined(CONFIG_ESP_BIST_MULTICORE) && defined(SOC_TARGET_ESP32P4)
+    stack_top = (uint32_t *)&_stack_top_cpu1;
+    stack_bottom = (uint32_t *)&_stack_overflow_protection_start_cpu1;
+    for (uint32_t *p = stack_bottom; p < stack_top; p++) {
+        *p = 0xBADC0FFE;
+    }
+#endif
 }

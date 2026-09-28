@@ -35,6 +35,7 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_adc.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_ram.h \
+    $(PROJECT_PATH)/src/bist/core/multicore/include/bist_multicore.h \
     $(PROJECT_PATH)/src/bist/core/wdt/include/bist_wdt.h \
     $(PROJECT_PATH)/src/bist/drivers/include/bist_log.h \
     $(PROJECT_PATH)/src/bist/drivers/include/esp_timer.h \

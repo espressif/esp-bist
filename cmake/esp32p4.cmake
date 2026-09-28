@@ -61,6 +61,7 @@ set(include_hal
 
 set(soc_srcs
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
+    ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/cpu_multicore.c
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/clock_init.c
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/bare_metal_stubs.c
