@@ -116,11 +116,17 @@ function(bist_collect_sources out_var)
         list(APPEND _srcs "core/wdt/bist_wdt.c")
     endif()
     if(CONFIG_ESP_BIST_INTERRUPT_TEST)
-    list(APPEND
-         _srcs
-         core/interrupt/bist_interrupt.c
-         core/interrupt/bist_interrupt_sw.c
-         )
+        if(CONFIG_ESP_BIST_INTERRUPT_TEST_STATIC)
+            list(APPEND _srcs
+                "core/interrupt/bist_interrupt.c"
+                "core/interrupt/bist_interrupt_sw.c"
+            )
+        else()
+            list(APPEND _srcs
+                "core/interrupt/bist_interrupt_reciprocal.c"
+                "core/interrupt/bist_interrupt_sw_reciprocal.c"
+            )
+        endif()
     endif()
     set(${out_var} "${_srcs}" PARENT_SCOPE)
 endfunction()

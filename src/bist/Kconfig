@@ -261,6 +261,30 @@ config ESP_BIST_INTERRUPT_TEST
     help
       Enable tests for software and hardware interrupts.
 
+choice ESP_BIST_INTERRUPT_TEST_TYPE
+    prompt "Interrupt Test Selection"
+    depends on ESP_BIST_INTERRUPT_TEST
+    default ESP_BIST_INTERRUPT_TEST_STATIC
+    help
+      Select which Interrupt test to use.
+
+    config ESP_BIST_INTERRUPT_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static interrupt test for software source mapping and
+          hardware timer delivery.
+          Matches IEC60730 Table H.1 component 2 for Class B.
+
+    config ESP_BIST_INTERRUPT_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal interrupt tests.
+          Matches IEC60730 Table H.1 component 2 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
 endmenu
 
 config ESP_BIST_WDT_TIMEOUT_US
