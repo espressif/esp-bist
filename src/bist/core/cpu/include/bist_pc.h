@@ -15,33 +15,61 @@
 
 /**
  * @file bist_pc.h
- * @brief Program Counter integrity test
+ * @brief Stable API for the Program Counter integrity test
  *
- * Verifies Program Counter register bits are functional by calling test
- * functions placed in different memory regions. Each function exercises
- * different PC bits based on its address.
+ * The STATIC and RECIPROCAL implementations expose the same bist_pc_test()
+ * entry point.
+ *
  */
 
 #pragma once
 
 #include "stdint.h"
 #include "bist_esp_types.h"
+#ifndef __ZEPHYR__
+#include "bist_conf.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Test Program Counter register integrity
  *
- * Calls 4 test functions placed in different memory regions:
+ * In STATIC mode, calls four test functions placed in different memory
+ * regions:
  * - pcTestFunction0 @ IRAM 0x4038xxxx (tests PC bits 2-17)
  * - pcTestFunction1 @ IRAM 0x403Bxxxx (tests PC bits 2-17, inverted)
  * - pcTestFunction2 @ Flash 0x4201xxxx (tests PC bits 19-21, 25)
  * - pcTestFunction3 @ RTC 0x5000xxxx (tests PC bit 28)
  *
- * After each function call, captures return address and compares
- * against expected function pointer to verify PC integrity.
+ * After each function call, the implementation captures the return address
+ * and compares it against the expected function pointer. This covers 24 of
+ * the 30 addressable PC bits (bits 0-1 are always zero due to alignment).
  *
- * @return BIST_ESP_OK if all 4 functions return correctly
- * @return BIST_ESP_PC_TEST_ERR if return address mismatch detected
+ * In RECIPROCAL mode on ESP32-P4, runs the five-region call walk on HP core 0
+ * into evidence slot 0 and on HP core 1 into slot 1:
+ * - pcTestFunction0 @ HP SRAM 0x4FFxxxxx
+ * - pcTestFunction1 @ Flash 0x400xxxxx (start of .flash.text)
+ * - pcTestFunction2 @ Flash, 0xFFF8 bytes after pcTestFunction1
+ * - pcTestFunction3 @ LP SRAM 0x5010xxxx
+ * - pcTestFunction4 @ TCM 0x3010xxxx
  *
- * @note Covers 24 of 30 addressable PC bits (bits 0-1 always 0 due to alignment)
+ * Each slot records the walk status, a completion bit for every returned
+ * region function, and the returned addresses. Each core validates its own
+ * slot and the other core's slot against the canonical linked addresses.
+ *
+ * @return BIST_ESP_OK if the selected mode completes and all validations pass
+ * @return BIST_ESP_PC_TEST_ERR on any walk, dispatch, completion, or address
+ *         verification failure
  */
 bist_esp_err_t bist_pc_test(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#if defined(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL)
+#include "bist_pc_reciprocal.h"
+#endif

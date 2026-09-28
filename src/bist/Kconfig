@@ -197,6 +197,29 @@ config ESP_BIST_PROGRAM_COUNTER_TEST
     help
       Enable tests for the program counter.
 
+choice ESP_BIST_PROGRAM_COUNTER_TEST_TYPE
+    prompt "Program Counter Test Selection"
+    depends on ESP_BIST_PROGRAM_COUNTER_TEST
+    default ESP_BIST_PROGRAM_COUNTER_TEST_STATIC
+    help
+      Select which Program Counter test to use.
+
+    config ESP_BIST_PROGRAM_COUNTER_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static memory test for Program Counter.
+          Matches IEC60730 Table H.1 component 1.3 for Class B.
+
+    config ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal tests for Program Counter.
+          Matches IEC60730 Table H.1 component 1.3 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
 config ESP_BIST_MEMORY_FLASH_TEST
     bool "Memory Flash Test"
     default n
