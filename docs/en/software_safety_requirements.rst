@@ -30,7 +30,7 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 1.3
      - CPU - Program Counter
-     - Exercises PC bits, detects unexpected jumps or stuck PC
+     - Exercises PC bits across memory regions, detects unexpected jumps or stuck PC
      - Control-flow faults, stuck PC, unexpected jumps, code execution outside intended regions
      - :ref:`program-counter-test`
 
@@ -136,8 +136,9 @@ The BIST library interfaces with hardware through a HAL layer; low-level access 
 - **Memory interfaces**:
 
   - RAM direct access: Direct memory read/write for March A/X RAM tests (``src/bist/core/memory/bist_ram.c``)
-  - RTC memory: RTC memory region for PC test function placement (``src/bist/core/cpu/bist_pc.c``)
-  - Linker-defined memory regions: IRAM, Flash, and RTC memory sections via linker scripts (``src/soc/{IDF_TARGET_PATH_NAME}/ld/linker.ld``)
+  - RTC memory: RTC memory region for PC test function placement (``src/bist/core/cpu/bist_pc.c``, ``src/bist/core/cpu/bist_pc_reciprocal.c``)
+  - Linker-defined memory regions: IRAM, Flash, RTC memory, and (ESP32-P4) TCM sections via linker scripts (``src/soc/{IDF_TARGET_PATH_NAME}/ld/linker.ld``)
+  - Shared HP SRAM (ESP32-P4 reciprocal tests): statically allocated result slots exchanged between HP cores by the CPU register, CSR, and PC reciprocal tests
 
 Build System
 ------------

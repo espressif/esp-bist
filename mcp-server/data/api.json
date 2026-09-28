@@ -3118,11 +3118,22 @@
     "function": "bist_pc_test",
     "signature": "bist_esp_err_t bist_pc_test(void)",
     "module": "cpu",
-    "description": "Program Counter integrity test",
+    "description": "Stable API for the Program Counter integrity test",
     "params": [],
-    "returns": "BIST_ESP_OK if all 4 functions return correctly; BIST_ESP_PC_TEST_ERR if return address mismatch detected",
-    "note": "Covers 24 of 30 addressable PC bits (bits 0-1 always 0 due to alignment)",
+    "returns": "BIST_ESP_OK if the selected mode completes and all validations pass; BIST_ESP_PC_TEST_ERR on any walk, dispatch, completion, or address verification failure",
+    "note": "",
     "header_file": "src/bist/core/cpu/include/bist_pc.h",
+    "kconfig_guards": []
+  },
+  {
+    "function": "bist_pc_reciprocal",
+    "signature": "",
+    "module": "cpu",
+    "description": "Fixed-layout evidence for the reciprocal Program Counter test",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/cpu/include/bist_pc_reciprocal.h",
     "kconfig_guards": []
   },
   {

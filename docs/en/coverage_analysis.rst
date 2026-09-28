@@ -59,7 +59,7 @@ The following table provides code coverage information for each BIST module:
      - 1
      - 1 (100%)
      - 1 (4 regions; 5 on ESP32-P4)
-     - 2 (fault injection)
+     - 2 (fault injection; 10 on P4 reciprocal)
      - :doc:`software_validation` (Program Counter Test)
 
    * - Interrupt Test
@@ -179,8 +179,8 @@ Requirements Coverage Matrix
    * - 1.3
      - Program Counter Integrity
      - ``bist_pc_test()``
-     - QEMU + Hardware (4 regions; 5 on ESP32-P4 with TCM; fault injection)
-     - ``tests/pc_test/build/tests/*_report.xml``
+     - QEMU + Hardware (4 regions; 5 on ESP32-P4 with TCM; dual-core reciprocal coverage on P4; fault injection)
+     - ``tests/pc_test*/build/tests/*_report.xml``
 
    * - 2
      - Interrupt Source Map

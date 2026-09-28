@@ -1305,7 +1305,7 @@ CI Test Results
 Program Counter Integrity Test
 ------------------------------
 
-**Purpose:** Verify that the program counter maintains integrity and that code execution occurs in expected memory regions (IRAM, Flash, RTC).
+**Purpose:** Verify that the program counter maintains integrity and that code execution occurs in expected memory regions (IRAM, Flash, RTC, and TCM on ESP32-P4).
 
 QEMU/Emulation Validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1323,7 +1323,7 @@ QEMU/Emulation Validation
    - ``pcTestFunction4`` in TCM (ESP32-P4 only)
 3. Each function returns its own address
 4. Test verifies return addresses match expected function addresses
-5. Returns ``BIST_ESP_OK`` if all addresses verified (covers 24 of 30 addressable PC bits)
+5. Returns ``BIST_ESP_OK`` if all addresses are verified.
 
 **Expected Output:**
 
@@ -1419,8 +1419,8 @@ Hardware Validation
 
 **Expected Behavior:**
 
-- All four function addresses verified correctly on real hardware
-- 24 PC bits (2-17, 19-21, 25, 28) exercised successfully
+- All four function addresses (five on ESP32-P4) verified correctly on real hardware
+- PC bits exercised across memory regions
 - No unexpected code execution or address corruption detected
 
 **Failure Test: Function Pointer Corruption (WDT Reset)**
@@ -1465,6 +1465,65 @@ watchdog timer fires and resets the CPU.
 
     Reset reason: 7
 
+Program Counter Reciprocal Comparison Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify on ESP32-P4 that both HP cores execute the five PC test
+regions (HP SRAM, two Flash locations, LP SRAM, and TCM) at their linked
+addresses, and that each core's fixed-layout evidence is validated against the
+canonical linked addresses on both cores.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/pc_test_reciprocal/pytest_qemu_pc_test_reciprocal.py`` (ESP32-P4 only; skipped on other targets)
+
+**Execution:**
+
+1. Core 0 runs the five-region walk into shared slot 0 (``bist_pc_shared_results[0]``) and validates it.
+2. Core 0 dispatches the walk to Core 1 via ``bist_cpu_call()``, which writes shared slot 1.
+3. Core 1 validates slot 1 and then validates slot 0.
+4. Core 0 validates slot 1.
+5. The test returns ``BIST_ESP_OK`` only if both walks and all four validations pass, and prints ``test_BIST_PC:PASS``.
+
+**Fault Injection:**
+
+``test_pc_expected_address_error`` is parameterized for both result slots and
+all five region functions. At ``bist_pc_verify_core0_on_core1`` or
+``bist_pc_verify_core1_on_core0``, GDB sets the selected
+``bist_pc_shared_results[core].returned_address[function]`` to zero. The other
+core then compares the corrupted address with the canonical linked address and
+reports ``test_BIST_PC:FAIL``.
+
+There are 10 QEMU injection cases: five function addresses for each of the two
+core result slots. The injection occurs after both local validations have
+passed, so each case is detectable only by the corresponding cross-core
+validation.
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/pc_test_reciprocal/pytest_device_pc_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 in standalone bare-metal mode with both HP cores initialized
+- Shared HP SRAM and HP SPM (TCM) accessible by both cores
+
+**Expected Behavior:**
+
+- ``test_BIST_PC:PASS`` is reported after both walks and reciprocal validations complete.
+
+**Fault Injection:**
+
+``test_pc_expected_address_error_device`` runs with ``pytest --injection`` and
+is parameterized for both result slots and all five region functions (10 test
+cases total). At ``bist_pc_verify_core0_on_core1`` or
+``bist_pc_verify_core1_on_core0``, GDB sets the selected
+``bist_pc_shared_results[core].returned_address[function]`` to zero. The other
+core compares the corrupted address with the canonical linked address and
+reports ``test_BIST_PC:FAIL``.
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1473,10 +1532,20 @@ CI Test Results
 .. xml-junit-test-results:: tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
     :title: Program Counter QEMU Test Results
 
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/pc_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+        :title: Program Counter Reciprocal QEMU Test Results
+
 **Device Test:**
 
 .. xml-junit-test-results:: tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Program Counter Device Test Results
+
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/pc_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+        :title: Program Counter Reciprocal Device Test Results
 
 Interrupt Handling and Execution Test
 -------------------------------------

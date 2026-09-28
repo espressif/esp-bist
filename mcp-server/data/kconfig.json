@@ -202,12 +202,32 @@
   {
     "name": "ESP_BIST_PROGRAM_COUNTER_TEST",
     "type": "bool",
-    "default": "n",
-    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
-    "help": "Enable tests for the program counter.",
+    "default": "ESP_BIST_PROGRAM_COUNTER_TEST_STATIC",
+    "depends_on": "ESP_BIST_PROGRAM_COUNTER_TEST",
+    "help": "Select which Program Counter test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "Program Counter Test"
+  },
+  {
+    "name": "ESP_BIST_PROGRAM_COUNTER_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static memory test for Program Counter.\nMatches IEC60730 Table H.1 component 1.3 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Use the reciprocal tests for Program Counter.\nMatches IEC60730 Table H.1 component 1.3 for Class C,\nbut requires dual-core support (currently only ESP32-P4) and standalone build.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal Tests"
   },
   {
     "name": "ESP_BIST_MEMORY_FLASH_TEST",

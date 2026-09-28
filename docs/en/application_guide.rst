@@ -226,7 +226,7 @@ Runtime Tests
 5. **Program Counter Test** (``bist_pc_test()``)
 
    - **IEC 60730 Component**: 1.3 (Program Counter)
-   - **Purpose**: Exercises PC register bits by calling functions across 4 different memory regions (5 on ESP32-P4 with TCM)
+   - **Purpose**: Exercises PC register bits by calling functions across 4 different memory regions (5 on ESP32-P4 with TCM). In reciprocal mode (ESP32-P4), both HP cores execute the region walk and reciprocally validate results against the linked function addresses.
    - **Rationale**: PC corruption can cause execution outside intended code regions
    - **Execution Frequency**: Called in main loop (every iteration)
 

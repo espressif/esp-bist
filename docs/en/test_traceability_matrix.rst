@@ -119,21 +119,33 @@ CPU Instruction Equivalence Test (IEC 60730 ID: 1.2)
 Program Counter Test (IEC 60730 ID: 1.3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Exercise PC bits across execution regions and detect unexpected jumps or stuck PC.
+**Requirement**: Exercise PC bits across execution regions and detect unexpected jumps or stuck PC. For reciprocal testing on ESP32-P4, execute the region walk on both HP cores and reciprocally cross-validate results (H.2.18.15).
 
-**Design**: ``src/bist/core/cpu/bist_pc.c`` (``bist_pc_test()``; :ref:`program-counter-test`)
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_pc.c`` (Static), ``src/bist/core/cpu/bist_pc_reciprocal.c`` (Reciprocal)
+- Function: ``bist_pc_test()``
+- Design Doc: :ref:`program-counter-test`
 
 **Test Implementation**:
 
-- QEMU: ``tests/pc_test/pytest_qemu_pc_test.py`` (multi-region pass, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
-- Hardware: ``tests/pc_test/pytest_device_pc_test.py`` (multi-region execution on target DUT, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
+- Static:
+
+  - QEMU: ``tests/pc_test/pytest_qemu_pc_test.py`` (multi-region pass, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
+  - Hardware: ``tests/pc_test/pytest_device_pc_test.py`` (multi-region execution on target DUT, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/pc_test_reciprocal/pytest_qemu_pc_test_reciprocal.py`` (dual-core pass and returned-address fault injection for all five functions in both result slots)
+  - Hardware: ``tests/pc_test_reciprocal/pytest_device_pc_test_reciprocal.py`` (dual-core pass and returned-address fault injection for all five functions in both result slots)
 
 **Test Results**:
 
-- QEMU: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
-- Hardware: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Static QEMU: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Static Hardware: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Reciprocal QEMU/Hardware: ``tests/pc_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml`` and ``{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 QEMU test cases + 1 hardware test case; exercises 24 of 30 addressable PC bits (25 on ESP32-P4) across up to 5 execution regions.
+**Coverage**: Static: 4 functions (5 on ESP32-P4) exercised by 1 pass and 2 failure test cases. Reciprocal: 5 functions exercised across both cores by 1 pass and 10 fault-injection test cases.
 
 Interrupt Test (IEC 60730 ID: 2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

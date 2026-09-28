@@ -79,7 +79,7 @@ Reciprocal Dual-Core Register Test (ESP32-P4)
         Success [label = "Return\nBIST_ESP_OK"];
     }
 
-For dual-core reciprocal comparison (e.g. IEC 60730 Class C / Annex H Table H.1 / H.2.18.15), ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation:
+For dual-core reciprocal comparison (Annex H Table H.1 / H.2.18.15 reciprocal comparison), ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation:
 
 1. **Independent Execution (Core 0)**: Core 0 executes a full register walk (x1–x31 and f0–f31 on FPU-supported hardware) and writes the raw read-back values directly into shared memory slot 0 (``bist_cpu_regs_shared_results_cc[0]``).
 2. **Local Validation (Core 0 on Core 0)**: Core 0 verifies that its own recorded read-backs match the expected checkerboard patterns (``0xAAAAAAAA`` and ``0x55555555``).
@@ -226,7 +226,7 @@ Reciprocal Dual-Core CSR Test (ESP32-P4)
         Success [label = "Return\nBIST_ESP_OK"];
     }
 
-For dual-core reciprocal comparison (e.g. IEC 60730 Class C / Annex H Table H.1 / H.2.18.15), ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation on 40 CSRs (5 trap + 16 PMP address + 4 PMP config + 12 PMA address + 3 FPU CSRs):
+For dual-core reciprocal comparison, ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation on 40 CSRs (5 trap + 16 PMP address + 4 PMP config + 12 PMA address + 3 FPU CSRs):
 
 1. **Independent Execution (Core 0)**: Core 0 executes the CSR walk and writes raw read-back values directly into shared memory slot 0 (``bist_cpu_csr_regs_shared_results_cc[0]``).
 2. **Local Validation (Core 0 on Core 0)**: Core 0 verifies that its own recorded read-backs match the expected masked patterns.
@@ -1135,9 +1135,24 @@ This mechanism ensures that the flash integrity check in ESP-BIST validates the 
 Program Counter Test
 --------------------
 
+The Program Counter Test calls functions placed in different memory regions and checks that each function returns its own address. Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Walk)**: Default implementation running entirely on the executing core (``bist_pc.c``).
+- **Reciprocal (Dual-Core Comparison)**: Available on ESP32-P4 (``bist_pc_reciprocal.c``). Both HP cores run the same walk and cross-validate each other's evidence.
+
+Both implementations use functions placed in distinct memory regions via linker sections:
+
+- ``pc_test_0``: IRAM (``.iram0.text``).
+- ``pc_test_1`` and ``pc_test_2``: Flash (``.flash.text``), placed with an offset between them to exercise lower PC bits.
+- ``pc_test_3``: RTC / LP SRAM.
+- ``pc_test_4``: TCM / HP SPM (ESP32-P4 only).
+
+Static Single-Core PC Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
-    :scale: 60%
-    :caption: Program Counter Test
+    :scale: 50%
+    :caption: Program Counter Test (Static)
     :align: center
 
     blockdiag {
@@ -1168,15 +1183,100 @@ Program Counter Test
         End [label = "End", shape = roundedbox];
     }
 
-This diagram shows the concrete implementation of the program counter integrity test. Each function is placed in a specific memory region by the linker script to exercise different PC register bits: ``pc_test_0`` in IRAM, ``pc_test_1`` and ``pc_test_2`` in Flash (exercising bits [3:15] across a 64 KB gap without consuming SRAM), ``pc_test_3`` in RTC memory (bit 28), and ``pc_test_4`` in TCM (bits [2:7], ESP32-P4 only). The test iterates through the function pointer array, verifying that each function returns its own entry address to detect stuck-at faults in the PC register.
+This diagram shows the implementation of the static program counter integrity test. Functions are placed in distinct memory regions by the linker script (IRAM, Flash, RTC memory, and TCM on ESP32-P4) to exercise different PC register bits. The test verifies that each function returns its own address, detecting stuck-at faults in the PC register.
+
+Reciprocal Dual-Core PC Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: Program Counter Walk Job (Per-Core Execution & Evidence Logging)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 35;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> ClearSlot -> RegionLoop;
+        RegionLoop -> CallFunc [label = "Next"];
+        CallFunc -> CheckMatch;
+        CheckMatch -> Fail [label = "Mismatch"];
+        CheckMatch -> RecordEvidence [label = "Match"];
+        RecordEvidence -> RegionLoop;
+        RegionLoop -> Pass [label = "Done"];
+
+        Start [label = "bist_pc_walk_job(slot)", shape = roundedbox];
+        ClearSlot [label = "Clear result slot buffer\nSet status = TEST_ERR"];
+        RegionLoop [label = "For each region\nregions 0..4", shape = diamond];
+        CallFunc [label = "Call region function\nret = (*func)()"];
+        CheckMatch [label = "ret == expected\nfunction address?", shape = diamond];
+        RecordEvidence [label = "Record returned address\nand set completion bit"];
+        Fail [label = "Leave status = TEST_ERR\nReturn", shape = roundedbox];
+        Pass [label = "Set slot status = BIST_ESP_OK\nReturn", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 50%
+    :caption: Program Counter Test (Reciprocal Cross-Validation Protocol)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: PC Walk" -> "Core 0: Validate Core 0" -> "Core 1: PC Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: PC Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: PC Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: PC Walk" [label = "Core 0: Call 5 regions\nWrite results to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0\n(Local check)", shape = diamond];
+        "Core 1: PC Walk" [label = "Core 1: Call 5 regions\nWrite results to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1\n(Remote check via IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0\n(Cross-check via IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1\n(Cross-check local)", shape = diamond];
+        Error [label = "Return\nBIST_ESP_PC_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+For dual-core reciprocal comparison, the ESP32-P4 PC test utilizes both HP cores to perform mutual cross-validation:
+
+1. **Independent Execution (Core 0)**: Core 0 clears shared slot 0 (``bist_pc_shared_results[0]``), calls the five region functions, and records returned addresses, completion mask, and status.
+2. **Local Validation (Core 0 on Core 0)**: Core 0 validates slot 0 against the canonical linked addresses.
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the same walk to HP Core 1 via ``bist_cpu_call()``. Core 1 executes the five region functions and writes slot 1 (``bist_pc_shared_results[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of slot 1 to Core 1.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of slot 0 to Core 1.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates slot 1 directly.
+
+Each validator requires ``status == BIST_ESP_OK`` and a complete ``completion_mask``, then compares every recorded address against the canonical linked address of the corresponding region function. Any walk, dispatch, or validation failure returns ``BIST_ESP_PC_TEST_ERR``.
+
+Fixed-Layout Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal PC test exchanges evidence using a fixed-layout structure (``bist_pc_result_t``) placed in statically allocated HP SRAM (``bist_pc_shared_results``):
+
+- Exactly 28 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers; returned addresses are stored as ``uint32_t`` values.
+- Verified at compile time via ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status``, a ``completion_mask`` with one bit per region, and five ``returned_address`` entries.
+
+Fault-injection labels are provided at the walk loop (``bist_pc_walk``) and before each cross-validation (``bist_pc_verify_core0_on_core1``, ``bist_pc_verify_core1_on_core0``).
 
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_pc_test
-
-
 
 Source Files
 ^^^^^^^^^^^^
@@ -1191,6 +1291,9 @@ Source Files
    * - ``src/bist/core/cpu/bist_pc.c``
      - v1.1.0
      - 78569f53cddc8fcb74f7e0daaf0cd973
+   * - ``src/bist/core/cpu/bist_pc_reciprocal.c``
+     - N/A
+     - 85f00cd01fb951201c90b2f572eb05d1
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1198,16 +1301,19 @@ Coding and Interfaces
 - The PC test uses explicit function placement in different memory regions to exercise specific PC bits. Error handling is explicit: if the return address does not match the expected function pointer, the function returns an explicit error code.
 - This test uses linker-defined sections for function placement.
 - Uses an array of function pointers to the test functions.
-- No dynamic memory is used.
+- The public function remains ``bist_pc_test()``; Static mode declares it in ``bist_pc.h`` and Reciprocal mode in ``bist_pc_reciprocal.h``. ``src/bist/cmake/sources_stl.cmake`` selects ``bist_pc.c`` or ``bist_pc_reciprocal.c`` based on ``CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST_STATIC`` or ``CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL``.
+- The reciprocal implementation additionally depends on the bare-metal ``bist_cpu_call()`` dispatcher and shared HP SRAM. Only Core 0 initiates dispatch to Core 1, and Core 1 idle wake-up uses a dedicated cross-core software interrupt.
+- In reciprocal mode, the walk's call table is ``volatile`` so each call and each immediate comparison reads the stack copy, and the walk job is ``noinline, noclone`` so its fault-injection label is emitted once.
+- No dynamic memory is used. Reciprocal mode uses two fixed-size static result slots with no embedded pointers.
 - The main function has a single entry and, under normal conditions, a single exit. Early returns are used for error handling.
 - Branching is limited to error detection and function pointer checks. No deep nesting or complex logic.
 - Loops are bounded by the number of test functions. All loops are finite and predictable.
 - Only pointer comparisons and assignments are used. No floating-point or complex arithmetic.
-- No interrupts are used or manipulated by this test.
-- Pointers are used for function pointers only. All pointer usage is explicit and safe.
+- In static mode, no interrupts are used or manipulated by this test.
+- Pointers are used for function pointers and, in reciprocal mode, for the shared result slot passed to each job. All pointer usage is explicit and safe.
 - No recursion is used in this test.
 - No goto or label-based jumps are used.
-- Type conversions are only used for function pointer casting, which is standard and explicit.
+- Type conversions are only used for function pointer casting, which is standard and explicit. Reciprocal mode additionally converts returned addresses to ``uint32_t`` through ``uintptr_t`` for pointer-free storage.
 - No division operations are present in this test.
 
 .. _interrupt-test:
