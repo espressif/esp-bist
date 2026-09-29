@@ -46,7 +46,8 @@
  * 3. Read 1 from all cells (ascending)
  *
  * Backs up original RAM content before test and restores after.
- * Test region defined by linker symbols _bist_ram_test_start/_end.
+ * Test region defined by linker symbols _bist_ram_test_start/_end
+ * (or _bist_hp_ram_start/_end when host RAM audit is active).
  *
  * @return BIST_ESP_OK if RAM passes test
  * @return BIST_ESP_RAM_TEST_ERR if mismatch detected

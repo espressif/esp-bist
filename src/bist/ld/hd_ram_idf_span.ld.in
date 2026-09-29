@@ -1,0 +1,21 @@
+/*
+ * Live HP DRAM march for the host RAM audit.
+ *
+ * The span is the heap through the end of sram_seg. Task stacks live in
+ * that heap. .dram0.safe_ram and the mailbox are in .bss, below _heap_start.
+ *
+ * P4 rev >= 3: IDF defines SRAM_START as "0x4FF00000 + CONFIG_CACHE_L2_CACHE_SIZE"
+ * without parentheses, so LENGTH(sram_seg) is SRAM_END - 0x4FF00000 + cache.
+ * ORIGIN + LENGTH then lands past SOC_DRAM_HIGH (0x4ffc0000) by twice the L2
+ * cache size, and the march load-faults on that address. The real exclusive
+ * end of sram_seg is the bootloader iram_loader_seg (0x4FFAEFC0).
+ */
+#include "sdkconfig.h"
+
+_bist_hp_ram_start = _heap_start;
+#if CONFIG_IDF_TARGET_ESP32P4 && !CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+_bist_hp_ram_limit = ORIGIN(sram_seg) + LENGTH(sram_seg);
+_bist_hp_ram_end = (_bist_hp_ram_limit > 0x4FFAEFC0) ? 0x4FFAEFC0 : _bist_hp_ram_limit;
+#else
+_bist_hp_ram_end = ORIGIN(sram_seg) + LENGTH(sram_seg);
+#endif

@@ -96,6 +96,30 @@ int main(void)
 		bist_hd_checkpoint_reached();
 	}
 
+	bist_hd_audit_result_t audit = {0};
+
+	if (bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, &audit) != 0 || audit.valid == 0 ||
+	    audit.status != BIST_HD_STATUS_OK) {
+		all_pass = false;
+		printk("test_HD_audit_cpu:FAIL\n");
+	} else {
+		printk("test_HD_audit_cpu:PASS\n");
+	}
+	if (bist_hd_agent_audit_get(BIST_HD_AUDIT_CSR, &audit) != 0 || audit.valid == 0 ||
+	    audit.status != BIST_HD_STATUS_OK) {
+		all_pass = false;
+		printk("test_HD_audit_csr:FAIL\n");
+	} else {
+		printk("test_HD_audit_csr:PASS\n");
+	}
+	if (bist_hd_agent_audit_get(BIST_HD_AUDIT_RAM, &audit) != 0 || audit.valid == 0 ||
+	    audit.status != BIST_HD_STATUS_OK) {
+		all_pass = false;
+		printk("test_HD_audit_ram:FAIL\n");
+	} else {
+		printk("test_HD_audit_ram:PASS\n");
+	}
+
 	if (IS_ENABLED(CONFIG_ESP_BIST_HD_AUDIT_QA)) {
 		/*
 		 * Completing all runtime loops proves Q&A rounds passed; a

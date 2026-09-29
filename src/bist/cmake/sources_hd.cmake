@@ -33,6 +33,10 @@ function(bist_hd_collect_hp_sources os_port out_srcs out_incs)
         list(APPEND _srcs "core/cpu/bist_cpu_csr_regs.c")
         list(APPEND _incs "core/cpu/include")
     endif()
+    if(CONFIG_ESP_BIST_HD_AUDIT_RAM)
+        list(APPEND _srcs "core/memory/bist_ram.c")
+        list(APPEND _incs "core/memory/include")
+    endif()
 
     if(os_port STREQUAL "idf")
         list(APPEND _srcs

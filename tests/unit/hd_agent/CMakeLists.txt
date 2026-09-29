@@ -43,6 +43,7 @@ set(HD_AGENT_SCENARIOS
     checkpoint_step_is_one
     checkpoint_send_failure_consumes_id
     diag_req_handled
+    audit_ctx
 )
 
 foreach(scenario IN LISTS HD_AGENT_SCENARIOS)

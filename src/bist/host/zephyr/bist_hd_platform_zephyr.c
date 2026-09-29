@@ -102,3 +102,13 @@ void bist_hd_platform_irq_unlock(uint32_t key)
 {
 	irq_unlock(key);
 }
+
+void bist_hd_platform_preempt_lock(void)
+{
+	k_sched_lock();
+}
+
+void bist_hd_platform_preempt_unlock(void)
+{
+	k_sched_unlock();
+}

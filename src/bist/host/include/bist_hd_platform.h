@@ -77,6 +77,19 @@ uint32_t bist_hd_platform_irq_lock(void);
  */
 void bist_hd_platform_irq_unlock(uint32_t key);
 
+/**
+ * @brief Stop other threads from running. The caller keeps running.
+ *
+ * Used around the host RAM March so other threads cannot run while a
+ * chunk is written. Does not suspend the calling agent thread.
+ */
+void bist_hd_platform_preempt_lock(void);
+
+/**
+ * @brief Undo bist_hd_platform_preempt_lock().
+ */
+void bist_hd_platform_preempt_unlock(void);
+
 #ifdef __cplusplus
 }
 #endif

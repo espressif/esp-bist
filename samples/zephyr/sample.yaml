@@ -30,4 +30,7 @@ tests:
         - "test_BIST_cpu_reg:PASS"
         - "test_BIST_runtime_cpu_reg:PASS"
         - "Runtime loop 5/5"
+        - "test_HD_audit_cpu:PASS"
+        - "test_HD_audit_csr:PASS"
+        - "test_HD_audit_ram:PASS"
         - "BIST_RESULT:PASS"

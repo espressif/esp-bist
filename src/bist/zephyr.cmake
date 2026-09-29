@@ -74,6 +74,12 @@ else()
         zephyr_library_compile_options(-Os)
 endif()
 
+if(CONFIG_ESP_BIST_HD_AUDIT_RAM AND NOT _bist_is_lpcore)
+        zephyr_linker_sources(RAM_SECTIONS ${CMAKE_CURRENT_LIST_DIR}/ld/hd_ram_zephyr.ld)
+        # After .dram0.noinit, so ADDR() is the first byte of that section.
+        zephyr_linker_sources(SECTIONS ${CMAKE_CURRENT_LIST_DIR}/ld/hd_ram_zephyr_span.ld)
+endif()
+
 if(CONFIG_ESP_BIST)
         if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
                 set(BIST_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")

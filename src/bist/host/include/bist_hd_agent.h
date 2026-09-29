@@ -6,8 +6,9 @@
  * Host Diagnostic Agent API (HP / QM host OS).
  *
  * The companion (LP) owns safe-state decisions. This agent collaborates:
- * answers Q&A challenges and reports alive checkpoints. Catalog DIAG audits
- * are deferred. This is not a Safety OS.
+ * answers Q&A challenges, runs catalog DIAG audits, and reports alive
+ * checkpoints. Completed audits are recorded for the application to read.
+ * This is not a Safety OS.
  */
 
 #pragma once
@@ -57,6 +58,28 @@ int bist_hd_agent_wait_lp_status(uint32_t *status_out, uint32_t expect_flag, int
  * @return 0 on success, -1 if checkpoint audit is disabled
  */
 int bist_hd_checkpoint_reached(void);
+
+/**
+ * @brief Latest result of one catalog audit.
+ */
+typedef struct {
+    uint8_t valid;        /**< 0 until this audit has completed once */
+    uint32_t status;      /**< BIST_HD_STATUS_* from bist_hd_protocol.h */
+    uint32_t duration_ms; /**< Latest run, from bist_hd_platform_time_ms() */
+} bist_hd_audit_result_t;
+
+/**
+ * @brief Copy the latest result for one catalog audit.
+ *
+ * A catalog id that has not run yet returns 0 with valid == 0.
+ * Do not call this from inside an audit: the copy takes the platform
+ * irq lock, and that lock is not recursive.
+ *
+ * @param audit_id bist_hd_audit_id_t value
+ * @param out Receives the record
+ * @return 0 on success, -1 on a NULL out or an id outside the catalog
+ */
+int bist_hd_agent_audit_get(uint8_t audit_id, bist_hd_audit_result_t *out);
 
 #ifdef __cplusplus
 }

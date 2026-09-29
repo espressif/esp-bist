@@ -24,6 +24,7 @@
 static int s_started;
 static int s_have_seq;
 static uint16_t s_last_seq;
+static bist_hd_audit_result_t s_audit[BIST_HD_AUDIT_COUNT];
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
 /*
@@ -174,4 +175,35 @@ int bist_hd_checkpoint_reached(void)
 #else
     return -1;
 #endif
+}
+
+void bist_hd_ctx_commit(uint8_t audit_id, uint32_t status, uint32_t duration_ms)
+{
+    bist_hd_audit_result_t *rec;
+    uint32_t key;
+
+    if (audit_id >= (uint8_t)BIST_HD_AUDIT_COUNT) {
+        return;
+    }
+
+    key = bist_hd_platform_irq_lock();
+    rec = &s_audit[audit_id];
+    rec->valid = 1u;
+    rec->status = status;
+    rec->duration_ms = duration_ms;
+    bist_hd_platform_irq_unlock(key);
+}
+
+int bist_hd_agent_audit_get(uint8_t audit_id, bist_hd_audit_result_t *out)
+{
+    uint32_t key;
+
+    if (out == NULL || audit_id >= (uint8_t)BIST_HD_AUDIT_COUNT) {
+        return -1;
+    }
+
+    key = bist_hd_platform_irq_lock();
+    *out = s_audit[audit_id];
+    bist_hd_platform_irq_unlock(key);
+    return 0;
 }

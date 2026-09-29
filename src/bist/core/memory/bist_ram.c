@@ -16,18 +16,30 @@
 #include <stdbool.h>
 #include "bist_ram.h"
 
-#if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
+#if defined(CONFIG_ESP_BIST_MEMORY_RAM_TEST) || \
+    (defined(CONFIG_ESP_BIST_HD_AUDIT_RAM) && !defined(IS_ULP_COCPU))
 
-#ifdef CONFIG_ESP_BIST_RAM_PARTITION_SIZE
-#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE CONFIG_ESP_BIST_RAM_PARTITION_SIZE
+/*
+ * March A is the same loop everywhere. Standalone and the companion march
+ * _bist_ram_test_start/_end with CONFIG_ESP_BIST_RAM_PARTITION_SIZE.
+ * The host marches the live HP span with CONFIG_ESP_BIST_HD_RAM_PARTITION_SIZE,
+ * so a shared HP/LP configuration can keep a small LP partition.
+ */
+#if defined(CONFIG_ESP_BIST_HD_AUDIT_RAM) && !defined(IS_ULP_COCPU)
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE CONFIG_ESP_BIST_HD_RAM_PARTITION_SIZE
+extern uint32_t _bist_hp_ram_start;
+extern uint32_t _bist_hp_ram_end;
+#define BIST_RAM_SPAN_START _bist_hp_ram_start
+#define BIST_RAM_SPAN_END   _bist_hp_ram_end
 #else
-#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE 512
+#define BIST_ESP_RAM_BACKUP_CHUNK_SIZE CONFIG_ESP_BIST_RAM_PARTITION_SIZE
+extern uint32_t _bist_ram_test_start;
+extern uint32_t _bist_ram_test_end;
+#define BIST_RAM_SPAN_START _bist_ram_test_start
+#define BIST_RAM_SPAN_END   _bist_ram_test_end
 #endif
 
 #define MARCH_STACK_SIZE 256
-
-extern uint32_t _bist_ram_test_start;
-extern uint32_t _bist_ram_test_end;
 
 /*
  * Size is computed from the boundary symbols to avoid GP-relative relocation
@@ -35,7 +47,7 @@ extern uint32_t _bist_ram_test_end;
  */
 static uint32_t bist_ram_test_words(void)
 {
-    return ((uint32_t)&_bist_ram_test_end - (uint32_t)&_bist_ram_test_start) / 4u;
+    return ((uint32_t)&BIST_RAM_SPAN_END - (uint32_t)&BIST_RAM_SPAN_START) / 4u;
 }
 
 // Buffer to backup and restore two partitions (2 x 1024 bytes) for Abraham
@@ -51,7 +63,7 @@ ram_test_stack[MARCH_STACK_SIZE];
 
 /*
  * Run fn() with SP relocated to ram_test_stack (.dram0.safe_ram).
- * safe_ram sits below _bist_ram_test_start, so the march algorithms can
+ * safe_ram sits outside the marched span, so the march algorithms can
  * test the entire linker-defined region — including the normal stack —
  * without ever corrupting their own frame.
  *
@@ -87,7 +99,7 @@ static bist_esp_err_t run_on_safe_stack(bist_esp_err_t (*fn)(void))
 static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
 {
     bool test_passed = true;
-    volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
+    volatile uint32_t *start_addr = (uint32_t *)&BIST_RAM_SPAN_START;
     volatile uint32_t dram_test_size = bist_ram_test_words();
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
@@ -140,7 +152,7 @@ restore_a:
 static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
 {
     bool test_passed = true;
-    volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
+    volatile uint32_t *start_addr = (uint32_t *)&BIST_RAM_SPAN_START;
     volatile uint32_t dram_test_size = bist_ram_test_words();
 
     for (size_t offset = 0; offset < dram_test_size; offset += BIST_ESP_RAM_BACKUP_CHUNK_SIZE) {
@@ -241,7 +253,7 @@ bist_esp_err_t bist_ram_test_march_x(void)
 static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
 {
     bool test_passed = true;
-    volatile uint32_t *start_addr = (uint32_t *)&_bist_ram_test_start;
+    volatile uint32_t *start_addr = (uint32_t *)&BIST_RAM_SPAN_START;
     volatile uint32_t dram_test_size = bist_ram_test_words();
 
     size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
@@ -623,4 +635,4 @@ bist_esp_err_t bist_ram_test_abraham_full(void)
     return BIST_ESP_OK;
 }
 
-#endif // CONFIG_ESP_BIST_MEMORY_RAM_TEST
+#endif /* CONFIG_ESP_BIST_MEMORY_RAM_TEST || HP HD RAM audit */

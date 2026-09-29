@@ -33,7 +33,7 @@
 
 #ifdef CONFIG_BIST_HD_TEST_STARVE_AGENT
 /* Outlasts the challenge window plus the companion LP watchdog timeout. */
-#define STARVE_US 500000
+#define STARVE_US 5000000
 
 /*
  * Model a host too busy to answer: become cooperative above the agent thread

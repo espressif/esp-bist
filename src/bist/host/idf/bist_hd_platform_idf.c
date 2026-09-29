@@ -113,3 +113,13 @@ void bist_hd_platform_irq_unlock(uint32_t key)
 #endif
     portCLEAR_INTERRUPT_MASK_FROM_ISR(key);
 }
+
+void bist_hd_platform_preempt_lock(void)
+{
+    vTaskSuspendAll();
+}
+
+void bist_hd_platform_preempt_unlock(void)
+{
+    (void)xTaskResumeAll();
+}
