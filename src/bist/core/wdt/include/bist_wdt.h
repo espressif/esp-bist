@@ -31,9 +31,11 @@
  * @brief Test watchdog timer operation
  *
  * Two-phase test:
- * 1. First execution: Initializes watchdog with 100 µs timeout,
- *    waits 1000 µs, causing watchdog to expire and trigger reset
- * 2. After reset: Checks reset reason is RESET_REASON_CORE_MWDT0
+ * 1. First execution: Initializes watchdog with a 10000 µs timeout,
+ *    waits 50000 µs, causing the watchdog to expire and trigger reset
+ * 2. After reset: Checks the reset reason. ESP32-P4 expects
+ *    RESET_REASON_CORE_MWDT. Every other supported SoC expects
+ *    RESET_REASON_CORE_MWDT0
  *
  * @return BIST_ESP_OK if WDT reset detected (second execution)
  * @return BIST_ESP_WDT_TEST_ERR if watchdog fails to trigger reset
