@@ -774,7 +774,7 @@ build_docs_html:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 --skip-reqs-check -l en
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32h4 esp32p4 --skip-reqs-check -l en
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/html/index.html"
 
 build_docs_pdf:
@@ -790,7 +790,7 @@ build_docs_pdf:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 --skip-reqs-check -l en -bs latex
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32h4 esp32p4 --skip-reqs-check -l en -bs latex
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf"
 
 deploy_preview_docs:
