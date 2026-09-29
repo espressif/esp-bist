@@ -41,13 +41,13 @@ The following table maps identified hazards to safety functions, risk levels, an
      - CPU CSR corruption causing incorrect exception handling or memory protection failures
      - High
      - 1.1 (CPU CSRs)
-     - ``bist_cpu_csr_regs_test()`` validates critical CSRs (MTVEC, MEPC, MCAUSE, PMPADDR, PMPCFG, and on PMA-capable SoCs: PMA address, MEXSTATUS, MHINT; on FPU supported devices: ``fflags``, ``frm``, ``fcsr``) maintain integrity
+     - ``bist_cpu_csr_regs_test()`` validates critical trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), memory protection registers (PMPADDR, PMPCFG, and PMA address registers on PMA-capable SoCs), custom CSRs (MEXSTATUS, MHINT on ESP32-C5), and FPU registers (``fflags``, ``frm``, ``fcsr``) on FPU supported devices
 
    * - H3
      - Program counter corruption causing execution outside intended code regions
      - High
      - 1.3 (Program Counter)
-     - ``bist_pc_test()`` exercises PC bits by calling functions placed in IRAM, Flash, and RTC regions, detecting stuck-at faults or unexpected jumps
+     - ``bist_pc_test()`` exercises PC bits by calling functions placed in IRAM, Flash, RTC, and TCM (ESP32-P4) regions, detecting stuck-at faults or unexpected jumps
 
    * - H4
      - Interrupt handling or execution failure causing missed, stuck, or incorrectly routed interrupts
@@ -59,7 +59,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - Clock oscillator failure causing timing violations and missed deadlines
      - High
      - 3 (Clock)
-     - ``bist_clock_test()`` monitors 32kHz crystal via XT WDT and validates 40MHz main crystal frequency within ±1% tolerance
+     - ``bist_ext_crystal_fail_test()`` monitors the 32 kHz crystal via XT WDT when ``SOC_XT_WDT_SUPPORTED`` is set; ``bist_main_crystal_test()`` validates the main crystal (``CONFIG_XTAL_FREQ``) within ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default 1%)
 
    * - H6
      - Flash memory corruption leading to execution of incorrect code or use of corrupted data
@@ -71,7 +71,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - RAM corruption causing data integrity loss or stack overflow
      - High
      - 4.2 (Variable Memory)
-     - ``bist_ram_test_march_a()`` and ``bist_ram_test_march_x()`` detect coupling and transition faults; ``bist_cpu_stack_overflow_check()`` monitors stack sentinel
+     - ``bist_ram_test_march_a()`` and ``bist_ram_test_march_x()`` detect coupling and transition faults; ``bist_ram_test_abraham()`` / ``bist_ram_test_abraham_full()`` (H.2.19.1) provide expanded pattern sensitivity and address decoder fault coverage; ``bist_cpu_stack_overflow_check()`` monitors stack sentinel with safe-stack execution isolation
 
    * - H8
      - Infinite loop or deadlock preventing watchdog feeding and system recovery
@@ -83,13 +83,13 @@ The following table maps identified hazards to safety functions, risk levels, an
      - GPIO misconfiguration or stuck I/O lines causing incorrect system behavior
      - Medium
      - 7.1 (Digital I/O)
-     - ``bist_gpio_test()`` verifies GPIO configuration and validates output/input levels are readable and controllable
+     - ``bist_gpio_output_test()`` and ``bist_gpio_input_test()`` verify GPIO configuration, output drive capability, and input level readback
 
    * - H10
      - ADC misconfiguration or stuck analog input lines causing incorrect sensor readings
      - Medium
      - 7.2 (Analog I/O)
-     - ``bist_adc_low_level_test()`` and ``bist_adc_high_level_test()`` verify ADC configuration using internal pull resistors; on ESP32-C3, ``bist_adc_reference_test()`` adds mid-scale VREF validation
+     - On supported SoCs, ``bist_adc_low_level_test()`` and ``bist_adc_high_level_test()`` verify ADC configuration and conversion with hardware calibration; on ESP32-C3, ``bist_adc_reference_test()`` adds mid-scale VREF validation
 
 Risk Level Definitions
 ----------------------

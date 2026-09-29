@@ -9,8 +9,8 @@
 #  <https://www.gnu.org/licenses/lgpl-3.0.html>.
 
 cmake_minimum_required(VERSION 3.22)
-set(PROJECT_VERSION 1.0.0)
-project(bist_esp VERSION 0.0.1 DESCRIPTION "Espressif's Built-In Self Test (BIST) Library")
+set(PROJECT_VERSION 1.1.0)
+project(bist_esp VERSION 1.1.0 DESCRIPTION "Espressif's Built-In Self Test (BIST) Library")
 
 if(DEFINED ZEPHYR_BASE)
         include(zephyr.cmake)

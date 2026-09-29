@@ -12,9 +12,12 @@ This documentation provides a comprehensive overview of ESP-BIST, including its 
    * - Version
      - Date
      - Description
-   * - v1.0.0
+   * - `v1.0.0 <https://documentation.espressif.com/IEC%2060730%20Class%20B%20&%20IEC60335-1%20Class%20R1%20Safety%20Certification.pdf>`_
      - Jan 23, 2026
      - Initial release
+   * - v1.1.0
+     - TBD
+     - Enhanced SoC support across all targets, expanded self-test coverage (Abraham RAM, ADC, hardware interrupts). See :doc:`changelog`.
 
 .. only:: html
 
@@ -24,6 +27,7 @@ This documentation provides a comprehensive overview of ESP-BIST, including its 
     :maxdepth: 1
 
     Get Started <get_started>
+    Changelog <changelog>
     Software Safety Requirements <software_safety_requirements>
     Risk Assessment <risk_assessment>
     Software Architecture <software_architecture>
@@ -34,6 +38,4 @@ This documentation provides a comprehensive overview of ESP-BIST, including its 
     Tool Qualification <tool_qualification>
     Safety Case Summary <safety_case_summary>
     Application Guide <application_guide>
-    Host Diagnostics <host_diagnostics>
     API Reference <api>
-    MCP Server <mcp_server>

@@ -28,12 +28,49 @@ Test Execution Flow
 ^^^^^^^^^^^^^^^^^^^
 
 .. blockdiag::
-    :scale: 100%
-    :caption: Test Execution Flow
+    :scale: 85%
+    :caption: Test Execution Architecture
     :align: center
 
     blockdiag {
-        Build -> "Start QEMU\n(debug/normal)" -> "GDB fault\ninjection\n" -> "Test runs" -> "pytest validates\noutput" -> Cleanup;
+        orientation = portrait;
+        span_height = 35;
+        node_width = 220;
+        node_height = 50;
+        default_fontsize = 11;
+
+        Build -> TargetCheck;
+        TargetCheck -> QEMU [label = "Emulation"];
+        TargetCheck -> Device [label = "Hardware"];
+        TargetCheck -> Host [label = "Host Unit"];
+
+        QEMU -> ModeCheck;
+        ModeCheck -> QemuRun [label = "Normal"];
+        ModeCheck -> GdbInject [label = "Fault Injection"];
+        GdbInject -> QemuRun;
+        QemuRun -> PytestVal;
+
+        Device -> FlashDUT -> SerialCapture -> PytestVal;
+
+        Host -> CTestRun -> CTestVal;
+
+        PytestVal -> Report;
+        CTestVal -> Report;
+
+        Build [label = "Build firmware / tests\n(CMake + Ninja)", shape = roundedbox];
+        TargetCheck [label = "Validation Target?", shape = diamond];
+        QEMU [label = "QEMU Environment\n(qemu-system-riscv32)"];
+        Device [label = "Target Hardware\n({IDF_TARGET_NAME} DUT)"];
+        Host [label = "Host Machine\n(Off-target CMake)"];
+        ModeCheck [label = "Test Mode?", shape = diamond];
+        GdbInject [label = "Attach GDB (:1234)\nInject breakpoint & fault"];
+        QemuRun [label = "Execute BIST in QEMU"];
+        FlashDUT [label = "Flash firmware\n(esptool.py)"];
+        SerialCapture [label = "Execute BIST on DUT\nCapture UART output"];
+        PytestVal [label = "pytest validates output\n(assert PASS/FAIL)"];
+        CTestRun [label = "ctest execution\n(clock_math)"];
+        CTestVal [label = "CTest assertions\n(assert 0 failures)"];
+        Report [label = "JUnit XML / Test Report", shape = roundedbox];
     }
 
 GDB Fault Injection Pattern
@@ -103,13 +140,13 @@ QEMU/Emulation Validation
 
     # When breakpoint is hit, modify register to wrong value
     commands
-        set $ra=0x55555555
+        set $<reg_name>=0x55555555
         continue
     end
 
 **Script Parameterization:**
 
-The script is executed 32 times, once for each register:
+The script is executed 32 times, once for each general-purpose integer register:
 
 - ``ra``, ``sp``, ``gp``, ``tp``
 - ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
@@ -118,15 +155,25 @@ The script is executed 32 times, once for each register:
 
 Each test replaces ``<reg_name>`` with the specific register name.
 
+**Failure Test: ``test_freg_error`` (Parameterized, 32 FPU registers, ESP32-H4/P4 only)**
+
+On FPU-supported SoCs, ``test_freg_error`` tests each single-precision floating-point register:
+
+- ``ft0``–``ft11``
+- ``fs0``–``fs11``
+- ``fa0``–``fa7``
+
+Breakpoint is placed at ``testFRegA_<freg_name>``, and GDB corrupts the register value to ``0x55555555``, verifying that the comparison detects the fault.
+
 **Fault Injection Method:**
 
-1. GDB sets breakpoint at label ``testRegA_<reg_name>`` (where register is tested against 0xAAAAAAAA)
-2. When breakpoint hits, register is forcibly set to 0x55555555 (wrong value)
-3. Test continues and reads register, expecting 0xAAAAAAAA
+1. GDB sets breakpoint at label ``testRegA_<reg_name>`` (or ``testFRegA_<freg_name>``)
+2. When breakpoint hits, register is forcibly set to wrong value (0x55555555)
+3. Test continues and verifies register, expecting 0xAAAAAAAA
 4. Mismatch detected, test returns error code ``BIST_ESP_CPU_TEST_ERR``
 5. Test prints "test_BIST_Cpu_Regs:FAIL"
 
-**Test Coverage:** 32 test cases (one per register)
+**Test Coverage:** 32 test cases on integer cores; 64 test cases on FPU-enabled cores (ESP32-H4, ESP32-P4)
 
 **Expected Output per Register:**
 
@@ -141,7 +188,7 @@ Hardware Validation
 
 **Expected Inputs/Environment:**
 
-- Device running at nominal clock frequency (40 MHz typical)
+- Device running at ``CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ`` from the SoC ``sdkconfig.h``
 - No active interrupts during test execution
 
 **Execution:**
@@ -207,8 +254,9 @@ The script is executed once for each CSR. The full list varies by SoC:
 - **Trap CSRs** (all SoCs): ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
 - **PMP Address CSRs** (all SoCs): ``pmpaddr0``–``pmpaddr15``
 - **PMP Configuration CSRs** (all SoCs): ``pmpcfg0``–``pmpcfg3``
-- **PMA Address CSRs** (C6, H2, C5 only): ``0xBD0``–``0xBDB`` (pma_addr0–11)
+- **PMA Address CSRs** (C6, H2, C5, C61, P4, H4): ``0xBD0``–``0xBDB`` (pma_addr0–11)
 - **Custom CSRs** (C5 only): ``0x7E1`` (mexstatus), ``0x7C5`` (mhint)
+- **FPU CSRs** (H4, P4 only): ``fflags``, ``frm``, ``fcsr`` tested by ``test_freg_csr_error``
 
 Each test replaces ``<csr_name>`` with the specific CSR name or number.
 
@@ -216,8 +264,8 @@ Each test replaces ``<csr_name>`` with the specific CSR name or number.
 
 **Fault Injection Method:**
 
-1. GDB sets breakpoint at CSR test label
-2. When hit, modifies temporary register (t0) to incorrect value
+1. GDB sets breakpoint at CSR test label (``testRegA_<csr_name>`` or ``testRegA_<fcsr_name>``)
+2. When hit, modifies temporary register (t0) to incorrect value (0x55555555)
 3. Test logic uses t0 to verify CSR contents
 4. Mismatch detected, test fails
 5. Returns ``BIST_ESP_CPU_CSR_TEST_ERR``
@@ -370,16 +418,19 @@ QEMU/Emulation Validation
 
 1. QEMU executes all RAM test algorithms over linker-defined RAM region
 2. **March A** (ascending):
+
    - Write 0x00000000 to all addresses ascending
    - Read 0, write 0xFFFFFFFF ascending
    - Read 0xFFFFFFFF ascending
 3. **March X** (asc/desc):
+
    - Write 0x00000000 to all addresses ascending
    - Read 0, write 0xFFFFFFFF ascending
    - Read 0xFFFFFFFF, write 0 descending
    - Read 0, write 0xFFFFFFFF ascending
-   - Read 0xFFFFFFFF, write 0 descending
+   - Read 0xFFFFFFFF, write 0 descending\
 4. **Abraham** (H.2.19.1, time-division):
+
    - Single period: tests one partition pair through the 10-element/30n-op sequence
    - Full: resets pair schedule and runs all C(N,2) pairs to completion
 5. Backup/restore chunk buffer preserves RAM content on failure
@@ -394,7 +445,13 @@ QEMU/Emulation Validation
     test_BIST_ram_abraham:PASS
     test_BIST_ram_abraham_full:PASS
 
-**Failure Test: Memory Corruption via GDB**
+**Failure Tests: Memory Corruption via GDB**
+
+The test suite validates failure detection for all three algorithms:
+
+- ``test_ram_march_a_error``: breaks at ``bist_ram_test_march_a_step2``
+- ``test_ram_march_x_error``: breaks at ``bist_ram_test_march_x_step2``
+- ``test_ram_abraham_error``: breaks at ``bist_ram_test_abraham_seq1``
 
 **GDB Fault Injection Script:**
 
@@ -403,8 +460,9 @@ QEMU/Emulation Validation
     # Connect to QEMU debug server
     target remote :1234
 
-    # Set temporary breakpoint at RAM test step 2
-    tb bist_ram_test_march_a_step2
+    # Set temporary breakpoint at algorithm verification label
+    # (bist_ram_test_march_a_step2, bist_ram_test_march_x_step2, or bist_ram_test_abraham_seq1)
+    tb <test_breakpoint>
     continue
 
     # Corrupt memory to cause pattern mismatch
@@ -415,13 +473,13 @@ QEMU/Emulation Validation
 
 **Fault Injection Method:**
 
-1. GDB sets breakpoint during RAM pattern verification (step 2: Read 0, Write 1)
+1. GDB sets breakpoint during RAM pattern verification (e.g. step 2: Read 0, Write 1, or Abraham sequence 1)
 2. When hit, writes ``0xFF`` to the first word of the test region via the linker
    symbol ``_bist_ram_test_start`` (the local pointer ``start_addr`` is optimized
    into a register by ``-Os`` and is not accessible to GDB)
-3. Test continues and reads memory, expecting the all-zeros pattern written in step 1
+3. Test continues and reads memory, expecting the all-zeros pattern written in initialization
 4. Mismatch detected, returns ``BIST_ESP_RAM_TEST_ERR``
-5. Test prints "test_BIST_ram_march_x:FAIL"
+5. Test prints failure report for the specific algorithm
 
 **Test Coverage:** 3 test cases (March A, March X, and Abraham algorithms)
 
@@ -429,7 +487,9 @@ QEMU/Emulation Validation
 
 .. code-block::
 
+    test_BIST_ram_march_a:FAIL
     test_BIST_ram_march_x:FAIL
+    test_BIST_ram_abraham:FAIL
 
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
@@ -495,7 +555,12 @@ QEMU/Emulation Validation
 
     test_BIST_flash:PASS
 
-**Failure Test: CRC Length Corruption via GDB**
+**Failure Tests: CRC Length Corruption via GDB**
+
+The test suite validates failure detection on both flash regions:
+
+- ``test_bist_flash_test_data``: breaks at ``bist_flash_test_data`` to corrupt the ``.flash.rodata`` section length
+- ``test_bist_flash_test_text``: breaks at ``bist_flash_test_text`` to corrupt the ``.flash.text`` section length
 
 **GDB Fault Injection Script:**
 
@@ -504,8 +569,9 @@ QEMU/Emulation Validation
     # Connect to QEMU debug server
     target remote :1234
 
-    # Set temporary breakpoint at CRC test data
-    tb bist_flash_test_data
+    # Set temporary breakpoint at CRC test label
+    # (bist_flash_test_data for rodata or bist_flash_test_text for text)
+    tb <test_breakpoint>
     continue
 
     # Corrupt section length to cause wrong CRC
@@ -516,7 +582,7 @@ QEMU/Emulation Validation
 
 **Fault Injection Method:**
 
-1. GDB sets breakpoint at CRC test initialization
+1. GDB sets breakpoint at CRC test section initialization (data or text)
 2. When hit, modifies section length to incorrect value (0xFF)
 3. Test computes CRC over wrong region
 4. Computed CRC does not match stored value
@@ -579,11 +645,12 @@ QEMU/Emulation Validation
 **Execution:**
 
 1. QEMU executes ``bist_pc_test()``
-2. Test calls four functions placed in different memory regions:
-   - ``pcTestFunction0``
-   - ``pcTestFunction1``
-   - ``pcTestFunction2``
-   - ``pcTestFunction3``
+2. Test calls functions placed in different memory regions (four on most SoCs; five on ESP32-P4):
+   - ``pcTestFunction0`` in IRAM
+   - ``pcTestFunction1`` in Flash
+   - ``pcTestFunction2`` in Flash (with 64 KB gap)
+   - ``pcTestFunction3`` in RTC memory
+   - ``pcTestFunction4`` in TCM (ESP32-P4 only)
 3. Each function returns its own address
 4. Test verifies return addresses match expected function addresses
 5. Returns ``BIST_ESP_OK`` if all addresses verified (covers 24 of 30 addressable PC bits)
@@ -608,14 +675,16 @@ a wrong value and the verification detects the mismatch — without crashing.
     # Connect to QEMU debug server
     target remote :1234
 
-    # Break at the PC verification loop entry; $sp points to
-    # the first element of the pcTestFunctions array on the stack.
+    # Break at the PC verification loop entry. The function pointer array is
+    # dynamically located on the stack ($sp on most SoCs, $sp + 12 on ESP32-P4)
+    # by matching the pcTestFunction0 / pcTestFunction1 address pair into $slot.
     tb bist_verify_pc_test
     continue
 
     # Flip bit 2 of the first function pointer (stuck-at fault on PC bit 2).
     commands
-        set *(int*)$sp = *(int*)$sp ^ 4
+        <locate_pc_test_array>
+        set *(int*)$slot = *(int*)$slot ^ 4
         continue
     end
 
@@ -632,22 +701,22 @@ watchdog timer fires and resets the CPU (reset reason 7).
     # Connect to QEMU debug server
     target remote :1234
 
-    # Break at the PC verification loop entry; $sp points to
-    # the first element of the pcTestFunctions array on the stack.
+    # Break at the PC verification loop entry
     tb bist_verify_pc_test
     continue
 
     # Zero the first function pointer — causes an instruction access fault
     # that leads to a WDT reset.
     commands
-        set *(int*)$sp = 0
+        <locate_pc_test_array>
+        set *(int*)$slot = 0
         continue
     end
 
 **Fault Injection Method:**
 
 1. GDB sets a breakpoint at ``bist_verify_pc_test`` (the loop label)
-2. At the breakpoint ``$sp`` points to the ``pcTestFunctions`` array on the stack
+2. At the breakpoint, GDB dynamically locates the ``pcTestFunctions`` array on the stack
 3. Test 1 flips bit 2 of the pointer — the CPU jumps to a valid but wrong address
    and the return-value comparison detects the mismatch (``BIST_ESP_PC_TEST_ERR``)
 4. Test 2 zeroes the pointer — the CPU jumps to address 0, faults, and the WDT
@@ -723,6 +792,37 @@ QEMU/Emulation Validation
 
     test_BIST_Interrupt_Source_Map:PASS
 
+**Failure Test: ``test_interrupt_source_map_error`` (ISR Count Corruption)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to QEMU debug server
+    target remote :1234
+
+    # Set temporary breakpoint after the software interrupt trigger loop
+    tb bist_interrupt_source_map_count
+    continue
+
+    # Corrupt ISR delivery count to force mismatch
+    commands
+        set interrupt_count=0
+        continue
+    end
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at ``bist_interrupt_source_map_count`` after the 8-iteration trigger loop finishes
+2. When hit, sets ``interrupt_count`` to 0 (mismatch against expected 8)
+3. Test verifies interrupt delivery count, detects mismatch, and returns ``BIST_ESP_INTERRUPT_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:FAIL
+
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
 
@@ -740,7 +840,7 @@ Hardware Validation
 2. Run ``pytest pytest_device_interrupt_test.py``
 3. Application runs ``bist_interrupt_source_map_test()`` then ``bist_hardware_interrupt_test()``
 4. Software path: map/trigger/unmap four software IRQ sources on CPU interrupt 9
-5. Hardware path: start TIMG0 (500 µs) and TIMG1 (1000 µs) alarms on CPU interrupts 9 and 10; wait until both ISR counts reach 1000 while checking the 2:1 period ratio with ±1 count tolerance
+5. Hardware path: start TIMG0 (500 µs) and TIMG1 (1000 µs) alarms on CPU interrupts 9 and 10; poll until either ISR count reaches 1000 while checking the 2:1 period ratio with ±1 count tolerance asynchronously in the ISR
 6. Serial output captured and validated
 
 **Expected Behavior:**
@@ -772,7 +872,7 @@ CI Test Results
 Clock Integrity Test
 --------------------
 
-**Purpose:** Verify that external 32kHz and main 40MHz crystal oscillators are operating within specified tolerances.
+**Purpose:** Verify the 32 kHz crystal, on SoCs with ``SOC_XT_WDT_SUPPORTED``, and the main crystal (``CONFIG_XTAL_FREQ``).
 
 QEMU/Emulation Validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -782,20 +882,22 @@ QEMU/Emulation Validation
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
 
-**Test Scripts:**
+**Test Application:** ``tests/clock_test/``
 
+The device clock test runs under Unity via ``tests/clock_test/main.c``:
 
 **External 32kHz Crystal Test: ``test_BIST_ext_crystal_fail``**
 
 **Execution:**
 
 1. Flash firmware to device
-2. Run ``pytest pytest_device_ext_crystal_test.py``
+2. Run the clock test application
 3. Application registers XT WDT callback via ``esp_xt_wdt_register_callback()``
-4. Configure XT WDT with 200-cycle timeout (approximately 6 µs)
-5. Test waits ~2 ms without crystal failure
-6. If callback is not fired, returns ``BIST_ESP_OK`` (crystal operating)
-7. If callback is fired, returns ``BIST_ESP_CLOCK_TEST_ERR`` (crystal failure detected)
+4. Configure XT WDT with a 200-cycle timeout and ``auto_backup_clk_enable`` false
+5. Test waits 2 ms (``ets_delay_us(2000)``)
+6. If the callback is not fired, returns ``BIST_ESP_OK``
+7. If the callback is fired, returns ``BIST_ESP_CLOCK_TEST_ERR``
+8. On SoCs without ``SOC_XT_WDT_SUPPORTED``, the test returns ``BIST_ESP_OK`` without programming the XT WDT
 
 **Fail Case:** Remove or disconnect 32kHz crystal → XT WDT fires → ``FAIL``
 
@@ -805,19 +907,19 @@ Hardware Validation
 
     test_BIST_ext_crystal_fail:PASS
 
-**Main 40MHz Crystal Test: ``test_BIST_main_crystal``**
+**Main Crystal Test: ``test_BIST_main_crystal``**
 
 **Execution:**
 
 1. Flash firmware to device
-2. Run ``pytest pytest_device_main_crystal_test.py``
-3. Get expected frequency via ``rtc_clk_xtal_freq_get()``
-4. Measure frequency ratio between main and 32kHz reference via ``rtc_clk_cal_ratio()``
-5. Calculate deviation via ``xtal_deviation_percent()`` (``bist_clock_math.h``): ``|measured - expected| / expected * 100``
-6. Check if deviation exceeds ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default: ±1%)
-7. Returns ``BIST_ESP_OK`` if within tolerance, ``BIST_ESP_CLOCK_TEST_ERR`` if drift exceeds threshold
+2. Run the clock test application
+3. Read the expected frequency with ``rtc_clk_xtal_freq_get()``
+4. Measure the 32 kHz reference with ``rtc_clk_cal(CLK_CAL_32K_XTAL, 500)``. A zero result returns ``BIST_ESP_CLOCK_TEST_ERR``
+5. Derive the main-crystal frequency from that calibration and the expected frequency
+6. Calculate deviation with ``xtal_deviation_percent()`` (``bist_clock_math.h``): ``|measured - expected| / expected * 100``
+7. Fail when the deviation exceeds ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default 1)
 
-**Fail Case:** Remove or significantly damage 40MHz crystal → large frequency deviation → ``FAIL``
+**Fail Case:** A missing or failed 32 kHz calibration, or a main-crystal deviation above the configured limit, returns ``FAIL``
 
 **Expected Output:**
 
@@ -867,7 +969,7 @@ QEMU/Emulation Validation
 
 .. code-block::
 
-    test_wdt_success:PASS
+    test_BIST_WDT:PASS
 
 **Failure Test: ``test_wdt_error`` (No WDT Reset)**
 
@@ -882,9 +984,9 @@ QEMU/Emulation Validation
     tb bist_test_wdt_timeout
     continue
 
-    # Set timeout too long to trigger during test
+    # Set timeout too long to trigger during test (1 second)
     commands
-        set wdt_timeout_us=10000
+        set wdt_timeout_us=1000000
         continue
     end
 
@@ -900,7 +1002,7 @@ QEMU/Emulation Validation
 
 .. code-block::
 
-    test_wdt_success:FAIL
+    test_BIST_WDT:FAIL
 
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
@@ -926,7 +1028,8 @@ Hardware Validation
 
 - First boot: Watchdog timeout detected, system resets
 - Second boot: Reset reason correctly identified as ``RESET_REASON_CORE_MWDT0`` (ESP32-P4: ``RESET_REASON_CORE_MWDT``)
-- Test returns PASS on real hardware
+- Sub-tick timeout rejection verified (``test_BIST_WDT_INIT_SUB_TICK_TIMEOUT:PASS``)
+- Both tests return PASS on real hardware
 - Two-boot sequence completes within test timeout window
 
 CI Test Results
@@ -995,27 +1098,20 @@ CI Test Results
 .. xml-junit-test-results:: tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
    :title: Windowed WDT Device Test Results
 
-esp_timer Test
---------------
+esp_timer Validation
+---------------------
 
-**Purpose:** Verify that the high-resolution software timer (esp_timer) driver operates correctly for one-shot timers (creation, start, callback invocation).
+**Purpose:** Verify that the high-resolution software timer (esp_timer) driver operates correctly for one-shot timers (creation, start, callback invocation, and cancellation).
 
-**Test Application:** ``tests/esp_timer_test/``
+**Validation through Windowed Watchdog:**
 
-**Execution:**
+The standalone BIST library uses `esp_timer` (``src/bist/drivers/esp_timer.c``) to enforce underflow windows in ``wdt_init_windowed()``. Full driver functionality is validated in-situ by ``tests/windowed_wdt_test/``:
 
-1. Build and run the esp_timer test application (QEMU or device).
-2. Test ``test_BIST_ESP_TIMER_ONESHOT`` initializes esp_timer, creates a one-shot timer, starts it with a 10 ms timeout.
-3. After waiting longer than the timeout, the test verifies the callback was invoked.
-4. Returns PASS if callback executed as expected.
+1. **One-shot initialization & start:** ``wdt_init_windowed()`` creates and starts an esp_timer one-shot alarm set to ``underflow_timeout_us``.
+2. **Callback invocation & flag reset:** The timer ISR runs upon expiration to set ``window_open_flag = true``, permitting the subsequent feed.
+3. **Timer restart & cancellation:** Tested over consecutive feed cycles and verified on teardown via ``wdt_windowed_deinit()``.
 
-**Expected Output:**
-
-.. code-block::
-
-    test_BIST_ESP_TIMER_ONESHOT:PASS
-
-**Note:** QEMU and device pytest scripts and CI jobs for esp_timer_test may be added in a future release. The test application can be run manually via ``ninja -C build qemu`` or ``ninja -C build flash`` and ``ninja -C build monitor``.
+Both QEMU and device test pipelines execute ``tests/windowed_wdt_test/``, validating ``esp_timer`` operation under both emulation and real hardware.
 
 GPIO Plausibility Test
 ----------------------
@@ -1068,10 +1164,11 @@ Hardware Validation
 
    **Execution:**
 
-   - Configure GPIO as input (GPIO_MODE_INPUT)
-      - GPIO8 is used for C6, C5, C61 and P4
+   - Configure GPIO as input (``GPIO_MODE_INPUT``)
+      - GPIO8 is used for C6, C5, C61, and P4
       - GPIO9 is used for C3 and H2
-   - GPIO is tied to GND (expected level = 0)
+      - GPIO34 is used for H4
+   - Pin level is verified against configured expected level (``BIST_TEST_GPIO_INPUT_LEVEL = 1``)
    - Read GPIO level and verify it matches expected value
    - Reset GPIO to default state
    - Returns ``BIST_ESP_OK`` if level matches expected
@@ -1094,7 +1191,7 @@ Hardware Validation
 
 - Invalid GPIO numbers properly rejected
 - GPIO2 output drive/read functionality confirmed
-- GPIO input reads correct level (tied to GND)
+- GPIO input reads correct configured level (high level 1)
 - All GPIO configurations properly reset after test
 - No GPIO configuration errors or stuck pins detected
 
@@ -1118,6 +1215,8 @@ QEMU/Emulation Validation
 
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
+
+**Note:** The ESP32-H4 does not feature an ADC peripheral; the ADC test suite is skipped for ESP32-H4 targets.
 
 **Test Script:** ``tests/analog_io_test/pytest_device_analog_io_test.py``
 
@@ -1257,12 +1356,10 @@ Clock Math (``tests/unit/clock_math``)
 
     All bist_clock_math tests passed
 
-For the Host Diagnostics protocol, companion, and agent unit tests (``tests/unit/hd_protocol``, ``tests/unit/hd_companion``, ``tests/unit/hd_agent``), see :doc:`host_diagnostics`.
-
 Validation Summary
 ------------------
 
 - QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
 - Hardware covers all modules; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
-- Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``), the Host Diagnostics protocol encode/decode logic, the LP companion state machine, and the HP agent checkpoint counter.
+- Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``).
 - Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.
