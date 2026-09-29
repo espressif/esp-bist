@@ -35,11 +35,11 @@ typedef struct {
 
 static const char *TAG = "bist_irq_hw";
 
-static uint32_t hw_interrupt_count_1 = 0;
-static uint32_t hw_interrupt_count_2 = 0;
-static uint32_t hw_check_divider = 0;
+static volatile uint32_t hw_interrupt_count_1 = 0;
+static volatile uint32_t hw_interrupt_count_2 = 0;
+static volatile uint32_t hw_check_divider = 0;
+static volatile bool hw_interrupt_test_failed = false;
 static bist_hw_timer_t hw_timers[BIST_HW_TIMER_COUNT];
-static bool hw_interrupt_test_failed = false;
 
 static void bist_hw_timers_deinit(void);
 
@@ -84,7 +84,12 @@ static void bist_hw_timer1_isr(void *arg)
     }
 }
 
-static bist_esp_err_t bist_hw_timer_start(bist_hw_timer_t *timer)
+/*
+ * Configure the GPTimer and CPU interrupt routing, but leave the counter
+ * stopped. Counters are armed together after both timers are ready so UART
+ * logging (or other init latency) cannot skew the 2:1 ISR ratio.
+ */
+static bist_esp_err_t bist_hw_timer_configure(bist_hw_timer_t *timer)
 {
     const uint32_t core_id = esp_cpu_get_core_id();
     const uint32_t divider = CONFIG_XTAL_FREQ; /* XTAL_MHz -> 1 MHz (1 tick = 1 us) */
@@ -127,7 +132,10 @@ static bist_esp_err_t bist_hw_timer_start(bist_hw_timer_t *timer)
 
     timer_ll_enable_intr(timer->hal.dev, TIMER_LL_EVENT_ALARM(timer->timer_id), true);
     timer_ll_enable_alarm(timer->hal.dev, timer->timer_id, true);
-    timer_ll_enable_counter(timer->hal.dev, timer->timer_id, true);
+
+    /* Counter stays stopped until logging and configurations are complete.
+     * timer_ll_enable_counter() is called a bit later.
+     */
 
     ESP_LOGD(TAG, "TIMG%d T%d period %u us -> CPU intr %d",
              timer->group_id, (int)timer->timer_id, (unsigned)timer->period_us, timer->cpu_intr);
@@ -149,6 +157,13 @@ static void bist_hw_timer_deinit(bist_hw_timer_t *timer)
     esp_cpu_intr_disable(cpu_intr_mask);
     esp_rom_route_intr_matrix(esp_cpu_get_core_id(), timer->intr_source, ETS_INVALID_INUM);
     timer_hal_deinit(&timer->hal);
+}
+
+static void bist_hw_timers_arm(void)
+{
+    for (int i = 0; i < BIST_HW_TIMER_COUNT; i++) {
+        timer_ll_enable_counter(hw_timers[i].hal.dev, hw_timers[i].timer_id, true);
+    }
 }
 
 static void bist_hw_timers_deinit(void)
@@ -182,9 +197,9 @@ static bist_esp_err_t bist_hardware_interrupt_test_init(void)
     };
 
     for (int i = 0; i < BIST_HW_TIMER_COUNT; i++) {
-        ret = bist_hw_timer_start(&hw_timers[i]);
+        ret = bist_hw_timer_configure(&hw_timers[i]);
         if (ret != BIST_ESP_OK) {
-            ESP_LOGE(TAG, "Failed to start TIMG hardware timer %d", i);
+            ESP_LOGE(TAG, "Failed to configure TIMG hardware timer %d", i);
             bist_hw_timers_deinit();
             return BIST_ESP_INTERRUPT_TEST_ERR;
         }
@@ -193,6 +208,8 @@ static bist_esp_err_t bist_hardware_interrupt_test_init(void)
     ESP_LOGD(TAG, "Hardware interrupt setup complete: TIMG0/TIMG1, periods %u/%u us",
              (unsigned)BIST_HARDWARE_INTERRUPT_PERIOD_US_1,
              (unsigned)BIST_HARDWARE_INTERRUPT_PERIOD_US_2);
+
+    bist_hw_timers_arm();
 
     return BIST_ESP_OK;
 }
