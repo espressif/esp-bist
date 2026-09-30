@@ -43,130 +43,9 @@ This diagram shows the generic logic for all tested CPU registers: save original
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_cpu_regs_test
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1336
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1336
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1336
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1336
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1336
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2920
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2920
 
 
 Source Files
@@ -251,130 +130,9 @@ Total CSRs tested: 25 on ESP32-C3, 37 on ESP32-C6/H2/C61, 39 on ESP32-C5, 40 on 
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_cpu_csr_regs_test
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1832
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2900
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2720
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2752
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2720
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2964
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_csr_regs_test``
-        - not measured
-        - not measured
-        - not measured
-        - 2964
 
 
 Source Files
@@ -529,235 +287,9 @@ High Watermark Calculation
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_cpu_stack_overflow_init, bist_cpu_stack_overflow_check, bist_cpu_stack_overflow_test, bist_get_stack_high_watermark
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_cpu_stack_overflow_init``
-        - not measured
-        - not measured
-        - not measured
-        - 38
-      * - ``bist_cpu_stack_overflow_check``
-        - not measured
-        - not measured
-        - not measured
-        - 56
-      * - ``bist_cpu_stack_overflow_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-      * - ``bist_get_stack_high_watermark``
-        - not measured
-        - not measured
-        - not measured
-        - 44
 
 
 Source Files
@@ -855,7 +387,7 @@ March A
 March X
 ^^^^^^^
 .. blockdiag::
-    :scale: 50%
+    :scale: 40%
     :caption: RAM March X Test
     :align: center
 
@@ -971,245 +503,18 @@ coupling faults (CF), and address decoder faults (AF).
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_ram_test_march_a, bist_ram_test_march_x, bist_ram_test_abraham, bist_ram_test_abraham_full
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_ram_test_march_a``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_march_x``
-        - not measured
-        - not measured
-        - not measured
-        - 12
-      * - ``bist_ram_test_abraham``
-        - not measured
-        - not measured
-        - not measured
-        - 62
-      * - ``bist_ram_test_abraham_full``
-        - not measured
-        - not measured
-        - not measured
-        - 106
 
 
 .. note::
 
-   The v1.0.0 manual published one unlabelled Abraham timing set. Those
-   figures are not in this table. Abraham cost depends on
-   ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE``: a single pair scales with the
-   partition size, and ``bist_ram_test_abraham_full()`` scales with the
-   number of pairs C(N, 2), where N is the number of partitions in the
-   tested region. March A and March X walk the whole region.
+   Abraham execution cost depends on ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE``:
+   a single pair scales with the partition size, and
+   ``bist_ram_test_abraham_full()`` scales with the number of pairs C(N, 2),
+   where N is the number of partitions in the tested region. March A and
+   March X walk the whole region.
 
 .. note::
 
@@ -1344,130 +649,9 @@ This diagram shows the concrete implementation of flash CRC validation. The test
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_flash_test
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 368
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 368
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 368
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 368
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 368
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 128
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_flash_test``
-        - not measured
-        - not measured
-        - not measured
-        - 368
 
 
 In this analysis CONFIG_BIST_FLASH_TEST_CHUNK_SIZE was set to 1024 bytes.
@@ -1629,130 +813,9 @@ This diagram shows the concrete implementation of the program counter integrity 
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_pc_test
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 58
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 35 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_pc_test``
-        - not measured
-        - not measured
-        - not measured
-        - 62
 
 
 Source Files
@@ -1904,165 +967,9 @@ While both ISR counts are below 1000, the ISR path periodically checks that ``|c
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_interrupt_source_map_test, bist_hardware_interrupt_test
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 482
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 914
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 580
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 984
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 514
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 958
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 580
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 982
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 514
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 956
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 452
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 864
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_interrupt_source_map_test``
-        - not measured
-        - not measured
-        - not measured
-        - 590
-      * - ``bist_hardware_interrupt_test``
-        - not measured
-        - not measured
-        - not measured
-        - 1038
 
 
 .. note::
@@ -2175,7 +1082,7 @@ Module API
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2183,22 +1090,21 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 94
+        - 2.00 ms
+        - 320659
+        - 320164
+        - 128
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 162
-
+        - 15.29 ms
+        - 2446951
+        - 2442076
+        - 238
 
 .. only:: esp32c5
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2206,22 +1112,21 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 34
+        - 9.11 ms
+        - 729167
+        - 433486
+        - 32
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 162
-
+        - 15.29 ms
+        - 1222976
+        - 611711
+        - 238
 
 .. only:: esp32c6
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2229,22 +1134,21 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 34
+        - 8.85 ms
+        - 1416535
+        - 605241
+        - 32
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 162
-
+        - 15.30 ms
+        - 2448692
+        - 2442672
+        - 238
 
 .. only:: esp32c61
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2252,22 +1156,21 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 34
+        - 8.85 ms
+        - 1416535
+        - 605241
+        - 32
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 162
-
+        - 15.30 ms
+        - 2448692
+        - 2442672
+        - 238
 
 .. only:: esp32h2
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2275,22 +1178,21 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 34
+        - 8.85 ms
+        - 849915
+        - 371025
+        - 32
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 162
-
+        - 15.29 ms
+        - 1468273
+        - 1465632
+        - 238
 
 .. only:: esp32h4
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2298,22 +1200,21 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 4
+        - 8.85 ms
+        - 849915
+        - 371025
+        - 32
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 122
-
+        - 15.29 ms
+        - 1468273
+        - 1465632
+        - 238
 
 .. only:: esp32p4
 
    .. list-table::
       :header-rows: 1
-      :widths: 35 15 15 20 20
+      :widths: 30 15 15 20 20
 
       * - Function name
         - Exec Time
@@ -2321,16 +1222,15 @@ Module API
         - Instruction Count
         - Code size (Bytes)
       * - ``bist_ext_crystal_fail_test``
-        - not measured
-        - not measured
-        - not measured
-        - 34
+        - 9.11 ms
+        - 3645472
+        - 1168233
+        - 32
       * - ``bist_main_crystal_test``
-        - not measured
-        - not measured
-        - not measured
-        - 122
-
+        - 15.28 ms
+        - 6112887
+        - 3052797
+        - 238
 
 Source Files
 ^^^^^^^^^^^^
@@ -2376,7 +1276,7 @@ Watchdog Operation Test
 Standard WDT
 ^^^^^^^^^^^^
 .. blockdiag::
-    :scale: 50%
+    :scale: 45%
     :caption: Standard WDT Test
     :align: center
 
@@ -2475,124 +1375,9 @@ Module API
 
 ``wdt_init_windowed()`` is measured before any feed. The characterization application calls ``wdt_windowed_deinit()`` after the measurement so the underflow timer is not left running.
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: wdt_init_windowed
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 230
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 238
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 236
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 238
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 236
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 230
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 15 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``wdt_init_windowed``
-        - not measured
-        - not measured
-        - not measured
-        - 236
 
 Source Files
 ^^^^^^^^^^^^
@@ -2722,165 +1507,9 @@ Both tests ensure GPIO pins are restored to default state after testing to avoid
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_gpio_output_test, bist_gpio_input_test
 
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 158
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 182
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 158
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 182
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 158
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 182
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 158
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 182
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 158
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 182
-
-
-.. only:: esp32h4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 158
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 182
-
-
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_gpio_output_test(gpio_num_t gpio_num)``
-        - not measured
-        - not measured
-        - not measured
-        - 160
-      * - ``bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level)``
-        - not measured
-        - not measured
-        - not measured
-        - 188
 
 
 Source Files
@@ -2922,7 +1551,7 @@ ADC Plausibility Test
 ADC Low Level
 ^^^^^^^^^^^^^
 .. blockdiag::
-    :scale: 100%
+    :scale: 80%
     :caption: ADC Low Level Test
     :align: center
 
@@ -2966,7 +1595,7 @@ ADC Low Level
 ADC High Level
 ^^^^^^^^^^^^^^
 .. blockdiag::
-    :scale: 100%
+    :scale: 80%
     :caption: ADC High Level Test
     :align: center
 
@@ -3009,7 +1638,7 @@ ADC High Level
 ADC Reference (ESP32-C3 only)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. blockdiag::
-    :scale: 100%
+    :scale: 80%
     :caption: ADC Reference Test (ESP32-C3)
     :align: center
 
@@ -3056,151 +1685,13 @@ All tests ensure the ADC channel GPIO is restored to default state after testing
 Module API
 ^^^^^^^^^^
 
-.. only:: esp32c3
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 288
-      * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 294
-      * - ``bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)`` (ESP32-C3 only)
-        - not measured
-        - not measured
-        - not measured
-        - 662
-
-
-.. only:: esp32c5
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 300
-      * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 310
-
-
-.. only:: esp32c6
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 300
-      * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 310
-
-
-.. only:: esp32c61
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 300
-      * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 310
-
-
-.. only:: esp32h2
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 296
-      * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 306
-
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_adc_low_level_test, bist_adc_high_level_test, bist_adc_reference_test
 
 .. only:: esp32h4
 
    ADC tests are not linked. ``core/io/bist_adc.c`` is omitted from the ESP32-H4 image.
 
-.. only:: esp32p4
-
-   .. list-table::
-      :header-rows: 1
-      :widths: 45 20 15 20 20
-
-      * - Function name
-        - Exec Time
-        - Cycles
-        - Instruction Count
-        - Code size (Bytes)
-      * - ``bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 320
-      * - ``bist_adc_high_level_test(adc_unit_t unit, adc_channel_t channel)``
-        - not measured
-        - not measured
-        - not measured
-        - 330
 
 
 Source Files

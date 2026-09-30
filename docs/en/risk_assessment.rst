@@ -22,6 +22,7 @@ Hazard Analysis and Risk Mitigation
 The following table maps identified hazards to safety functions, risk levels, and mitigation measures:
 
 .. list-table::
+   :class: longtable hazard-table
    :header-rows: 1
    :widths: 10 25 10 20 30
 

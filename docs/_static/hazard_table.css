@@ -1,0 +1,13 @@
+/* Auto layout gives the long Mitigation Measure paragraph most of the
+   table, so that column runs past the content area. Fixed layout keeps
+   the table inside the content width and honors the :widths: ratios. */
+.wy-table-responsive table.hazard-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.wy-table-responsive table.hazard-table th,
+.wy-table-responsive table.hazard-table td {
+  box-sizing: border-box;
+}
