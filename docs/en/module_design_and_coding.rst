@@ -1031,7 +1031,7 @@ Hardware Interrupt Test
         node_height = 55;
         default_fontsize = 11;
 
-        Start -> Init -> Route0 -> Route1 -> Poll;
+        Start -> Configure -> Route0 -> Route1 -> Arm -> Poll;
         Poll -> RatioOk;
         RatioOk -> MarkFail [label = "No"];
         RatioOk -> CountsDone [label = "Yes"];
@@ -1045,9 +1045,10 @@ Hardware Interrupt Test
         Ok -> End;
 
         Start [label = "Start", shape = roundedbox];
-        Init [label = "Init TIMG0/TIMG1\n500 us / 1000 us"];
+        Configure [label = "Configure TIMG0/TIMG1\n500 us / 1000 us\n(counters stopped)"];
         Route0 [label = "Route TIMG0 to\nCPU intr 9"];
         Route1 [label = "Route TIMG1 to\nCPU intr 10"];
+        Arm [label = "Arm both counters\ntogether; clear ISR counts"];
         Poll [label = "Delay and sample\nISR counts"];
         RatioOk [label = "count1 ~= 2*count2\n(tolerance ±1)?", shape = diamond];
         MarkFail [label = "Mark test failed\n(ratio error)"];
@@ -1059,7 +1060,9 @@ Hardware Interrupt Test
         End [label = "End", shape = roundedbox];
     }
 
-``bist_hardware_interrupt_test()`` starts GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10). While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for possible synchronization skew between the two independent timer interrupts (for example, sampling the counters while one ISR has run and the other has not yet). Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
+``bist_hardware_interrupt_test()`` configures GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10) with the counters left stopped. After both timers are routed and any debug logging from setup has completed, both counters are armed together and the ISR counts are cleared. Starting the timers only after configuration avoids init latency (in particular slow UART debug prints between consecutive ``timer_ll_enable_counter`` calls) from giving TIMG0 a multi-millisecond head start that would break the expected 2:1 ISR ratio under debug log levels.
+
+While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for residual synchronization skew between the two independent timer interrupts (for example, sampling the counters while one ISR has run and the other has not yet). Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
 
 Module API
 ^^^^^^^^^^
@@ -1074,15 +1077,15 @@ Module API
      - Instruction Count
      - Code size (Bytes)
    * - ``bist_interrupt_source_map_test``
-     - 178.48 ms
+     - 178.47 ms
      - 7138958
      - 2976110
      - 462
    * - ``bist_hardware_interrupt_test``
-     - 2000.04 ms
-     - 80002102.8
-     - 39753904
-     - 874
+     - 2000.00 ms
+     - 80000000
+     - 39752859
+     - 924
 
 .. note::
 
@@ -1104,14 +1107,15 @@ Source Files
      - 3ff1fd697f93435862a902213604a947
    * - ``src/bist/core/interrupt/bist_interrupt.c``
      - v1.1.0
-     - 4af30c5d3945cee4d1d395a13b9a8535
+     - cfb8f700c25bd21f8e1420feff585cdd
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Explicit error handling: any enable-mask, ISR-count, or period-ratio failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
 - Uses ``esp_cpu_intr_*`` and ``esp_rom_route_intr_matrix`` for CPU interrupt control and interrupt-matrix routing; hardware path also uses TIMG HAL/LL (``timer_hal``, ``timer_ll``, ``timg_ll``).
-- Static state holds ISR counters and timer contexts; no dynamic memory allocation.
+- Hardware path configures both TIMG instances with counters stopped, then arms them together and clears ISR counts so setup latency cannot skew the 2:1 period ratio.
+- Static volatile state holds ISR counters and failure flag; timer contexts are static with no dynamic memory allocation.
 - Public APIs have a single entry; early returns are used for error paths. Hardware path always deinitializes timers before exit.
 - Branching is limited to setup checks, enable-mask checks, count checks, and the period-ratio check. No deep nesting.
 - Only integer comparisons and assignments are used for pass/fail decisions.
