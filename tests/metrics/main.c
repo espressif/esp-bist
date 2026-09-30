@@ -8,6 +8,7 @@
 
 #include "adc_hw_calibration.h"
 #include "bist_esp.h"
+#include "bist_log.h"
 #include "bist_metrics.h"
 #include "hal/adc_types.h"
 #include "sdkconfig.h"
@@ -45,48 +46,52 @@
 #define METRICS_SOC "unknown"
 #endif
 
-#define MEASURE(name, setup, expr)                                    \
+static const char *TAG = "metrics test";
+
+#define MEASURE_CHECKED(name, setup, expr, check)                     \
     do {                                                               \
         bist_metrics_t metrics;                                        \
         int ret;                                                       \
-        printf("BEGIN %s\n", name);                                    \
+        ESP_LOGI(TAG, "BEGIN %s", name);                               \
         setup;                                                         \
         BIST_METRICS_INIT(BIST_METRICS_MODE_CYCLE);                    \
         BIST_METRICS_BEGIN(metrics);                                   \
         ret = (int)(expr);                                             \
         BIST_METRICS_END(metrics);                                     \
         BIST_METRICS_PRINT(name, metrics);                             \
-        printf("RESULT %s mode=0 ret=%d\n", name, ret);                \
+        ESP_LOGI(TAG, "RESULT %s mode=0 ret=%d", name, ret);           \
         setup;                                                         \
         BIST_METRICS_INIT(BIST_METRICS_MODE_INST);                     \
         BIST_METRICS_BEGIN(metrics);                                   \
         ret = (int)(expr);                                             \
         BIST_METRICS_END(metrics);                                     \
         BIST_METRICS_PRINT(name, metrics);                             \
-        printf("RESULT %s mode=1 ret=%d\n", name, ret);                \
+        ESP_LOGI(TAG, "RESULT %s mode=1 ret=%d", name, ret);           \
     } while (0)
+
+#define MEASURE(name, setup, expr) MEASURE_CHECKED(name, setup, expr, 1)
 
 int main(void)
 {
-    printf("METRICS_BANNER soc=%s cpu_mhz=%d ram_partition_words=%d\n",
-           METRICS_SOC,
-           CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
-           CONFIG_ESP_BIST_RAM_PARTITION_SIZE);
-    printf("METRICS_PINS gpio_out=%d gpio_in=%d gpio_in_level=%d\n",
-           GPIO_OUTPUT_PIN, GPIO_INPUT_PIN, GPIO_INPUT_LEVEL);
+    ESP_LOGI(TAG, "METRICS_BANNER soc=%s cpu_mhz=%d ram_partition_words=%d",
+             METRICS_SOC,
+             CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+             CONFIG_ESP_BIST_RAM_PARTITION_SIZE);
+    ESP_LOGI(TAG, "METRICS_PINS gpio_out=%d gpio_in=%d gpio_in_level=%d",
+             GPIO_OUTPUT_PIN, GPIO_INPUT_PIN, GPIO_INPUT_LEVEL);
 #if !defined(SOC_TARGET_ESP32H4)
-    printf("METRICS_PINS adc_unit=%d adc_channel=%d\n", (int)ADC_UNIT, (int)ADC_CHANNEL);
+    ESP_LOGI(TAG, "METRICS_PINS adc_unit=%d adc_channel=%d", (int)ADC_UNIT, (int)ADC_CHANNEL);
 #else
-    printf("METRICS_PINS adc=not_in_image\n");
+    ESP_LOGI(TAG, "METRICS_PINS adc=not_in_image");
 #endif
-    printf("WDT_PROCEDURE bist_wdt_test timeout_us=10000 wait_us=50000 two_boot=1 not_measured=1\n");
+    ESP_LOGI(TAG, "WDT_PROCEDURE bist_wdt_test timeout_us=10000 wait_us=50000 two_boot=1 not_measured=1");
 
     MEASURE("bist_cpu_regs_test", (void)0, bist_cpu_regs_test());
     MEASURE("bist_cpu_csr_regs_test", (void)0, bist_cpu_csr_regs_test());
     MEASURE("bist_cpu_stack_overflow_init", (void)0, bist_cpu_stack_overflow_init());
     MEASURE("bist_cpu_stack_overflow_check", (void)0, bist_cpu_stack_overflow_check());
     MEASURE("bist_cpu_stack_overflow_test", (void)0, bist_cpu_stack_overflow_test());
-    MEASURE("bist_get_stack_high_watermark", (void)0, bist_get_stack_high_watermark());
+    MEASURE_CHECKED("bist_get_stack_high_watermark", (void)0, bist_get_stack_high_watermark(), 0);
     MEASURE("bist_pc_test", (void)0, bist_pc_test());
 
     MEASURE("bist_ram_test_march_a", (void)0, bist_ram_test_march_a());
@@ -116,9 +121,9 @@ int main(void)
             wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US));
     wdt_windowed_deinit();
 
-    printf("NOTE abraham_full is quadratic in the partition count\n");
+    ESP_LOGI(TAG, "NOTE abraham_full is quadratic in the partition count");
     MEASURE("bist_ram_test_abraham_full", bist_ram_test_abraham_reset(), bist_ram_test_abraham_full());
 
-    printf("METRICS_DONE soc=%s\n", METRICS_SOC);
+    ESP_LOGI(TAG, "METRICS_DONE soc=%s", METRICS_SOC);
     return 0;
 }
