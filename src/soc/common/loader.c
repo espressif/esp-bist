@@ -171,6 +171,13 @@ void core_intr_matrix_clear(void)
 
 void init_stack_pattern(void)
 {
+    /*
+     * esp_clk_init() and earlier __start steps run with a deep call stack.
+     * Painting the whole [protection, _stack_top) range here would overwrite
+     * those frames before main(). Reset SP so main starts on a clean stack.
+     */
+    __asm__ __volatile__("la sp, _stack_top");
+
     uint32_t *stack_top = (uint32_t *)&_stack_top;
     uint32_t *stack_bottom = (uint32_t *)&_stack_overflow_protection_start;
 
