@@ -266,7 +266,7 @@ config ESP_BIST_MULTICORE
     help
       Bring up HP core 1 during startup and enable bist_multicore_call() so
       tests can be dispatched to it. Only available on dual-core standalone
-      bare-metal targets (ESP32-P4).
+      bare-metal targets (ESP32-P4, ESP32-H4).
 
 config ESP_BIST_CPU1_STACK_SIZE
     hex "HP Core 1 Stack Size"
@@ -274,7 +274,7 @@ config ESP_BIST_CPU1_STACK_SIZE
     default 0x2000
     help
       Size in bytes of the dedicated HP core 1 stack on dual-core standalone
-      targets (ESP32-P4). Reserved at the top of HP SRAM so RAM march tests
+      targets (ESP32-P4, ESP32-H4). Reserved at the top of HP SRAM so RAM march tests
       on core 0 cannot overwrite core 1's live stack. Unused on single-core SoCs.
 
 config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US

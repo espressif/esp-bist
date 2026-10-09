@@ -26,11 +26,16 @@
 #include "rom/ets_sys.h"
 #include "riscv/interrupt.h"
 #include "riscv/rv_utils.h"
-#include "soc/hp_sys_clkrst_reg.h"
 #include "soc/soc.h"
 #include "soc/soc_caps.h"
 #include "soc/system_intr.h"
 #include "soc/system_reg.h"
+
+#if defined(SOC_TARGET_ESP32P4)
+#include "soc/hp_sys_clkrst_reg.h"
+#elif !defined(SOC_TARGET_ESP32H4)
+#error "src/soc/common/cpu_multicore.c supports ESP32-H4 and ESP32-P4 only"
+#endif
 
 extern int _vector_table;
 extern int _mtvt_table;
@@ -132,10 +137,13 @@ void bist_cpu_start_core1(void)
         return;
     }
 
+#if defined(SOC_TARGET_ESP32P4)
     REG_SET_BIT(HP_SYS_CLKRST_CPU_WAITI_CTRL0_REG, HP_SYS_CLKRST_REG_CORE1_WAITI_ICG_EN);
+#endif
 
     cpu_utility_ll_unstall_cpu(1);
     cpu_utility_ll_enable_clock_and_reset_app_cpu();
+    cpu_utility_ll_enable_clock_and_reset_app_cpu_int_matrix();
     ets_set_appcpu_boot_addr((uint32_t)__start_cpu1);
 
     while (!s_cpu1_ready) {
