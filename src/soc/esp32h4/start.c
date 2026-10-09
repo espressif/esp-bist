@@ -105,7 +105,9 @@ void __start(void)
 
     esp_rom_output_tx_wait_idle(0);
 
-    REG_SET_FIELD(PCR_MSPI_CLK_CONF_REG, PCR_MSPI_FUNC_CLK_SEL, 0);
+    /* Leave the bootloader flash clock (PLL 48 MHz). IDF does not move MSPI
+     * onto XTAL before esp_clk_init().
+     */
     REG_SET_BIT(PCR_MSPI_CLK_CONF_REG, PCR_MSPI_FUNC_CLK_EN);
     REG_SET_BIT(PCR_MSPI_CONF_REG, PCR_MSPI_CLK_EN);
 
