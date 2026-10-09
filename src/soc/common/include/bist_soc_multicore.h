@@ -15,7 +15,9 @@
 
 /**
  * @file bist_soc_multicore.h
- * @brief ESP32-P4 SoC-level multi-core bring-up and worker loop definitions
+ * @brief SoC-level multi-core bring-up and worker loop definitions
+ *
+ * Shared by HP dual-core targets (ESP32-H4, ESP32-P4).
  */
 
 #pragma once

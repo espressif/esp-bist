@@ -28,7 +28,7 @@
 #define CACHE_LEVEL CACHE_LL_LEVEL_EXT_MEM
 
 extern uint32_t _stack_top, _stack_overflow_protection_start;
-#if defined(CONFIG_ESP_BIST_MULTICORE) && defined(SOC_TARGET_ESP32P4)
+#if defined(CONFIG_ESP_BIST_MULTICORE) && (defined(SOC_TARGET_ESP32P4) || defined(SOC_TARGET_ESP32H4))
 extern uint32_t _stack_top_cpu1, _stack_overflow_protection_start_cpu1;
 #endif
 
@@ -185,7 +185,7 @@ void init_stack_pattern(void)
         *p = 0xBADC0FFE;
     }
 
-#if defined(CONFIG_ESP_BIST_MULTICORE) && defined(SOC_TARGET_ESP32P4)
+#if defined(CONFIG_ESP_BIST_MULTICORE) && (defined(SOC_TARGET_ESP32P4) || defined(SOC_TARGET_ESP32H4))
     stack_top = (uint32_t *)&_stack_top_cpu1;
     stack_bottom = (uint32_t *)&_stack_overflow_protection_start_cpu1;
     for (uint32_t *p = stack_bottom; p < stack_top; p++) {

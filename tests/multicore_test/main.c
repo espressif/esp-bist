@@ -3,7 +3,7 @@
 #include "bist_esp.h"
 #include "unity.h"
 
-#if defined(SOC_TARGET_ESP32P4)
+#if defined(SOC_TARGET_ESP32P4) || defined(SOC_TARGET_ESP32H4)
 #include "bist_multicore.h"
 #include "esp_cpu.h"
 
@@ -51,7 +51,7 @@ void tearDown(void) {}
 int main()
 {
     UNITY_BEGIN();
-#if defined(SOC_TARGET_ESP32P4)
+#if defined(SOC_TARGET_ESP32P4) || defined(SOC_TARGET_ESP32H4)
     RUN_TEST(test_BIST_Multicore_Dispatch);
 #endif
     return UNITY_END();
