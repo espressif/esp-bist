@@ -8,6 +8,7 @@ tools/
 
 # Sphinx documentation
 docs/_build/
+docs/witness/_build/
 docs/extensions/_build/
 
 # Knowledge graph build cache

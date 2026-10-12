@@ -85,6 +85,8 @@ int wdt_init(uint32_t timeout_us)
 
     uint32_t stage_timeout_ticks = timeout_us / MWDT_DEFAULT_TICKS_PER_US;
 
+    wdt_ctx.overflow_timeout = timeout_us;
+
     ESP_LOGI(TAG, "Enabling WDT(%lu us)", (unsigned long)timeout_us);
     ESP_LOGI(TAG, "WDT prescaler: %u", MWDT_LL_DEFAULT_CLK_PRESCALER);
     ESP_LOGI(TAG, "Stage timeout ticks: %u", stage_timeout_ticks);
