@@ -4,12 +4,12 @@ Tool Qualification
 Overview
 --------
 
-This document provides tool qualification evidence for development tools used in the ESP-BIST project. Tool qualification is required for IEC 60730-1 Annex H compliance to ensure that tools used in the development of safety-relevant software do not introduce errors that could compromise system safety.
+This document provides tool qualification evidence for development, build, static analysis, and verification tools used in the ESP-BIST project. Tool qualification is required for IEC 60730-1 Annex H compliance to ensure that software tools used in the engineering lifecycle of safety-relevant embedded software do not introduce errors into executable code or fail to detect defects that could compromise system safety.
 
 Tool Classification
 -------------------
 
-According to IEC 61508-3 (which provides guidance for IEC 60730), tools are classified based on their potential impact on safety:
+According to IEC 61508-3:2010, which provides normative guidance for tool qualification applicable to IEC 60730-1 safety software development, offline software tools are classified into three categories based on their potential to introduce errors or fail to detect faults:
 
 - **T1**: Tools that cannot introduce errors into the executable code (e.g., editors, version control)
 - **T2**: Tools that can introduce errors but are verified by other qualified tools (e.g., linkers)
@@ -190,9 +190,9 @@ Test Tools
 
 **Qualification Method**:
 
-1. **Off-Target Verification**: Host unit tests in ``tests/unit/`` exercise pure algorithmic helpers (clock deviation math, protocol encode/decode, companion state machine) without target hardware or an emulator
+1. **Off-Target Verification**: The host unit test in ``tests/unit/clock_math`` exercises the clock deviation math helper without target hardware or an emulator
 2. **Float-ABI Caveat**: The host build uses hard-float (x86 SSE) while the device uses soft-float on targets without an F extension; test tolerances absorb the difference for the input ranges used by the firmware
-3. **CI Enforcement**: Each suite runs as a dedicated GitLab CI job in stage ``Lint`` (``test_clock_math_unit``, ``test_hd_protocol_unit``, ``test_hd_companion_unit``, ``test_hd_agent_unit``)
+3. **CI Enforcement**: The suite runs as a dedicated GitLab CI job in stage ``Lint`` (``test_clock_math_unit``)
 
 Evidence Summary
 ----------------

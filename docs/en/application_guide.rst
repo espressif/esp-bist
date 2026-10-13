@@ -78,17 +78,17 @@ Post-Boot Self-Tests
 3. **Main Crystal Test** (``bist_main_crystal_test()``)
 
    - **IEC 60730 Component**: 3 (Clock)
-   - **Purpose**: Validates 40 MHz main crystal oscillator frequency
+   - **Purpose**: Validates the main crystal frequency (``CONFIG_XTAL_FREQ``)
    - **Rationale**: Main clock accuracy is essential for all timing-critical operations
    - **Implementation**: Measures frequency ratio against 32 kHz reference; fails if drift exceeds ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default: ±1%)
 
-4. **RAM Test** (``bist_ram_test_march_x()`` / ``bist_ram_test_abraham_full()``)
+4. **RAM Test** (``bist_ram_test_march_a()`` / ``bist_ram_test_march_x()`` / ``bist_ram_test_abraham_full()``)
 
    - **IEC 60730 Component**: 4.2 (Variable Memory)
    - **Purpose**: Detects RAM stuck-at, coupling, transition, and address decoder faults
    - **Rationale**: RAM integrity is critical; corruption can lead to unpredictable behavior
-   - **Implementation**: March X for Class B coverage; Abraham (H.2.19.1) with time-division
-     partition pairs for Class C–level coupling fault detection across the full RAM region
+   - **Implementation**: March A or March X for Class B coverage; Abraham (H.2.19.1) with time-division
+     partition pairs for coupling fault detection across the full RAM region
 
 5. **Flash CRC Test** (``bist_flash_test()``)
 
@@ -116,21 +116,21 @@ Post-Boot Self-Tests
    - **IEC 60730 Component**: 7.1 (Digital I/O)
    - **Purpose**: Verifies GPIO input functionality
    - **Rationale**: Input validation ensures correct reading of external signals
-   - **Implementation**: Reads GPIO level and verifies it matches expected value (button tied to GND = 0)
+   - **Implementation**: Reads GPIO level and verifies it matches expected value (active-low button with pull-up, expected idle level = 1)
 
 9. **ADC Low Level Test** (``bist_adc_low_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
 
    - **IEC 60730 Component**: 7.2 (Analog I/O)
    - **Purpose**: Verifies ADC reads near zero with internal pull-down
    - **Rationale**: Analog input functionality must be validated before use in safety-critical applications
-   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of zero
+   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of zero (skipped on ESP32-H4)
 
 10. **ADC High Level Test** (``bist_adc_high_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
 
     - **IEC 60730 Component**: 7.2 (Analog I/O)
     - **Purpose**: Verifies ADC reads near full scale with internal pull-up
     - **Rationale**: Detects stuck-at-low faults and verifies ADC conversion path
-    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference
+    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference (skipped on ESP32-H4)
 
 11. **ADC Reference Test** (``bist_adc_reference_test(ADC_UNIT_1, ADC_CHANNEL_2)``) — ESP32-C3 only
 
@@ -205,7 +205,7 @@ Runtime Tests
 2. **CPU CSR Test** (``bist_cpu_csr_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU CSRs)
-   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6/H2/C5/P4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4).
+   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6, H2, C5, C61, P4, and H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4).
    - **Rationale**: CSR corruption can cause exception handling failures or memory protection violations
    - **Execution Frequency**: Called in main loop (every iteration)
 
@@ -219,7 +219,7 @@ Runtime Tests
 4. **Program Counter Test** (``bist_pc_test()``)
 
    - **IEC 60730 Component**: 1.3 (Program Counter)
-   - **Purpose**: Exercises PC register bits by calling functions in different memory regions
+   - **Purpose**: Exercises PC register bits by calling functions across 4 different memory regions (5 on ESP32-P4 with TCM)
    - **Rationale**: PC corruption can cause execution outside intended code regions
    - **Execution Frequency**: Called in main loop (every iteration)
 
@@ -237,7 +237,7 @@ GPIO Configuration
 **Implementation**:
 
 - LED GPIO (GPIO 7): Configured as output for visual feedback
-- Button GPIO (GPIO 9): Configured as input (tied to GND, expected level = 0)
+- Button GPIO (GPIO 9): Configured as input (active-low button with pull-up, expected idle level = 1)
 
 Watchdog Initialization
 ^^^^^^^^^^^^^^^^^^^^^^^

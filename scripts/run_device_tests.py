@@ -58,6 +58,9 @@ def discover_test_apps(mode: str, target: str) -> tuple[str, ...]:
     for path in sorted(TESTS_DIR.iterdir()):
         if not path.is_dir() or next(path.glob(pattern), None) is None:
             continue
+        if path.name == "metrics":
+            # Characterization app. The test_metrics job captures it.
+            continue
         if not app_supports_target(path, target):
             logger.info("Skipping %s (not supported on %s)", path.name, target)
             continue

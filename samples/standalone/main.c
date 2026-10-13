@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "adc_hw_calibration.h"
 #include "bist_esp.h"
 #include "bist_log.h"
 #include "wdt.h"
@@ -132,21 +133,23 @@ static void post_boot_tests(void)
     }
 
 #if !defined(SOC_TARGET_ESP32H4)
+    adc_hw_calibration();
+
     test_err = bist_adc_low_level_test(ADC_UNIT, ADC_CHANNEL);
-    if (test_err == BIST_ESP_IO_TEST_ERR) {
+    if (test_err == BIST_ESP_ADC_TEST_ERR) {
         ESP_LOGE(TAG, "ADC low level test failed");
         fail_safe_exit();
     }
 
     test_err = bist_adc_high_level_test(ADC_UNIT, ADC_CHANNEL);
-    if (test_err == BIST_ESP_IO_TEST_ERR) {
+    if (test_err == BIST_ESP_ADC_TEST_ERR) {
         ESP_LOGE(TAG, "ADC high level test failed");
         fail_safe_exit();
     }
 
 #if defined(SOC_TARGET_ESP32C3)
     test_err = bist_adc_reference_test(ADC_UNIT, ADC_CHANNEL);
-    if (test_err == BIST_ESP_IO_TEST_ERR) {
+    if (test_err == BIST_ESP_ADC_TEST_ERR) {
         ESP_LOGE(TAG, "ADC reference test failed");
         fail_safe_exit();
     }

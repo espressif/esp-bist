@@ -4,39 +4,37 @@ Software Architecture
 Architecture Overview and Layering
 -----------------------------------
 
-This chapter describes the **standalone** bare-metal architecture
-(``samples/standalone``). For the LP-companion plus HP-agent supervision
-architecture (ESP-IDF, Zephyr), see :doc:`host_diagnostics`.
+This chapter describes the standalone bare-metal architecture
+(``samples/standalone``).
 
 The ESP-BIST standalone firmware uses a three-layer architecture:
 
 - **Application layer** — Integrates BIST tests and fail-safe logic (e.g., ``samples/standalone/main.c``). Runs post-boot tests, registers watchdog and crystal failure callbacks, initializes stack overflow detection, and runs runtime tests in the main loop.
 - **BIST library layer** (``src/bist/``) — Core safety test routines and driver wrappers:
 
-  - Core modules ``core/cpu/``, ``core/interrupt/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``
-  - Driver layer ``drivers/`` for watchdog, XT WDT, GPIO, timer
+  - Core modules: ``core/cpu/``, ``core/interrupt/``, ``core/memory/``, ``core/clock/``, ``core/wdt/``, ``core/io/``
+  - Driver layer: ``drivers/`` for watchdog (MWDT and windowed WDT), XT WDT, high-resolution timer (SYSTIMER), GPIO, and ADC oneshot
   - Public API headers ``src/bist/include/`` and ``src/bist/core/include/`` expose test functions and error codes
 - **SoC and HAL layer** (``soc/{IDF_TARGET_PATH_NAME}/``, ``components/``) — Startup code, vector table, linker script, minimal HAL stubs, and memory layout control.
 
 Key Build Properties
 ^^^^^^^^^^^^^^^^^^^^
-- CMake + Ninja build; toolchain pinned in dev container and ``cmake/toolchain.cmake``
+- CMake + Ninja build; toolchain and flags pinned in dev container, ``cmake/toolchain.cmake``, and ``cmake/project.cmake``
 - BIST library compiled with ``-Os``/``-ggdb``, strict warnings, ``-std=gnu17``, section flags, and volatile bitfield safety flags; per-function ``-O0`` overrides where needed
-- All BIST objects placed in IRAM by linker for deterministic timing; CRC regions reserved in flash
+- All BIST code placed in IRAM and BIST rodata in DRAM by linker for deterministic timing; CRC regions reserved in flash
 - Kconfig-driven configuration compiled into ``bist_conf.h``; timing and memory parameters recorded in build artifacts
 
 Modules Architecture
 --------------------
 
-- **CPU tests** (``core/cpu/``): register integrity, CSR integrity, PC integrity (functions placed in IRAM/Flash/RTC), stack overflow detection
-- **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC validation
+- **CPU tests** (``core/cpu/``): general-purpose and FPU register integrity, trap/PMP/PMA/FPU CSR integrity, PC integrity (functions placed in IRAM, Flash, RTC, and TCM on ESP32-P4), stack overflow sentinel protection
+- **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC32 validation
 - **Interrupt tests** (``core/interrupt/``): software IRQ source mapping and dual timer-group hardware interrupt delivery
-- **Clock tests** (``core/clock/``): XT WDT 32kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); 40MHz crystal drift measurement
-- **WDT tests** (``core/wdt/``): watchdog init and stack overflow handler registration
+- **Clock tests** (``core/clock/``): XT WDT 32 kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); main-crystal drift measurement at ``CONFIG_XTAL_FREQ``
+- **WDT tests** (``core/wdt/``): hardware watchdog timeout test and core reset verification
 - **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks
-- **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, GPIO, timer wrappers
+- **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, SYSTIMER, GPIO, and ADC oneshot drivers
 - **Performance Metrics** (``include/bist_metrics.h``): Macro-based Performance Counter CSR interface for measuring CPU cycles, instruction counts, and microarchitectural events during BIST test execution
-- **Multi-core dispatch** (``core/multicore/`` API; SoC backend ``soc/esp32p4/cpu_multicore.c``): portable ``bist_multicore_call()``; P4 standalone interrupt-woken worker
 - **SoC support** (``soc/{IDF_TARGET_PATH_NAME}/``): startup, vectors, linker script, newlib stubs
 
 Hierarchy & Call Structure
@@ -82,11 +80,12 @@ Interrupt Handling
 Data Storage Model
 ------------------
 
-- **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash region.
-- **IRAM**: All ``libbist_esp.a`` code placed in IRAM for deterministic timing; ``pc_test_0`` placed at end of IRAM.
-- **DRAM**: ``.data``/``.bss`` for app and BIST; rodata placed in DRAM for timing determinism; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
+- **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash sections (``.crc_section_text``, ``.crc_section_data``). No executable code is mapped to DROM.
+- **IRAM**: All ``libbist_esp.a`` code, startup routines, exception vectors, and ``pc_test_0`` placed in IRAM for deterministic timing.
+- **DRAM**: ``.data``/``.bss`` for app and BIST; all BIST library rodata (``*libbist_esp.a:*(.rodata*)``) placed in DRAM to ensure cache-independent access during self-tests; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
 - **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
 - **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
+- **TCM (Tightly Coupled Memory)**: On ESP32-P4, ``.tcm.text`` at ``0x3010xxxx`` holds ``pc_test_4``.
 - **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).
 
 Time-Based Dependencies
@@ -97,7 +96,7 @@ Time-Based Dependencies
 - **Clock tests**: Measure frequency ratio vs 32.768 kHz; tolerance via ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT``.
 - **XT WDT**: Detects 32kHz failure after ~200 cycles.
 - **Runtime tests**: CPU/CSR/stack/PC executed within watchdog window; deterministic bounded execution.
-- **Post-boot tests**: RAM, flash, stack, GPIO, and interrupt tests run once at startup; integrators ensure total time fits safety goals.
+- **Post-boot tests**: Clock, RAM, flash, stack, GPIO, ADC, and interrupt tests run once at startup; integrators ensure total time fits safety goals.
 
 Hardware/Software Interfaces
 ----------------------------

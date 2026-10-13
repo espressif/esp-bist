@@ -36,6 +36,10 @@ spec:
       type: boolean
       default: true
       description: "Build the standalone sample"
+    run_build_docs:
+      type: boolean
+      default: false
+      description: "Build and deploy the documentation from cached test reports"
 
 ---
 
@@ -48,10 +52,11 @@ workflow:
 
 variables:
   USE_MIRROR: $[[ inputs.use_mirror ]]
+  DOCS_REPORTS_CACHE_KEY: esp-bist-docs-reports
   QEMU_CACHE_KEY: ${CI_COMMIT_REF_SLUG}-qemu-remote-riscv32
   QEMU_CACHE_KEY_SHARED: ${CI_DEFAULT_BRANCH}-qemu-remote-riscv32
   MCUBOOT_TARGETS: "esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 esp32h4"
-  TEST_APPS: "cpu_reg_test cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test multicore_test"
+  TEST_APPS: "cpu_reg_test cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test multicore_test metrics"
 
 stages:
   - Lint
@@ -112,6 +117,8 @@ mcp_data_drift:
   before_script: []
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - changes:
         - docs/en/**/*
         - src/bist/**/*.c
@@ -153,6 +160,8 @@ pre_commit:
     SKIP: "mcp-server-refresh"
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
         # Make sure the MR's base commit is fetched even on a shallow clone,
@@ -180,6 +189,8 @@ test_hd_protocol_unit:
   before_script: []
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - when: always
   script:
     - cmake -S tests/unit/hd_protocol -B build/hd_protocol_test
@@ -194,6 +205,8 @@ test_hd_agent_unit:
   before_script: []
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - when: always
   script:
     - cmake -S tests/unit/hd_agent -B build/hd_agent_test
@@ -209,6 +222,8 @@ test_hd_companion_unit:
   before_script: []
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - when: always
   script:
     - cmake -S tests/unit/hd_companion -B build/hd_companion_test
@@ -221,6 +236,8 @@ test_clock_math_unit:
   before_script: []
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - when: always
   script:
     - cmake -S tests/unit/clock_math -B build/clock_math_test
@@ -245,6 +262,8 @@ build_docker_image:
     - docker --config=./config push ${CI_DOCKER_REGISTRY}/${IMAGE_NAME}
   allow_failure: true
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.build_docker_image ]]" == "true"'
     - changes:
         - .devcontainer/Dockerfile
@@ -271,6 +290,8 @@ build_mcuboot:
       - mcuboot_build/
     expire_in: 1 week
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_build_standalone ]]" == "true"'
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
     - if: '"$[[ inputs.run_qemu_upstream_test ]]" == "true"'
@@ -308,6 +329,8 @@ build_qemu_remote:
     policy: push
     unprotect: true
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: $CI_COMMIT_BRANCH == "main"
     - if: '"$[[ inputs.build_qemu_remote ]]" == "true"'
   tags: [build]
@@ -373,6 +396,8 @@ build_tests:
     expire_in: 1 week
   <<: *build_tests_matrix
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
     - if: '"$[[ inputs.run_qemu_upstream_test ]]" == "true"'
     - if: '"$[[ inputs.run_qemu_remote_test ]]" == "true"'
@@ -399,6 +424,8 @@ build_samples:
     expire_in: 1 week
   <<: *build_samples_matrix
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_build_standalone ]]" == "true"'
 
 # One twister pass covers both roots: the Zephyr sample (happy path) and the
@@ -409,6 +436,8 @@ build_zephyr_twister:
   image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.29.3.20260727
   before_script: []
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_zephyr_test ]]" == "true"'
   parallel: *zephyr_boards_matrix
   variables:
@@ -462,6 +491,8 @@ build_zephyr_twister:
     - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_skip_checkpoint" set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint build
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
   artifacts:
     when: always
@@ -488,6 +519,8 @@ build_idf_samples:
     - cd $CI_PROJECT_DIR/tests/integration/hd_idf
     - pytest pytest_device* --target=$IDF_TARGET --junitxml=$CI_PROJECT_DIR/tests/integration/hd_idf/hd_idf_${IDF_TARGET}_device_report.xml --reruns 2
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
   tags: [generic, $IDF_TARGET]
   artifacts:
@@ -531,6 +564,8 @@ test_idf_device:
       done
     - python3 scripts/run_device_tests.py --target $SOC_TARGET --qemu
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_qemu_upstream_test ]]" == "true"'
   tags: [build]
   artifacts:
@@ -567,6 +602,8 @@ test_idf_device:
       done
     - python3 scripts/run_device_tests.py --target $SOC_TARGET --qemu
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_qemu_remote_test ]]" != "true"'
       when: never
     - when: always
@@ -640,6 +677,8 @@ test_qemu_remote:
       done
     - python3 scripts/run_device_tests.py --target $SOC_TARGET
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
   tags: [generic, $SOC_TARGET]
   needs:
@@ -668,6 +707,109 @@ test_device:
     - .test_device_template
   <<: *test_device_matrix
 
+.test_metrics_template:
+  stage: Test Device
+  timeout: 2h
+  variables:
+    REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
+  script:
+    - |
+      src="tests/${SOC_TARGET}/metrics_${SOC_TARGET}"
+      if [ ! -d "$src" ]; then
+        echo "Missing metrics build artifact ${src}"
+        exit 1
+      fi
+      rm -rf tests/metrics/build
+      mv "$src" tests/metrics/build
+    - |
+      cd tests/metrics
+      cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
+      ninja -C build flash_boot
+      python3 -m pytest pytest_device_metrics.py --executable metrics --target $SOC_TARGET --junitxml "$REPORT_PATH" --reruns 2
+  rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
+    - if: '"$[[ inputs.run_device_test ]]" == "true"'
+  tags: [generic, $SOC_TARGET]
+  needs:
+    - job: build_mcuboot
+      artifacts: true
+    - job: build_tests
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - tests/metrics/build/tests/${SOC_TARGET}_metrics.json
+      - tests/metrics/build/tests/${SOC_TARGET}_metrics.log
+    reports:
+      junit: tests/metrics/build/tests/${SOC_TARGET}_device_report.xml
+
+test_metrics:
+  extends:
+    - .test_metrics_template
+  <<: *test_device_matrix
+
+# One archive of the reports the manual embeds. Each test job only has its own
+# SoC, and a shared cache key keeps the last writer, so this job publishes the
+# merged snapshot after every report job has finished.
+cache_docs_reports:
+  stage: Test Device
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  before_script: []
+  tags: [build]
+  allow_failure: true
+  needs:
+    - job: test_qemu_upstream
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: *qemu_upstream_socs
+    - job: test_qemu_remote
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: *qemu_remote_socs
+    - job: test_device
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: *socs
+    - job: test_metrics
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: *socs
+  cache:
+    - key: $DOCS_REPORTS_CACHE_KEY
+      paths:
+        - tests/*/build/tests/*_qemu_report.xml
+        - tests/*/build/tests/*_device_report.xml
+        - tests/metrics/build/tests/*_metrics.json
+      policy: push
+      unprotect: true
+  script:
+    - |
+      reports=$(find tests \
+        \( -path '*/build/tests/*_qemu_report.xml' \
+        -o -path '*/build/tests/*_device_report.xml' \
+        -o -path '*/build/tests/*_metrics.json' \) | sort)
+      if [ -z "$reports" ]; then
+        echo "No documentation reports were produced"
+        exit 1
+      fi
+      echo "Caching documentation reports:"
+      echo "$reports"
+  rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
+    - if: '"$[[ inputs.run_device_test ]]" == "true" &&
+           "$[[ inputs.run_qemu_upstream_test ]]" == "true" &&
+           "$[[ inputs.run_qemu_remote_test ]]" == "true"'
+
 .test_zephyr_device_template:
   stage: Test Device
   image: ${CI_DOCKER_REGISTRY}/zephyr-ci
@@ -690,6 +832,8 @@ test_device:
         --device-serial=$ESPPORT
         --west-runner esp32
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
     - if: '"$[[ inputs.run_zephyr_test ]]" == "true"'
   tags: [generic, $SOC_TAG]
   needs:
@@ -743,20 +887,31 @@ test_zephyr_device:
 
 .build_docs_template:
   stage: Build Docs
-  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
+  image: $CI_REGISTRY/ci/images/idf-v5.5-docs:1
   before_script: []
   tags: [build]
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
     - if: '"$[[ inputs.run_device_test ]]" == "true" &&
            "$[[ inputs.run_qemu_upstream_test ]]" == "true" &&
            "$[[ inputs.run_qemu_remote_test ]]" == "true" &&
            "$[[ inputs.run_idf_test ]]" == "true"'
+  cache:
+    - key: $DOCS_REPORTS_CACHE_KEY
+      paths:
+        - tests/*/build/tests/*_qemu_report.xml
+        - tests/*/build/tests/*_device_report.xml
+        - tests/metrics/build/tests/*_metrics.json
+      policy: pull
+      unprotect: true
   needs:
     - job: test_qemu_upstream
       optional: true
     - job: test_qemu_remote
       optional: true
     - job: test_device
+      optional: true
+    - job: test_metrics
       optional: true
     - job: test_idf_device
       optional: true
@@ -790,12 +945,12 @@ build_docs_pdf:
     expire_in: 4 days
   script:
     - cd $DOCS_DIR
-    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 --skip-reqs-check -l en -bs latex
+    - build-docs -t esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32h4 esp32p4 --skip-reqs-check -l en -bs latex
     - echo "ESP-BIST documentation preview available at $CI_JOB_URL/artifacts/file/docs/_build/en/esp32c3/latex/build/esp-bist-en-master-esp32c3.pdf"
 
 deploy_preview_docs:
   stage: Deploy Docs
-  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
+  image: $CI_REGISTRY/ci/images/idf-v5.5-docs:1
   before_script: []
   tags: [build]
   variables:
@@ -816,11 +971,16 @@ deploy_preview_docs:
     - build_docs_html
     - build_docs_pdf
   rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true" && $CI_COMMIT_BRANCH == "main"'
+      when: never
+    - if: '"$[[ inputs.run_build_docs ]]" == "true" && $CI_COMMIT_TAG'
+      when: never
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 deploy_prod_docs:
   stage: Deploy Docs
-  image: $CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.4:1-1
+  image: $CI_REGISTRY/ci/images/idf-v5.5-docs:1
   before_script: []
   tags: [build]
   variables:

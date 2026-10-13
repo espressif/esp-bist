@@ -16,6 +16,7 @@ extensions += [  # noqa: F405
     "esp_docs.esp_extensions.dummy_build_system",
     "esp_docs.esp_extensions.run_doxygen",
     "xml_junit_test_report",
+    "metrics_table",
 ]
 
 # link roles config
@@ -26,6 +27,7 @@ html_context["github_user"] = "espressif"  # noqa: F405
 html_context["github_repo"] = "esp-bist"  # noqa: F405
 
 html_static_path = ["../_static"]  # noqa: F405
+html_css_files = ["hazard_table.css"]
 
 # Extra options required by sphinx_idf_theme
 project_slug = "esp-bist"
