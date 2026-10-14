@@ -67,6 +67,12 @@ static void runtime_tests(void)
         fail_safe_exit();
     }
 
+    test_err = bist_ram_test_abraham();
+    if (test_err == BIST_ESP_RAM_TEST_ERR) {
+        ESP_LOGE(TAG, "RAM Abraham test failed");
+        fail_safe_exit();
+    }
+
     test_err = bist_cpu_stack_overflow_check();
     if (test_err == BIST_ESP_STACK_TEST_OVERFLOW) {
         ESP_LOGE(TAG, "Stack test failed");
@@ -99,12 +105,6 @@ static void post_boot_tests(void)
     test_err = bist_ram_test_march_a();
     if (test_err == BIST_ESP_RAM_TEST_ERR) {
         ESP_LOGE(TAG, "RAM March A test failed");
-        fail_safe_exit();
-    }
-
-    test_err = bist_ram_test_abraham_full();
-    if (test_err == BIST_ESP_RAM_TEST_ERR) {
-        ESP_LOGE(TAG, "RAM Abraham test failed");
         fail_safe_exit();
     }
 
