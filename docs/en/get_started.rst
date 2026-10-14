@@ -54,7 +54,7 @@ The BIST library is supported on the following SoCs:
 
 .. list-table:: SoC Comparison
    :header-rows: 1
-   :widths: 10 10 10 10 10 10
+   :widths: 9 12 7 10 6 6 30
 
    * - SoC
      - CPU / Arch
@@ -62,48 +62,79 @@ The BIST library is supported on the following SoCs:
      - SRAM (KB)
      - PSRAM
      - GPIO
+     - Specific Test Cases & Differences
    * - ESP32-C3
      - Single-core RISC-V
      - 160
      - 400 + 8 RTC
      - No
      - 22 / 16
+     - - Has ADC voltage reference test
+       - Has 32 kHz crystal XT WDT test
+       - Custom CSR performance monitor CSRs (PCER, PCMR, PCCR)
+       - Tests 25 CSRs (no PMA address CSRs)
+       - No hardware FPU
    * - ESP32-C5
      - Single-core RISC-V + LP RISC-V
      - 80
      - 384 HP + 16 LP
      - Yes
      - 29
+     - - Tests 39 CSRs: adds 12 PMA address CSRs plus target-specific
+       - No hardware FPU
+       - No ADC reference test
+       - Lacks XT WDT hardware
    * - ESP32-C6
      - Single-core RISC-V + LP RISC-V
      - 160
      - 512 HP + 16 LP
      - No
      - 30 / 22
+     - - Tests 37 CSRs: includes 12 PMA address CSRs
+       - Custom CSR performance monitor CSRs (PCER, PCMR, PCCR)
+       - No hardware FPU
+       - No ADC reference test
+       - Lacks XT WDT hardware
    * - ESP32-C61
      - Single-core RISC-V
      - 160
      - 320
      - Yes
      - 30
+     - - Tests 37 CSRs: includes 12 PMA address CSRs
+       - No hardware FPU
+       - No ADC reference test
+       - Lacks XT WDT hardware
    * - ESP32-H2
      - Single-core RISC-V
      - 96
      - 320 + 4 RTC
      - No
      - 19
+     - - Tests 37 CSRs: includes 12 PMA address CSRs
+       - Custom CSR_PC performance monitor CSRs (PCER, PCMR, PCCR)
+       - No hardware FPU
+       - No ADC reference test
+       - Lacks XT WDT hardware
    * - ESP32-H4
      - Dual-core RISC-V
      - 32
      - 320
      - Yes
      - 35
+     - - Has hardware FPU: tests 32 single-precision FPU registers (f0–f31) and 3 FPU CSRs
+       - Lacks ADC peripheral in hardware
+       - Lacks XT WDT hardware
    * - ESP32-P4
      - Dual-core RISC-V + LP RISC-V
      - 400
      - 768 KB HP L2MEM + 32 KB LP + 8 KB TCM
      - Yes
      - 55
+     - - Has hardware FPU: tests 32 single-precision FPU registers (f0–f31) and 3 FPU CSRs
+       - 5-region Program Counter test including TCM memory
+       - No ADC reference test
+       - Lacks XT WDT hardware
 
 Default CPU is ``CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ`` in ``src/soc/<soc>/include/sdkconfig.h``.
 
