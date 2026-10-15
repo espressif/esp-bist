@@ -707,6 +707,52 @@ test_device:
     - .test_device_template
   <<: *test_device_matrix
 
+.test_samples_template:
+  stage: Test Device
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2_arm
+  variables:
+    REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
+  script:
+    - |
+      src="samples/standalone/standalone_${SOC_TARGET}"
+      if [ ! -d "$src" ]; then
+        echo "Missing standalone build artifact ${src}"
+        exit 1
+      fi
+      rm -rf samples/standalone/build
+      mv "$src" samples/standalone/build
+    - |
+      cd samples/standalone
+      cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
+      ninja -C build flash_boot
+      ESPPORT=/dev/serial_ports/ttyUSB-esp32 python3 -m pytest pytest_device_standalone.py --executable standalone_critical_${SOC_TARGET} --target $SOC_TARGET --junitxml "$REPORT_PATH" --reruns 2
+  rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
+    - if: '"$[[ inputs.run_build_standalone ]]" == "true"'
+  tags: [arm, $SOC_TARGET]
+  needs:
+    - job: build_mcuboot
+      artifacts: true
+    - job: build_samples
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
+            TEST_APP_NAME: ["standalone"]
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - samples/standalone/${REPORT_PATH}
+    reports:
+      junit: samples/standalone/${REPORT_PATH}
+
+test_samples:
+  extends:
+    - .test_samples_template
+  <<: *test_device_matrix
+
 .test_metrics_template:
   stage: Test Device
   timeout: 2h
