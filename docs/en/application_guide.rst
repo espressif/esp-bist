@@ -9,7 +9,7 @@ This guide explains how to integrate and use the ESP-BIST library in a safety-cr
 The standalone application serves as a reference implementation showing:
 
 - **Post-boot self-tests**: Comprehensive hardware integrity checks executed once at startup
-- **Runtime monitoring**: Continuous CPU and stack integrity checks during normal operation
+- **Runtime monitoring**: Continuous CPU, RAM, and stack integrity checks during normal operation
 - **Watchdog integration**: Windowed watchdog timer for timing fault detection
 - **Fail-safe handling**: Appropriate error response and safe state transition
 - **GPIO validation**: I/O functionality verification
@@ -82,13 +82,12 @@ Post-Boot Self-Tests
    - **Rationale**: Main clock accuracy is essential for all timing-critical operations
    - **Implementation**: Measures frequency ratio against 32 kHz reference; fails if drift exceeds ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT`` (default: ±1%)
 
-4. **RAM Test** (``bist_ram_test_march_a()`` / ``bist_ram_test_march_x()`` / ``bist_ram_test_abraham_full()``)
+4. **RAM Test** (``bist_ram_test_march_a()`` / ``bist_ram_test_march_x()``)
 
    - **IEC 60730 Component**: 4.2 (Variable Memory)
    - **Purpose**: Detects RAM stuck-at, coupling, transition, and address decoder faults
    - **Rationale**: RAM integrity is critical; corruption can lead to unpredictable behavior
-   - **Implementation**: March A or March X for Class B coverage; Abraham (H.2.19.1) with time-division
-     partition pairs for coupling fault detection across the full RAM region
+   - **Implementation**: March A or March X for Class B coverage across the full RAM region
 
 5. **Flash CRC Test** (``bist_flash_test()``)
 
@@ -189,7 +188,7 @@ Watchdog Callback Registration
 Runtime Tests
 ^^^^^^^^^^^^^
 
-**Purpose**: Continuous monitoring of CPU and stack integrity during normal operation.
+**Purpose**: Continuous monitoring of CPU, RAM, and stack integrity during normal operation.
 
 **Rationale**: Hardware faults can occur at any time during operation. Runtime tests detect transient faults, aging-related degradation, or corruption that develops during operation.
 
@@ -209,14 +208,22 @@ Runtime Tests
    - **Rationale**: CSR corruption can cause exception handling failures or memory protection violations
    - **Execution Frequency**: Called in main loop (every iteration)
 
-3. **Stack Overflow Check** (``bist_cpu_stack_overflow_check()``)
+3. **RAM Test** (``bist_ram_test_abraham()``)
+
+   - **IEC 60730 Component**: 4.2 (Variable Memory)
+   - **Purpose**: Detects pattern sensitivity, stuck-at, coupling, transition, and address decoder faults non-destructively in RAM during operation
+   - **Rationale**: Variable memory corruption can develop during runtime operation
+   - **Implementation**: Abraham (H.2.19.1) with time-division partition pairs; tests one partition pair per call with safe-RAM backup, covering the full RAM region over successive calls
+   - **Execution Frequency**: Called in main loop (every iteration)
+
+4. **Stack Overflow Check** (``bist_cpu_stack_overflow_check()``)
 
    - **IEC 60730 Component**: 4.2 (Variable Memory)
    - **Purpose**: Detects stack overflow by scanning the protection region for sentinel corruption
    - **Rationale**: Early detection prevents memory corruption from spreading
    - **Execution Frequency**: Called in main loop (every iteration)
 
-4. **Program Counter Test** (``bist_pc_test()``)
+5. **Program Counter Test** (``bist_pc_test()``)
 
    - **IEC 60730 Component**: 1.3 (Program Counter)
    - **Purpose**: Exercises PC register bits by calling functions across 4 different memory regions (5 on ESP32-P4 with TCM)
