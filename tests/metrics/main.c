@@ -116,6 +116,9 @@ int main(void)
 #if defined(SOC_TARGET_ESP32C3)
     MEASURE("bist_adc_reference_test", (void)0, bist_adc_reference_test(ADC_UNIT, ADC_CHANNEL));
 #endif
+#if defined(SOC_TARGET_ESP32P4)
+    MEASURE("bist_cpu_instruction_test", (void)0, bist_cpu_instruction_test());
+#endif
 
     MEASURE("wdt_init_windowed", wdt_windowed_deinit(),
             wdt_init_windowed(CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US));
