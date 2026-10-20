@@ -366,15 +366,3 @@ add_custom_command(TARGET qemu_debug POST_BUILD
     qemu-system-riscv32 -s -S -nographic -icount 3 -machine ${SOC_TARGET}
     -drive file=${APP_NAME}_qemu_image.bin,if=mtd,format=raw
     )
-
-# **************************************************************************************************
-# Debug Commands
-
-add_custom_target(debug DEPENDS ${APP_EXECUTABLE})
-add_custom_command(TARGET debug POST_BUILD
-    USES_TERMINAL
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND
-    ${BIST_ROOT_DIR}/scripts/debug.sh
-    ${APP_EXECUTABLE}
-    )
