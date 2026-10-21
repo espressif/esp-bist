@@ -155,4 +155,6 @@ void esp_perip_clk_init(void)
     soc_reset_reason_t rst_reason = esp_rom_get_reset_reason(0);
     periph_ll_clk_gate_config_t clk_gate_config = {0};
     periph_ll_clk_gate_set_default(rst_reason, &clk_gate_config);
+
+    periph_ll_enable_clk_clear_rst(PERIPH_TIMG0_MODULE);
 }
