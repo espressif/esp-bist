@@ -33,4 +33,5 @@
 #define CONFIG_ESP32P4_REV_MAX_FULL                  399
 #define CONFIG_ESP_REV_MAX_FULL                      CONFIG_ESP32P4_REV_MAX_FULL
 #define CONFIG_BOOTLOADER_CPU_CLK_FREQ_MHZ           CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ
+#define CONFIG_LIBC_NEWLIB                           1
 #define NON_OS_BUILD                                 1
