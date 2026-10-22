@@ -23,7 +23,7 @@ Compiler Toolchain
 
 **Tool**: RISC-V GCC Toolchain (riscv32-esp-elf-gcc)
 
-**Version**: Determined by ESP-IDF version in dev container (GCC 15.2.0 for ESP-IDF v6.0)
+**Version**: Determined by ESP-IDF version in dev container (GCC 16.1.0 for ESP-IDF v6.2)
 
 **Classification**: T3 (code generation tool)
 
@@ -85,7 +85,7 @@ Linker Tool
   - ESP32-H4:
     ``-march=rv32imafcb_zicsr_zifencei_zaamo_zalrsc_zba_zbb_zbs_xespdsp -mabi=ilp32f``
   - ESP32-P4 (minimum supported revision 3):
-    ``-march=rv32imafc_zicsr_zifencei_zaamo_zalrsc_xesploop_xespv -mabi=ilp32f``
+    ``-march=rv32imafcb_zicsr_zifencei_zaamo_zalrsc_zba_zbb_zbs_xesploop_xespv -mabi=ilp32f``
 - ``--specs=nosys.specs``: Minimal system library
 
 **Evidence Location**:

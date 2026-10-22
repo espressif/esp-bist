@@ -189,7 +189,7 @@ The following non-default compiler options are applied to specific third-party E
      - ESP-IDF's low-level XT WDT header (``hal/xt_wdt_ll.h``) declares helper functions as ``inline`` without ``static``. Under the project ``-std=gnu17``, that is an inline definition and does not emit an external symbol. The linker then fails with undefined references. ``src/bist/CMakeLists.txt`` adds ``-fgnu89-inline`` to this one translation unit on ESP32-C3, on top of the library ``-Os``, so the function bodies are emitted in place. The override does not change BIST-owned code.
    * - ``esp_hw_support/port/esp32c61/ocode_init.c`` (ESP-IDF)
      - ``-include esp_attr.h``
-     - ESP-IDF v6.0's ``esp32c61/ocode_init.c`` uses attributes ``NOINLINE_ATTR`` and ``IRAM_ATTR`` without explicitly including ``esp_attr.h``. Under strict compiler options, macros default to empty or trigger undeclared identifier errors. ``cmake/project.cmake`` force-includes ``esp_attr.h`` for this single translation unit when building for ESP32-C61.
+     - ESP-IDF's ``esp32c61/ocode_init.c`` uses attributes ``NOINLINE_ATTR`` and ``IRAM_ATTR`` without explicitly including ``esp_attr.h``. Under strict compiler options, macros default to empty or trigger undeclared identifier errors. ``cmake/project.cmake`` force-includes ``esp_attr.h`` for this single translation unit when building for ESP32-C61.
 
 For detailed information on tool versions, compiler/linker flags, toolchain configuration, and tool qualification methodology, see :doc:`tool_qualification`.
 
