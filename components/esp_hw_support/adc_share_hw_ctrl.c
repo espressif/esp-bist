@@ -20,7 +20,7 @@
 #include <esp_types.h>
 #include "sdkconfig.h"
 #include "sys/lock.h"
-#include "bist_log.h"
+#include "esp_log.h"
 #include "esp_check.h"
 // #include "freertos/FreeRTOS.h"
 #include "hal/adc_types.h"
@@ -101,7 +101,7 @@ void IRAM_ATTR adc_set_hw_calibration_code(adc_unit_t adc_n, adc_atten_t atten)
 }
 
 #if SOC_ADC_CALIB_CHAN_COMPENS_SUPPORTED
-static int s_adc_cali_chan_compens[SOC_ADC_MAX_CHANNEL_NUM][SOC_ADC_ATTEN_NUM] = {};
+static int s_adc_cali_chan_compens[ADC_LL_MAX_CHANNEL_NUM][SOC_ADC_ATTEN_NUM] = {};
 void adc_load_hw_calibration_chan_compens(adc_unit_t adc_n, adc_channel_t chan, adc_atten_t atten)
 {
     int version = esp_efuse_rtc_calib_get_ver();
@@ -128,45 +128,45 @@ int IRAM_ATTR adc_get_hw_calibration_chan_compens(adc_unit_t adc_n, adc_channel_
 
 esp_err_t adc_lock_acquire(adc_unit_t adc_unit)
 {
-    if (adc_unit == ADC_UNIT_1) {
-        // _lock_acquire(&adc1_lock);
-    }
+    // if (adc_unit == ADC_UNIT_1) {
+    //     _lock_acquire(&adc1_lock);
+    // }
 
-    if (adc_unit == ADC_UNIT_2) {
-        // _lock_acquire(&adc2_lock);
-    }
+    // if (adc_unit == ADC_UNIT_2) {
+    //     _lock_acquire(&adc2_lock);
+    // }
 
     return ESP_OK;
 }
 
 esp_err_t adc_lock_release(adc_unit_t adc_unit)
 {
-    if (adc_unit == ADC_UNIT_2) {
-        // ESP_RETURN_ON_FALSE(((uint32_t *)adc2_lock != NULL), ESP_ERR_INVALID_STATE, TAG, "adc2 lock release without acquiring");
-        // _lock_release(&adc2_lock);
-    }
+    // if (adc_unit == ADC_UNIT_2) {
+    //     ESP_RETURN_ON_FALSE(((uint32_t *)adc2_lock != NULL), ESP_ERR_INVALID_STATE, TAG, "adc2 lock release without acquiring");
+    //     _lock_release(&adc2_lock);
+    // }
 
-    if (adc_unit == ADC_UNIT_1) {
-        // ESP_RETURN_ON_FALSE(((uint32_t *)adc1_lock != NULL), ESP_ERR_INVALID_STATE, TAG, "adc1 lock release without acquiring");
-        // _lock_release(&adc1_lock);
-    }
+    // if (adc_unit == ADC_UNIT_1) {
+    //     ESP_RETURN_ON_FALSE(((uint32_t *)adc1_lock != NULL), ESP_ERR_INVALID_STATE, TAG, "adc1 lock release without acquiring");
+    //     _lock_release(&adc1_lock);
+    // }
 
     return ESP_OK;
 }
 
 esp_err_t adc_lock_try_acquire(adc_unit_t adc_unit)
 {
-    if (adc_unit == ADC_UNIT_1) {
-        // if (_lock_try_acquire(&adc1_lock) == -1) {
-        //     return ESP_ERR_TIMEOUT;
-        // }
-    }
+    // if (adc_unit == ADC_UNIT_1) {
+    //     if (_lock_try_acquire(&adc1_lock) == -1) {
+    //         return ESP_ERR_TIMEOUT;
+    //     }
+    // }
 
-    if (adc_unit == ADC_UNIT_2) {
-        // if (_lock_try_acquire(&adc2_lock) == -1) {
-        //     return ESP_ERR_TIMEOUT;
-        // }
-    }
+    // if (adc_unit == ADC_UNIT_2) {
+    //     if (_lock_try_acquire(&adc2_lock) == -1) {
+    //         return ESP_ERR_TIMEOUT;
+    //     }
+    // }
 
     return ESP_OK;
 }
@@ -175,7 +175,7 @@ esp_err_t adc2_wifi_acquire(void)
 {
 #if CONFIG_IDF_TARGET_ESP32
     /* Wi-Fi module will use adc2. Use locks to avoid conflicts. */
-    // adc_lock_acquire(ADC_UNIT_2);
+    adc_lock_acquire(ADC_UNIT_2);
     ESP_LOGD(TAG, "Wi-Fi takes adc2 lock.");
 #endif
 
@@ -203,7 +203,7 @@ void adc_apb_periph_claim(void)
     // esp_os_enter_critical(&s_spinlock);
     s_adc_digi_ctrlr_cnt++;
     if (s_adc_digi_ctrlr_cnt == 1) {
-        ADC_BUS_CLK_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             adc_ll_enable_bus_clock(true);
 #if SOC_RCC_IS_INDEPENDENT
             adc_ll_enable_func_clock(true);
@@ -220,7 +220,7 @@ void adc_apb_periph_free(void)
     // esp_os_enter_critical(&s_spinlock);
     s_adc_digi_ctrlr_cnt--;
     if (s_adc_digi_ctrlr_cnt == 0) {
-        ADC_BUS_CLK_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             adc_ll_enable_bus_clock(false);
 #if SOC_RCC_IS_INDEPENDENT
             adc_ll_enable_func_clock(false);
