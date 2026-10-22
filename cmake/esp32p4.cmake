@@ -5,10 +5,17 @@ set(include_soc
     )
 
 set(include_hal
-    ${BIST_ROOT_DIR}/components/hal/${SOC_TARGET}/include
-    ${IDF_PATH}/components/newlib/platform_include
+    ${IDF_PATH}/components/esp_libc/platform_include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_cache/include
+    ${IDF_PATH}/components/esp_hal_cache/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_systimer/include
+    ${IDF_PATH}/components/esp_hal_systimer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_regi2c/include
+    ${IDF_PATH}/components/esp_hal_regi2c/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_wdt/include
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
@@ -45,18 +52,19 @@ set(include_hal
     ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
-    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/riscv/include
     ${IDF_PATH}/components/esp_system/include
     ${IDF_PATH}/components/esp_system/port/include
     ${IDF_PATH}/components/esp_hw_support/include
+    ${IDF_PATH}/components/esp_hw_support/ldo/include
     ${IDF_PATH}/components/esp_hw_support/port/include
     ${IDF_PATH}/components/esp_hw_support/include/soc
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/private_include
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/spi_flash/include
+    ${IDF_PATH}/components/esp_mspi/include
     ${IDF_PATH}/components/log/include
     )
 
@@ -72,25 +80,29 @@ set(soc_srcs
     )
 
 set(idf_ow_srcs
-    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali.c
-    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali_curve_fitting.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_common.c
-    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_share_hw_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/sar_periph_ctrl_common.c
     ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/esp_clk_tree_common.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/esp_clk_tree.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_common.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_share_hw_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali_curve_fitting.c
     )
 
 set(idf_srcs
-    ${IDF_PATH}/components/hal/cache_hal.c
-    ${IDF_PATH}/components/hal/mmu_hal.c
+    ${IDF_PATH}/components/esp_hal_cache/cache_hal.c
+    ${IDF_PATH}/components/esp_hal_cache/mmu_hal.c
+    ${IDF_PATH}/components/esp_hal_cache/${SOC_TARGET}/cache_periph.c
     ${IDF_PATH}/components/hal/efuse_hal.c
     ${IDF_PATH}/components/hal/${SOC_TARGET}/efuse_hal.c
     ${IDF_PATH}/components/esp_hal_wdt/wdt_hal_iram.c
     ${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c
-    ${IDF_PATH}/components/esp_rom/patches/esp_rom_regi2c_esp32p4.c
+    ${IDF_PATH}/components/esp_hal_regi2c/${SOC_TARGET}/regi2c_impl.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk_init.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_time.c
@@ -109,8 +121,6 @@ set(idf_srcs
     ${IDF_PATH}/components/esp_hal_ana_conv/adc_hal_common.c
     ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/adc_periph.c
     ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/clk_tree_hal.c
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/esp_clk_tree.c
-    ${IDF_PATH}/components/esp_hw_support/port/esp_clk_tree_common.c
     ${IDF_PATH}/components/esp_adc/${SOC_TARGET}/curve_fitting_coefficients.c
     ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_rtc_calib.c
     ${IDF_PATH}/components/efuse/${SOC_TARGET}/esp_efuse_table_v3.0.c
@@ -119,14 +129,14 @@ set(idf_srcs
     ${IDF_PATH}/components/efuse/src/esp_efuse_utility.c
     )
 
-# P4 requires eco5.rvfp instead of eco5.libgcc for dealing with floating point operations
+# P4 rev >= 3.00 (ECO5+) is the default ROM ld set in IDF v6.2
 set(rom_ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.api.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.libc.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libc.ld
     -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.libc-suboptimal_for_misaligned_mem.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.newlib.ld
-    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.eco5.rvfp.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.newlib.ld
+    -T${IDF_PATH}/components/esp_rom/${SOC_TARGET}/ld/${SOC_TARGET}.rom.rvfp.ld
     -T${IDF_PATH}/components/riscv/ld/rom.api.ld
     -T${IDF_PATH}/components/soc/${SOC_TARGET}/ld/${SOC_TARGET}.peripherals.ld
     )
