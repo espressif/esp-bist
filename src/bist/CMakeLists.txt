@@ -76,7 +76,7 @@ endforeach()
 set(idf_srcs
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
-    ${IDF_PATH}/components/hal/systimer_hal.c
+    ${IDF_PATH}/components/esp_hal_systimer/systimer_hal.c
     ${IDF_PATH}/components/esp_hal_timg/timer_hal.c
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/timer_periph.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/systimer.c
@@ -165,8 +165,6 @@ target_include_directories(
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
-    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
-    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
@@ -175,6 +173,16 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hw_support/include
     ${IDF_PATH}/components/esp_hw_support/include/soc
     ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_cache/include
+    ${IDF_PATH}/components/esp_hal_cache/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_systimer/include
+    ${IDF_PATH}/components/esp_hal_systimer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_regi2c/include
+    ${IDF_PATH}/components/esp_hal_regi2c/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/include
+    ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_wdt/include
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
@@ -189,7 +197,6 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hw_support/etm/include
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -198,12 +205,6 @@ target_include_directories(
 if(SOC_TARGET STREQUAL "esp32p4")
     target_include_directories(bist_esp PUBLIC
         ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
-    )
-elseif(SOC_TARGET STREQUAL "esp32h4")
-    target_include_directories(bist_esp PUBLIC
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver_mp
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/include/hw_ver_mp
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/register
     )
 else()
     target_include_directories(bist_esp PUBLIC

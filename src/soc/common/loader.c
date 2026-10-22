@@ -56,6 +56,10 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
     /* Clear the MMU entries that are already set up,
      * so the new app only has the mappings it creates.
      */
+    mmu_hal_config_t mmu_cfg = {
+        .core_nums = SOC_CPU_CORES_NUM,
+    };
+    mmu_hal_ctx_init(&mmu_cfg);
     mmu_hal_unmap_all();
 
     mmu_hal_map_region(0, MMU_TARGET_FLASH0, app_drom_vaddr_aligned,
@@ -122,7 +126,7 @@ void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t ap
     memcpy((void *)app_rtc_vaddr, data, app_rtc_size);
 }
 
-#if SOC_MEM_TCM_SUPPORTED
+#if SOC_MEM_SPM_SUPPORTED
 void map_tcm_segment(uint32_t app_tcm_start, uint32_t app_tcm_vaddr, uint32_t app_tcm_size)
 {
     if (app_tcm_size == 0) {
