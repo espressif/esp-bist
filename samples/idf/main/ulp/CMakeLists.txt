@@ -10,9 +10,6 @@ include(IDFULPProject)
 
 ulp_apply_default_options(${ULP_APP_NAME})
 
-# Apply the BIST custom linker script (function provided by the IDF patch)
-ulp_apply_custom_linker_script(${ULP_APP_NAME} "${CMAKE_CURRENT_LIST_DIR}/../../../../src/soc/${IDF_TARGET}/ld/idf.ld")
-
 ulp_apply_default_sources(${ULP_APP_NAME})
 
 ulp_add_build_binary_targets(${ULP_APP_NAME})
