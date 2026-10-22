@@ -3,4 +3,4 @@
 
 dependencies:
   # Required IDF version
-  idf: "=6.0"
+  idf: "=6.2"
