@@ -1,9 +1,12 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Exclude documentation files from /usr/share/doc/ to reduce the Docker image size
 RUN echo 'path-exclude=/usr/share/doc/*' >> /etc/dpkg/dpkg.cfg.d/00_exclude-docs
+
+# Allow pip install in system Python (PEP 668 on Ubuntu 24.04) for CI runner pre_build_script
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # TARGETARCH is set by BuildKit/buildx (--platform).
 ARG TARGETARCH
@@ -39,6 +42,7 @@ RUN : \
         python3 \
         python3-dev \
         python3-pip \
+        python3-serial \
         python3-venv \
         tar \
         wget \
@@ -79,9 +83,16 @@ ARG IDF_URL_PATH="https://github.com/espressif/esp-idf.git"
 
 ENV IDF_PATH=/opt/esp/idf
 ENV IDF_TOOLS_PATH=/opt/esp
-ENV IDF_VERSION=v6.0
+# Commit of release/v6.2 (v6.2-dev-3470-g1a73d7217fe) on GitHub mirror
+ENV IDF_VERSION=1a73d7217fe527323b456665987da4ac618373b3
 
-RUN git clone -b $IDF_VERSION --recursive --shallow-submodules $IDF_URL_PATH $IDF_PATH
+RUN git clone --recursive --shallow-submodules $IDF_URL_PATH $IDF_PATH \
+    && git -C $IDF_PATH checkout $IDF_VERSION \
+    && git -C $IDF_PATH submodule update --init --recursive --depth 1
+
+# Shallow-clone ESP-IDF v6.0 for MCUboot HAL compatibility until MCUboot supports IDF v6.2
+ENV MCUBOOT_IDF_PATH=/opt/esp/idf-mcuboot
+RUN git clone -b v6.0 --depth 1 --recursive --shallow-submodules $IDF_URL_PATH $MCUBOOT_IDF_PATH
 
 # Install IDF.
 # Note: --enable-test-specific replaces the pre-v6 --enable-pytest flag
@@ -110,7 +121,7 @@ ENV PIP_PACKAGES="\
     pre-commit \
     pexpect \
 "
-RUN . /opt/esp/python_env/idf6.0_py3.10_env/bin/activate \
+RUN . /opt/esp/python_env/idf6.2_py3.12_env/bin/activate \
     && python3 -m pip install $PIP_PACKAGES
 
 RUN echo '. $IDF_PATH/export.sh' >> /root/.profile
