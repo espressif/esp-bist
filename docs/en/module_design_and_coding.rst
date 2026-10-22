@@ -164,6 +164,245 @@ Coding and Interfaces
 - No interrupts are used or manipulated by this test.
 - No recursion is used in this test.
 
+.. _cpu-instruction-test:
+
+CPU Instruction Equivalence Test
+--------------------------------
+
+The CPU instruction self-test verifies that the processor correctly decodes and executes instructions (IEC 60730-1 Annex H, component 1.2, measure H.2.18.5). It runs assembly test vectors covering representative instruction groups and operand corner cases (such as zero, boundary values, sign extension, and bit patterns) to ensure the CPU hardware behaves as expected.
+
+Execution Flow
+^^^^^^^^^^^^^^
+
+The C dispatcher (``bist_cpu_instruction_test``) executes enabled instruction groups sequentially with a fail-fast strategy: upon the first mismatch or error in any group, the test halts immediately, records the failing group and per-group vector ID, and returns ``BIST_ESP_CPU_INSTRUCTION_TEST_ERR``.
+
+.. blockdiag::
+    :scale: 60%
+    :caption: CPU Instruction Equivalence Test Execution Flow
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> IntALU -> Shift -> UpperImm -> Ctrl -> LdSt -> Mul -> CSR -> AMO -> FP -> Comp -> Pass;
+        IntALU -> Fail [label = "Mismatch"];
+        Shift -> Fail [label = "Mismatch"];
+        UpperImm -> Fail [label = "Mismatch"];
+        Ctrl -> Fail [label = "Mismatch"];
+        LdSt -> Fail [label = "Mismatch"];
+        Mul -> Fail [label = "Mismatch"];
+        CSR -> Fail [label = "Mismatch"];
+        AMO -> Fail [label = "Mismatch"];
+        FP -> Fail [label = "Mismatch"];
+        Comp -> Fail [label = "Mismatch"];
+        Fail -> ReportError;
+
+        Start [label = "bist_cpu_instruction_test()", shape = roundedbox];
+        IntALU [label = "Integer ALU (80)\nRV32I"];
+        Shift [label = "Shifts (36)\nRV32I"];
+        UpperImm [label = "Upper Imm (11)\nLUI / AUIPC"];
+        Ctrl [label = "Control Flow (28)\nBranches / Jumps"];
+        LdSt [label = "Load/Store (15)\nRV32I"];
+        Mul [label = "Multiply/Divide (48)\nRV32M"];
+        CSR [label = "CSR/Fence (15)\nZicsr/Zifencei"];
+        AMO [label = "Atomics (13)\nRV32A (Non-C3)"];
+        FP [label = "Floating Point (60)\nRV32F (H4/P4)"];
+        Comp [label = "Compressed (75)\nRV32C"];
+        Pass [label = "Return BIST_ESP_OK\nID=0, Group=NONE", shape = roundedbox];
+        Fail [label = "Fail-Fast Halt\nSave Vector ID & Group", shape = box];
+        ReportError [label = "Return\nBIST_ESP_CPU_INSTRUCTION_TEST_ERR", shape = roundedbox];
+    }
+
+Instruction Test Groups (381 Vectors Total)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The suite comprises 10 specialized assembly test groups covering a total of 381 test vectors:
+
+1. **Integer ALU (RV32I, 80 vectors, IDs 1–80)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_integer.S`` (enum: ``bist_insn_integer_id_t`` in ``bist_cpu_instructions_integer.h``)
+
+   - **Coverage**: Register-register and register-immediate arithmetic (``ADD``, ``ADDI``, ``SUB``), bitwise logic (``AND``, ``ANDI``, ``OR``, ``ORI``, ``XOR``, ``XORI``), and comparisons (``SLT``, ``SLTI``, ``SLTU``, ``SLTIU``).
+
+   - **Equivalence Classes**: Zero operands, smallest non-zero (``1``), all-ones (``-1``), signed maximum (``0x7FFFFFFF`` / ``INT32_MAX``), signed minimum (``0x80000000`` / ``INT32_MIN``), alternating bit patterns (``0xAAAAAAAA``, ``0x55555555``), 12-bit immediate boundary values (``-2048``, ``-1``, ``0``, ``1``, ``2047``), immediate sign-extension, and signed versus unsigned comparison truth tables.
+
+2. **Shifts (RV32I, 36 vectors, IDs 1–36)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_shift.S`` (enum: ``bist_insn_shift_id_t`` in ``bist_cpu_instructions_shift.h``)
+
+   - **Coverage**: Logical left (``SLL``, ``SLLI``), logical right (``SRL``, ``SRLI``), and arithmetic right (``SRA``, ``SRAI``) shift operations in both register-register and register-immediate forms.
+
+   - **Equivalence Classes**: Shift counts of 0 (no-op pass-through), 1 (single-bit shift), and 31 (maximum standard RV32 shift amount); shift counts :math:`\ge 32` (verifying low 5-bit masking of ``rs2[4:0]`` / ``shamt[4:0]``); sign-extension preservation for arithmetic right shifts on negative operands; alternating bit patterns.
+
+3. **Upper Immediate (RV32I, 11 vectors, IDs 1–11)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_upperimm.S`` (enum: ``bist_insn_upperimm_id_t`` in ``bist_cpu_instructions_upperimm.h``)
+
+   - **Coverage**: U-type instructions ``LUI`` (Load Upper Immediate) and ``AUIPC`` (Add Upper Immediate to PC).
+
+   - **Equivalence Classes**: ``LUI`` 20-bit immediate boundary classes: zero, smallest non-zero (``1``), max positive (``0x7FFFF``), sign bit set (``0x80000``), all-ones (``0xFFFFF``), and alternating pattern (``0xAAAAA``). ``AUIPC`` PC-relative calculations: zero addend (``rd == pc``), positive addend (``+0x1000``), negative addend (``-4096``), max positive (``0x7FFFF``), and most negative addend (``0x80000``), verified against independently recovered PC values via ``jal``.
+
+4. **Control Flow (RV32I, 28 vectors, IDs 1–28)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_ctrl.S`` (enum: ``bist_insn_ctrl_id_t`` in ``bist_cpu_instructions_ctrl.h``)
+
+   - **Coverage**: Conditional branch instructions (``BEQ``, ``BNE``, ``BLT``, ``BGE``, ``BLTU``, ``BGEU``) and unconditional jumps (``JAL``, ``JALR``).
+
+   - **Equivalence Classes**: Every branch condition evaluated for both taken and not-taken outcomes in both forward and backward jump directions; equality boundary cases for signed/unsigned inequalities; ``JAL`` and ``JALR`` forward/backward target calculations and return-address link register (``ra``) writeback verification.
+
+5. **Loads and Stores (RV32I, 15 vectors, IDs 1–15)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_ldst.S`` (enum: ``bist_insn_ldst_id_t`` in ``bist_cpu_instructions_ldst.h``)
+
+   - **Coverage**: Store instructions (``SB``, ``SH``, ``SW``) and load instructions (``LB``, ``LBU``, ``LH``, ``LHU``, ``LW``).
+
+   - **Equivalence Classes**: Word, half-word, and byte access to aligned stack scratchpad storage; positive and negative base displacement offsets; signed sign-extension (``LB``, ``LH``) versus unsigned zero-extension (``LBU``, ``LHU``); writing zero patterns and byte/half-word isolation within 32-bit words. (Aligned access only; unaligned accesses are excluded to avoid hardware trap exceptions).
+
+6. **Multiply and Divide (RV32M, 48 vectors, IDs 1–48)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_mul.S`` (enum: ``bist_insn_mul_id_t`` in ``bist_cpu_instructions_mul.h``)
+
+   - **Coverage**: Hardware multiplier (``MUL``, ``MULH``, ``MULHSU``, ``MULHU``) and hardware divider (``DIV``, ``DIVU``, ``REM``, ``REMU``).
+
+   - **Equivalence Classes**: Low 32-bit products; high 32-bit signed/signed (``MULH``), signed/unsigned (``MULHSU``), and unsigned/unsigned (``MULHU``) products; signed/unsigned quotients and remainders with varied sign combinations; ISA-mandated corner cases: division by zero (``DIV`` yields ``-1``, ``DIVU`` yields ``0xFFFFFFFF``, ``REM``/``REMU`` yield dividend) and signed overflow (``INT32_MIN / -1`` yielding ``INT32_MIN`` for ``DIV`` and ``0`` for ``REM``).
+
+7. **CSR and Fence (Zicsr / Zifencei / RV32I, 15 vectors, IDs 1–15)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_csr.S`` (enum: ``bist_insn_csr_id_t`` in ``bist_cpu_instructions_csr.h``)
+
+   - **Coverage**: Atomic CSR register/immediate read, write, set, and clear instructions (``CSRRW``, ``CSRRS``, ``CSRRC``, ``CSRRWI``, ``CSRRSI``, ``CSRRCI``, plus ``x0``/``rd0`` forms), alongside ``FENCE`` (RV32I) and ``FENCE.I`` (Zifencei).
+
+   - **Equivalence Classes**: Exercises all CSR access modes exclusively on ``mscratch``, which is saved on entry and restored on both pass and fail paths (ensuring zero persistent side-effects on processor state). Tests 5-bit unsigned immediate extremes (0, 31) and bitmask patterns (``0xAAAA``, ``0x5555``). ``FENCE`` and ``FENCE.I`` validate instruction fetch, decoding, and pipeline execution.
+
+8. **Atomics (RV32A, 13 vectors, IDs 1–13)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_amo.S`` (enum: ``bist_insn_amo_id_t`` in ``bist_cpu_instructions_amo.h``)
+
+   - **Coverage**: Zaamo atomic memory operations (``AMOADD.W``, ``AMOSWAP.W``, ``AMOAND.W``, ``AMOOR.W``, ``AMOXOR.W``, ``AMOMIN.W``, ``AMOMAX.W``, ``AMOMINU.W``, ``AMOMAXU.W``, ``AMOSWAP.W.AQRL``) and Zalrsc load-reserved/store-conditional (``LR.W``, ``SC.W``).
+
+   - **Equivalence Classes**: Atomic word arithmetic, bitwise logic, and signed/unsigned min/max on memory words; successful reservation sequence (``LR.W`` followed by ``SC.W`` returning 0); attempted reservation break sequence. Excluded on ESP32-C3 (which lacks the A extension).
+
+9. **Floating Point (RV32F, 60 vectors, IDs 1–60)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_fp.S`` (enum: ``bist_insn_fp_id_t`` in ``bist_cpu_instructions_fp.h``)
+
+   - **Coverage**: Single-precision IEEE-754 binary32 arithmetic (``FADD.S``, ``FSUB.S``, ``FMUL.S``, ``FDIV.S``, ``FSQRT.S``), fused multiply-add (``FMADD.S``, ``FMSUB.S``, ``FNMSUB.S``, ``FNMADD.S``), sign injection (``FSGNJ.S``, ``FSGNJN.S``, ``FSGNJX.S``), min/max (``FMIN.S``, ``FMAX.S``), comparisons (``FEQ.S``, ``FLT.S``, ``FLE.S``), conversions (``FCVT.W.S``, ``FCVT.WU.S``, ``FCVT.S.W``, ``FCVT.S.WU``), register transfers (``FMV.X.W``, ``FMV.W.X``), classification (``FCLASS.S``), static rounding modes (``RNE``, ``RTZ``), and sticky exception flags accrual in ``fflags`` (DZ, NV, NX). Gated on ``ESP_BIST_USE_FPU`` (ESP32-H4, ESP32-P4).
+
+   - **Equivalence Classes**: Exact bit-pattern verification via ``fmv.x.w`` against IEEE-754 bit representations (no floating-point tolerance); canonical quiet NaN (``0x7FC00000``) generation; subnormal, infinity, and signed zero handling; NaN payload preservation across raw moves; saturation on integer conversions. Caller-saved float registers (``ft0``–``ft3``) used; ``fcsr`` saved and restored.
+
+10. **Compressed Instructions (RV32C, 75 vectors, IDs 1–75)**
+
+    - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_comp.S`` (enum: ``bist_insn_comp_id_t`` in ``bist_cpu_instructions_comp.h``)
+
+    - **Coverage**: 16-bit compressed instruction formats: CR (register), CI (immediate), CI-sp (stack-pointer immediate), CSS (stack-pointer store), CIW (wide immediate), CL (load), CS (store), CA (arithmetic), CB (branch), CJ (jump).
+
+    - **Equivalence Classes**: Non-contiguous immediate bit unscrambling (e.g. ``c.addi16sp`` ``nzimm[9|4|6|8:7|5]``, ``c.addi4spn`` ``nzuimm[5:4|9:6|2|3]``), 3-bit restricted register field (``x8``–``x15`` mapped to ``a2``–``a5`` and ``s0``/``s1``), opcode discrimination across overlapping formats (e.g. ``c.lui`` vs ``c.addi16sp``), stack-pointer movement discipline, and link-resolved size witnesses for relaxable jump/branch instructions (``c.j``, ``c.jal``, ``c.beqz``, ``c.bnez``).
+
+Module API
+^^^^^^^^^^
+
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_cpu_instruction_test
+
+.. note::
+
+   Measured from the ESP32-P4 ``cpu_instruction_test`` ELF: code size and
+   instruction count cover ``bist_cpu_instruction_test`` plus all linked group
+   routines. Cycles were not sampled from the performance-monitor CSRs;
+   execution time is instruction count / 400 MHz (``CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ``).
+
+Source Files
+^^^^^^^^^^^^
+
+.. list-table:: Source Files
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Source File
+     - Version
+     - MD5
+   * - ``src/bist/core/cpu/bist_cpu_instructions.c``
+     - N/A
+     - f5416dc0cbabc32f4842e0d76cd8ded1
+   * - ``src/bist/core/cpu/bist_cpu_instructions_integer.S``
+     - N/A
+     - fae2bd5fb5b03945c89024a3538f400c
+   * - ``src/bist/core/cpu/bist_cpu_instructions_shift.S``
+     - N/A
+     - 32703a588a7769dc4b8a14f1f24b642b
+   * - ``src/bist/core/cpu/bist_cpu_instructions_upperimm.S``
+     - N/A
+     - ca28026075bdacc3eb2a12a0a0498784
+   * - ``src/bist/core/cpu/bist_cpu_instructions_ctrl.S``
+     - N/A
+     - b7ab45e0dd439d8859013a620bc29b2d
+   * - ``src/bist/core/cpu/bist_cpu_instructions_ldst.S``
+     - N/A
+     - 64518224f56bb36bb1e49ec9713e986b
+   * - ``src/bist/core/cpu/bist_cpu_instructions_mul.S``
+     - N/A
+     - 0a4c69eb0d2a386af1db47c2e64cc0ea
+   * - ``src/bist/core/cpu/bist_cpu_instructions_csr.S``
+     - N/A
+     - e26412dcd527ebad0ebf24c4a9526db5
+   * - ``src/bist/core/cpu/bist_cpu_instructions_amo.S``
+     - N/A
+     - 92a1c6104843e4e51eacd00a4ce502c1
+   * - ``src/bist/core/cpu/bist_cpu_instructions_fp.S``
+     - N/A
+     - 3ca0354b0ed9da520929d43a26c12f36
+   * - ``src/bist/core/cpu/bist_cpu_instructions_comp.S``
+     - N/A
+     - c2c08051fbff030d448a3a42595a1604
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions.h``
+     - N/A
+     - 954eb045c5a2839f9298246848d9d464
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_integer.h``
+     - N/A
+     - de3aadbbba246fbfdccd073f2c047677
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_shift.h``
+     - N/A
+     - bc12b43789eaf46959fd8d253a07eed8
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_upperimm.h``
+     - N/A
+     - e088da74621a9b609251cce85a27ed13
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_ctrl.h``
+     - N/A
+     - dd3c8aba9d10b96bef58b32de54ceb98
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_ldst.h``
+     - N/A
+     - 48625db0fc1d9be539e3f634fa2e0ba2
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_mul.h``
+     - N/A
+     - 2c45681599e53c2d6b01878ddc22dbf2
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_csr.h``
+     - N/A
+     - 4c7a3ecb74ef28b83ee2013039d0d643
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_amo.h``
+     - N/A
+     - e59a857d2e9f41f1ff6ef42e86a555a5
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_fp.h``
+     - N/A
+     - de9d47b7a6f18a2e8e24f0fed0b20eb4
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_comp.h``
+     - N/A
+     - 2a18de01ca714a50e4e8e9dc7c26e474
+
+Coding and Interfaces
+^^^^^^^^^^^^^^^^^^^^^
+
+- **Assembly Implementation**: Hand-written in pure assembly for full control over generated instructions. No dynamic memory allocation or recursion is used.
+- **Deterministic Execution**: Statically bounded execution time and minimal stack usage suitable for periodic runtime testing.
+- **Register Preservation**:
+  - Callee-saved registers (``s0``, ``s1``) and return address (``ra``) are saved at entry and restored on all exit paths.
+  - Floating-point control/status register (``fcsr``) and machine scratch register (``mscratch``) are saved and restored by their respective test groups.
+- **Instruction Encodings**:
+  - 32-bit test groups use ``.option norvc`` to prevent the assembler from emitting 16-bit compressed instructions.
+  - The compressed test group uses ``.option rvc`` and verifies that instructions encode into 16 bits.
+- **Architecture Gating**:
+  - Atomic instructions (RV32A) and floating-point instructions (RV32F) are enabled only on supported targets and gated in their respective assembly files.
+- **Deliberate Exclusions**:
+  - Trap instructions (such as ``c.ebreak`` and ``c.unimp``) and unaligned memory accesses are excluded to prevent hardware exceptions and ensure deterministic execution.
+
 
 Stack Overflow Test
 -------------------

@@ -314,6 +314,72 @@ CI Test Results
 .. xml-junit-test-results:: tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
    :title: CPU Register Device Test Results
 
+CPU Instruction Decoding and Execution Test
+-------------------------------------------
+
+**Purpose:** Verify the decoding, ALU calculations, branch evaluation, register data paths, immediate value unscrambling, and execution integrity of all supported RISC-V instruction equivalence classes (IEC 60730 Table H.1 component 1.2, measure H.2.18.5) across 10 distinct instruction groups (381 test vectors total).
+
+QEMU/Emulation Validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Application:** ``tests/cpu_instruction_test/main.c``
+
+**Test Script:** ``tests/cpu_instruction_test/pytest_device_cpu_instruction_test.py``
+
+**Execution Flow:**
+
+1. QEMU or target hardware boots the Unity test runner in ``tests/cpu_instruction_test/main.c``.
+2. Executes ``bist_cpu_instruction_test()``, which invokes enabled instruction groups in sequence:
+
+   - Integer ALU (80 vectors, RV32I)
+   - Shifts (36 vectors, RV32I)
+   - Upper Immediate (11 vectors, LUI/AUIPC)
+   - Control Flow (28 vectors, conditional branches and unconditional jumps)
+   - Loads and Stores (15 vectors, SB/SH/SW and LB/LBU/LH/LHU/LW)
+   - Multiply and Divide (48 vectors, RV32M)
+   - CSR and Fence (15 vectors, Zicsr/Zifencei operating on ``mscratch``)
+   - Atomics (13 vectors, RV32A Zaamo/Zalrsc; excluded on ESP32-C3)
+   - Floating Point (60 vectors, RV32F single-precision binary32 on ESP32-H4/P4)
+   - Compressed Instructions (75 vectors, RV32C 16-bit formats)
+3. Each vector computes results from specified operand equivalence classes and compares against expected values.
+4. On complete pass, the function returns ``BIST_ESP_OK``, writes ``0`` to ``bist_cpu_instruction_failure_id``, and sets failure group to ``BIST_INSN_GROUP_NONE``.
+5. Unity asserts that ``bist_cpu_instruction_test() == BIST_ESP_OK``, ``bist_cpu_instruction_last_failure_id() == 0``, and ``bist_cpu_instruction_last_failure_group() == BIST_INSN_GROUP_NONE``.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Instructions:PASS
+
+Fault Injection and Negative Testing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Negative testing and fault injection validate the diagnostic capability, fail-fast behavior, error reporting, and stack restoration:
+
+1. **Fail-Fast Mechanics and Vector ID Reporting**:
+   - When an injected fault causes a vector check to fail (e.g., modifying expected ALU, shift, or compressed arithmetic results), the assembly routine immediately halts further vector execution, stores the failing 1-based vector ID into ``bist_cpu_instruction_failure_id``, and returns error code ``14`` (``BIST_ESP_CPU_INSTRUCTION_TEST_ERR``).
+   - The C dispatcher captures the failing group enum (``bist_insn_group_t``) in ``bist_cpu_instruction_failure_group``, logs the error via ``ESP_LOGE`` with the group name and vector ID, and exits immediately without invoking subsequent groups.
+2. **Stack Frame Restoration on Error Exits**:
+   - The RV32C compressed group uses a 544-byte stack frame with frame base register ``t4``. When testing stack pointer manipulation (``c.addi16sp`` vectors), corrupting expected values (e.g., vector 59) proved that ``sp`` is restored cleanly from ``t4`` and callee-saved registers (``ra``, ``s0``, ``s1``) are restored before returning, guaranteeing no stack corruption on error paths.
+3. **Size Witness Verification for Relaxable Compressed Instructions**:
+   - For relaxable branch and jump instructions (``c.j``, ``c.jal``, ``c.beqz``, ``c.bnez``), link-resolved ``.rodata`` size witnesses (relocation pairs ``R_RISCV_ADD8`` / ``R_RISCV_SUB8``) are validated at run time. Mutating the expected witness check from 2 to 4 successfully caught vector 67 as an error, proving that silent widening at link time is reliably detected.
+
+Hardware Validation
+^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/cpu_instruction_test/pytest_device_cpu_instruction_test.py``
+
+**Expected Inputs/Environment:**
+
+- Device running in machine mode at nominal system frequency.
+- BIST code executing from IRAM for deterministic timing.
+
+**Execution:**
+
+1. Flash test binary to the target SoC.
+2. Monitor UART output during test suite execution.
+3. Verify that all 381 instruction test vectors execute cleanly and report ``PASS`` across all enabled groups.
+
 Stack Overflow Detection Test
 -----------------------------
 
