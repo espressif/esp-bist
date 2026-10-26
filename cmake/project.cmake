@@ -276,7 +276,7 @@ add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
 add_custom_command(TARGET ${APP_EXECUTABLE} POST_BUILD
     COMMAND
     ${imgtool_path}
-    sign --pad --confirm --pad-sig --align 4 -v 0 -H 32 -S 0x100000 ${APP_NAME}.bin ${APP_NAME}_signed.bin
+    sign --pad --confirm --pad-sig --align 4 -v 0 -H 32 -S 0x1C0000 ${APP_NAME}.bin ${APP_NAME}_signed.bin
     )
 
 # Qemu image
@@ -331,7 +331,7 @@ add_custom_command(TARGET flash_boot POST_BUILD
     ${esptool_path}
     -p ${ESPPORT} -b 460800 --before default-reset --after hard-reset
     --chip ${SOC_TARGET} write-flash
-    --flash-mode dio --flash-size detect --force
+    --flash-mode dio --flash-size detect --erase-all --force
     --flash-freq keep ${BOOTLOADER_ADDR}
     ${MCUBOOT_BIN_PATH}/mcuboot_${SOC_TARGET}.bin
     )
