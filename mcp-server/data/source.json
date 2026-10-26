@@ -541,10 +541,10 @@
   },
   {
     "function_name": "esp_timer_delete",
-    "body": "esp_err_t esp_timer_delete(esp_timer_handle_t timer)\n{\n    if (timer == NULL) {\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    int64_t alarm = systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));\n    esp_err_t err;\n\n    /* Check if the timer is armed once the list is locked to avoid a data race */\n    if (timer_armed(timer)) {\n        err = ESP_ERR_INVALID_STATE;\n    } else {\n        // A case for the timer with ESP_TIMER_ISR:\n        // This ISR timer was removed from the ISR list in esp_timer_stop() or in timer_process_alarm() -> LIST_REMOVE(it, list_entry)\n        // and here this timer will be added to another the TASK list, see below.\n        // We do this because we want to free memory of the timer in a task context instead of an isr context.\n        timer->flags &= ~FL_ISR_DISPATCH_METHOD;\n        timer->event_id = EVENT_ID_DELETE_TIMER;\n        timer->alarm = alarm;\n        timer->period = 0;\n        err = timer_insert(timer, false);\n    }\n    return err;\n}",
+    "body": "esp_err_t esp_timer_delete(esp_timer_handle_t timer)\n{\n    if (timer == NULL) {\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    /* BIST has no esp_timer task. Queueing the free onto the task list\n     * arms a deadline that nothing services, and that deadline is the\n     * hardware compare (min of both slots), so later ISR timers never run.\n     * Callers stop the timer before delete and are not in its callback. */\n    if (timer_armed(timer)) {\n        return ESP_ERR_INVALID_STATE;\n    }\n\n    free(timer);\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/esp_timer.c",
     "line_start": 209,
-    "line_end": 233,
+    "line_end": 225,
     "module": "drivers",
     "content_type": "source"
   },
@@ -552,8 +552,8 @@
     "function_name": "esp_timer_init",
     "body": "esp_err_t esp_timer_init(void)\n{\n    /* Guard avoids -Wdeprecated-declarations on SoCs where IDF retired\n     * the legacy API (C5/C61/...); SYSTIMER is on by reset default there. */\n#ifdef __PERIPH_CTRL_ALLOW_LEGACY_API\n    periph_module_enable(PERIPH_SYSTIMER_MODULE);\n#endif\n    systimer_hal_tick_rate_ops_t ops = {\n        .ticks_to_us = systimer_ticks_to_us,\n        .us_to_ticks = systimer_us_to_ticks,\n    };\n    systimer_hal_init(&systimer_hal);\n    systimer_hal_set_tick_rate_ops(&systimer_hal, &ops);\n\n    systimer_hal_enable_counter(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER);\n    systimer_hal_select_alarm_mode(&systimer_hal, SYSTIMER_ALARM_ESPTIMER, SYSTIMER_ALARM_MODE_ONESHOT);\n    systimer_hal_connect_alarm_counter(&systimer_hal, SYSTIMER_ALARM_ESPTIMER, SYSTIMER_COUNTER_ESPTIMER);\n\n    esp_cpu_intr_disable(1 << ETS_INTERNAL_TIMER0_INTR_NO);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_SYSTIMER_TARGET2_INTR_SOURCE, ETS_INTERNAL_TIMER0_INTR_NO);\n\n    esp_cpu_intr_set_type(ETS_INTERNAL_TIMER0_INTR_NO, 0);\n    esp_cpu_intr_set_priority(ETS_INTERNAL_TIMER0_INTR_NO, 2);\n    esp_cpu_intr_set_handler(ETS_INTERNAL_TIMER0_INTR_NO, timer_alarm_isr, NULL);\n\n    systimer_hal_enable_alarm_int(&systimer_hal, SYSTIMER_ALARM_ESPTIMER);\n\n    esp_cpu_intr_enable(1 << ETS_INTERNAL_TIMER0_INTR_NO);\n\n    return ESP_OK;\n\n}",
     "file": "src/bist/drivers/esp_timer.c",
-    "line_start": 374,
-    "line_end": 405,
+    "line_start": 365,
+    "line_end": 396,
     "module": "drivers",
     "content_type": "source"
   },
@@ -561,8 +561,8 @@
     "function_name": "esp_timer_deinit",
     "body": "esp_err_t esp_timer_deinit(void)\n{\n    /* Check if there are any active timers */\n    for (esp_timer_dispatch_t dispatch_method = ESP_TIMER_TASK; dispatch_method < ESP_TIMER_MAX; ++dispatch_method) {\n        if (!LIST_EMPTY(&s_timers[dispatch_method])) {\n            return ESP_ERR_INVALID_STATE;\n        }\n    }\n\n    systimer_ll_enable_alarm(systimer_hal.dev, SYSTIMER_ALARM_ESPTIMER, false);\n    systimer_ll_enable_alarm_int(systimer_hal.dev, SYSTIMER_ALARM_ESPTIMER, false);\n    esp_cpu_intr_disable(1 << ETS_INTERNAL_TIMER0_INTR_NO);\n\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/esp_timer.c",
-    "line_start": 407,
-    "line_end": 421,
+    "line_start": 398,
+    "line_end": 412,
     "module": "drivers",
     "content_type": "source"
   },
@@ -570,8 +570,8 @@
     "function_name": "esp_timer_get_time",
     "body": "int64_t esp_timer_get_time(void)\n{\n    // we hope the execution time of this function won't > 1us\n    // thus, to save one function call, we didn't use the existing `systimer_hal_get_time`\n    return systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));\n}",
     "file": "src/bist/drivers/esp_timer.c",
-    "line_start": 490,
-    "line_end": 495,
+    "line_start": 481,
+    "line_end": 486,
     "module": "drivers",
     "content_type": "source"
   },
