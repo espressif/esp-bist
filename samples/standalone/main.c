@@ -9,8 +9,13 @@
 #include "esp_attr.h"
 #include "soc/soc_caps.h"
 
+#if defined(SOC_TARGET_ESP32H4)
+#define LED_GPIO    2
+#define BTN_GPIO    3
+#else
 #define LED_GPIO    7
 #define BTN_GPIO    9
+#endif
 #define ADC_UNIT    0
 #define ADC_CHANNEL 2
 
@@ -197,12 +202,6 @@ int main()
 
     bist_cpu_stack_overflow_init();
 
-    // Register Crystal WDT and Master WDT callbacks
-#if SOC_XT_WDT_SUPPORTED
-    esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL);
-#endif
-    wdt_register_callback(wdt_callback, NULL);
-
     runtime_tests();
 
     configure_led();
@@ -220,6 +219,12 @@ int main()
         ESP_LOGE(TAG, "Windowed WDT initialization failed");
         fail_safe_exit();
     }
+
+    // Register Crystal WDT and Master WDT callbacks
+#if SOC_XT_WDT_SUPPORTED
+    esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL);
+#endif
+    wdt_register_callback(wdt_callback, NULL);
 
     while (1) {
         set_led(get_button());
