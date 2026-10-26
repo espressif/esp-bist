@@ -5,6 +5,15 @@ import pytest
 from tests.idf_targets import pytestmark  # noqa: F401
 
 
+def test_clock_test_success(dut, target):
+    tests_names = ["test_BIST_ext_crystal_fail", "test_BIST_main_crystal"]
+    expected_outputs = [f"{test}:PASS" for test in tests_names]
+
+    # expect from what esptool.py printed to sys.stdout
+    for expected_output in expected_outputs:
+        dut.expect(expected_output)
+
+
 def clock_error_test(openocd_dut, gdb_instance, dut, test_name, test_bp, inject_cmd):
     expected_output = "{}:FAIL".format(test_name)
     script = """
