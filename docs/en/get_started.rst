@@ -377,6 +377,8 @@ To run tests directly on target hardware, execute inside the test directory:
 
    pytest pytest_device_* --executable=<app_name> --target={IDF_TARGET_PATH_NAME} --junitxml=build/tests/report.xml
 
+FAIL cases in the same files use OpenOCD (USB-JTAG) and GDB. They are skipped by default. Add ``--injection`` to run them too.
+
 Host Unit Testing
 ^^^^^^^^^^^^^^^^^
 

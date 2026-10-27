@@ -16,6 +16,10 @@ spec:
       type: boolean
       default: true
       description: "Run on-device tests"
+    run_injection_test:
+      type: boolean
+      default: true
+      description: "Run on-device injection tests"
     run_qemu_upstream_test:
       type: boolean
       default: true
@@ -40,6 +44,10 @@ spec:
       type: boolean
       default: false
       description: "Build and deploy the documentation from cached test reports"
+    test_apps:
+      type: string
+      default: "all"
+      description: "Space-separated BIST test apps to run, or all"
 
 ---
 
@@ -251,14 +259,24 @@ build_docker_image:
   timeout: 4h
   variables:
     DOCKER_TLS_CERTDIR: ""
-    IMAGE_NAME: espressif/esp-bist/build-env-2
+    DOCKER_BUILDKIT: "1"
     DOCKERFILE: .devcontainer/Dockerfile
+  parallel:
+    matrix:
+      - IMAGE_NAME: espressif/esp-bist/build-env-2
+        DOCKER_PLATFORM: linux/amd64
+      - IMAGE_NAME: espressif/esp-bist/build-env-2_arm
+        DOCKER_PLATFORM: linux/arm64
   script:
     - mkdir -p config
     - echo ${DOCKER_AUTH_CONFIG} > config/config.json
+    - |
+      if [ "${DOCKER_PLATFORM}" = "linux/arm64" ]; then
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      fi
     - docker --config=./config pull ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} || true
-    - docker --config=./config build --pull -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} -f ${DOCKERFILE} .
-    - docker run --rm -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} /bin/bash -c "echo Hello Docker; exit 0"
+    - docker --config=./config build --platform ${DOCKER_PLATFORM} --pull -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} -f ${DOCKERFILE} .
+    - docker run --rm -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} /bin/bash -c "echo Hello Docker; uname -m; exit 0"
     - docker --config=./config push ${CI_DOCKER_REGISTRY}/${IMAGE_NAME}
   allow_failure: true
   rules:
@@ -661,8 +679,10 @@ test_qemu_remote:
 
 .test_device_template:
   stage: Test Device
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2_arm
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
+    RUN_INJECTION_TEST: $[[ inputs.run_injection_test ]]
   script:
     - |
       if [ ! -d "tests/${SOC_TARGET}" ]; then
@@ -675,12 +695,17 @@ test_qemu_remote:
           mv "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" "tests/$TEST_APP/build"
         fi
       done
-    - python3 scripts/run_device_tests.py --target $SOC_TARGET
+      if [ "$RUN_INJECTION_TEST" = "true" ]; then
+        INJECTION_ARGS="--injection"
+      else
+        INJECTION_ARGS=""
+      fi
+      ESPPORT=/dev/serial_ports/ttyUSB-esp32 python3 scripts/run_device_tests.py --target $SOC_TARGET $INJECTION_ARGS
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
-  tags: [generic, $SOC_TARGET]
+  tags: [$SOC_TARGET, "arm"]
   needs:
     - job: build_mcuboot
       artifacts: true

@@ -30,7 +30,7 @@ CPU Register Test (IEC 60730 ID: 1.1)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (pattern pass test and GDB fault injection per register)
-- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT)
+- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per register)
 
 **Test Results**:
 
@@ -49,7 +49,7 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (CSR pattern pass and GDB fault injection per CSR)
-- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT)
+- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per CSR)
 
 **Test Results**:
 
@@ -104,7 +104,7 @@ Program Counter Test (IEC 60730 ID: 1.3)
 **Test Implementation**:
 
 - QEMU: ``tests/pc_test/pytest_qemu_pc_test.py`` (multi-region pass, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
-- Hardware: ``tests/pc_test/pytest_device_pc_test.py`` (multi-region execution on target DUT)
+- Hardware: ``tests/pc_test/pytest_device_pc_test.py`` (multi-region execution on target DUT, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
 
 **Test Results**:
 
@@ -123,7 +123,7 @@ Interrupt Test (IEC 60730 ID: 2)
 **Test Implementation**:
 
 - QEMU: ``tests/interrupt_test/pytest_qemu_interrupt_test.py`` (software source map pass and GDB count corruption)
-- Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py`` (software source map and dual-timer 2:1 period ratio validation)
+- Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py`` (software source map and dual-timer 2:1 period ratio validation and GDB count corruption)
 
 **Test Results**:
 
@@ -161,7 +161,7 @@ Flash CRC Test (IEC 60730 ID: 4.1)
 **Test Implementation**:
 
 - QEMU: ``tests/flash_test/pytest_qemu_flash_test.py`` (text and rodata CRC pass + GDB length corruption)
-- Hardware: ``tests/flash_test/pytest_device_flash_test.py`` (CRC validation on target DUT)
+- Hardware: ``tests/flash_test/pytest_device_flash_test.py`` (CRC validation on target DUT + GDB length corruption)
 
 **Test Results**:
 
@@ -180,7 +180,7 @@ RAM Test (IEC 60730 ID: 4.2)
 **Test Implementation**:
 
 - QEMU: ``tests/ram_test/pytest_qemu_ram_test.py`` (March A, March X, and Abraham pass + GDB memory corruption)
-- Hardware: ``tests/ram_test/pytest_device_ram_test.py`` (algorithm execution on target DUT)
+- Hardware: ``tests/ram_test/pytest_device_ram_test.py`` (algorithm execution on target DUT + GDB memory corruption)
 
 **Test Results**:
 
@@ -199,7 +199,7 @@ Stack Overflow Test (IEC 60730 ID: 4.2)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_stack_test/pytest_qemu_cpu_stack_test.py`` (bounds verification, overflow detection, and GDB recursion limit)
-- Hardware: ``tests/cpu_stack_test/pytest_device_cpu_stack_test.py`` (stack overflow detection on target DUT)
+- Hardware: ``tests/cpu_stack_test/pytest_device_cpu_stack_test.py`` (stack overflow detection on target DUT and GDB recursion limit)
 
 **Test Results**:
 
@@ -218,7 +218,7 @@ Watchdog Test (IEC 60730 ID: 6.3)
 **Test Implementation**:
 
 - QEMU: ``tests/wdt_test/pytest_qemu_wdt_test.py`` (two-boot reset verification and GDB timeout failure injection)
-- Hardware: ``tests/wdt_test/pytest_device_wdt_test.py`` (two-boot reset check and sub-tick timeout rejection)
+- Hardware: ``tests/wdt_test/pytest_device_wdt_test.py`` (two-boot reset check and sub-tick timeout rejection and GDB timeout failure injection)
 
 **Test Results**:
 
@@ -237,14 +237,14 @@ Windowed Watchdog Test & esp_timer Validation (IEC 60730 ID: 6.3)
 **Test Implementation**:
 
 - QEMU: ``tests/windowed_wdt_test/pytest_qemu_windowed_wdt_test.py`` (normal feed, underflow detection, consecutive cycles)
-- Hardware: ``tests/windowed_wdt_test/pytest_device_windowed_wdt_test.py`` (normal feed, underflow, consecutive cycles)
+- Hardware: ``tests/windowed_wdt_test/pytest_device_windowed_wdt_test.py`` (normal feed, underflow, consecutive cycles and GDB underflow corruption)
 
 **Test Results**:
 
 - QEMU: ``tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases validating windowed WDT logic and in-situ ``esp_timer`` driver functionality.
+**Coverage**: 3 test cases (pass + fail) validating windowed WDT logic and in-situ ``esp_timer`` driver functionality.
 
 GPIO Test (IEC 60730 ID: 7.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -255,13 +255,13 @@ GPIO Test (IEC 60730 ID: 7.1)
 
 **Test Implementation**:
 
-- Hardware-only: ``tests/digital_io_test/pytest_device_digital_io_test.py`` (invalid pin rejection, GPIO2 output drive, configured input level)
+- Hardware-only: ``tests/digital_io_test/pytest_device_digital_io_test.py`` (invalid pin rejection, GPIO2 output drive, configured input level and GDB read value injection)
 
 **Test Results**:
 
 - Hardware: ``tests/digital_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases on target hardware.
+**Coverage**: 3 pass test and 2 fail cases on target hardware.
 
 ADC Test (IEC 60730 ID: 7.2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -272,13 +272,13 @@ ADC Test (IEC 60730 ID: 7.2)
 
 **Test Implementation**:
 
-- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py`` (invalid parameter rejection, pull-down, pull-up, and VREF on ESP32-C3; skipped on ESP32-H4)
+- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py`` (invalid parameter rejection, pull-down, pull-up, and VREF on ESP32-C3; skipped on ESP32-H4 and GDB raw read corruption)
 
 **Test Results**:
 
 - Hardware: ``tests/analog_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases (4 on ESP32-C3); skipped on ESP32-H4.
+**Coverage**: 3 test cases (pass + fail) (4 on ESP32-C3); skipped on ESP32-H4.
 
 Traceability Summary
 --------------------

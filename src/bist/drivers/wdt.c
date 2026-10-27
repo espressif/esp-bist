@@ -182,7 +182,9 @@ void wdt_windowed_deinit(void)
 
 bool wdt_is_underflow_detected(void)
 {
-    return wdt_ctx.stop_feed;
+    volatile bool underflow = wdt_ctx.stop_feed;
+    BIST_ADD_LABEL("bist_windowed_wdt_underflow_check");
+    return underflow;
 }
 
 /*

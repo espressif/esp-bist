@@ -11,6 +11,7 @@ Usage:
   ./scripts/run_device_tests.py --target esp32c3 --skip-flash
   ESPPORT=/dev/ttyUSB0 ./scripts/run_device_tests.py --target esp32c6
   ./scripts/run_device_tests.py --target esp32c6 --qemu
+  ./scripts/run_device_tests.py --target esp32c6 --injection
 
 Requires a built tree at tests/<app>/build (from build_all_tests.sh or CI artifacts).
 QEMU mode needs qemu-system-riscv32 on PATH and tests/<app>/build/<app>_qemu_image.bin.
@@ -54,8 +55,17 @@ def app_supports_target(app_dir: Path, target: str) -> bool:
 def discover_test_apps(mode: str, target: str) -> tuple[str, ...]:
     """tests/<name> dirs with pytest_<mode>*.py that support the given SoC."""
     pattern = f"pytest_{mode}*.py"
+    selected = os.getenv("TEST_APP_FILTER", os.getenv("TEST_APPS", "all"))
+    names = selected.replace(",", " ").replace(";", " ").split()
+    if not names or names == ["all"]:
+        names = os.getenv("TEST_APPS", "").split()
+    candidates = (
+        [TESTS_DIR / name for name in names]
+        if names
+        else sorted(p for p in TESTS_DIR.iterdir() if p.is_dir())
+    )
     apps = []
-    for path in sorted(TESTS_DIR.iterdir()):
+    for path in candidates:
         if not path.is_dir() or next(path.glob(pattern), None) is None:
             continue
         if path.name == "metrics":
@@ -81,11 +91,19 @@ def pushd(path: Path):
 class AppTestExecutor:
     """Run pytest for one test app. Device mode also flashes MCUboot."""
 
-    def __init__(self, target: str, app: str, mode: str, skip_flash: bool = False):
+    def __init__(
+        self,
+        target: str,
+        app: str,
+        mode: str,
+        skip_flash: bool = False,
+        injection: bool = False,
+    ):
         self.target = target
         self.app = app
         self.mode = mode
         self.skip_flash = skip_flash
+        self.injection = injection
         self.app_dir = TESTS_DIR / app
         self.build_dir = self.app_dir / "build"
         self.pytest_file = next(self.app_dir.glob(f"pytest_{mode}*.py"), None)
@@ -143,6 +161,8 @@ class AppTestExecutor:
             "--reruns",
             "2",
         ]
+        if self.injection:
+            args.append("--injection")
         logger.info("pytest %s", " ".join(args))
         ret = pytest.main(args)
         sys.stdout.flush()
@@ -152,11 +172,18 @@ class AppTestExecutor:
 class AppTestLoop:
     """Walk every matching test app on one chip; do not stop on the first failure."""
 
-    def __init__(self, target: str, mode: str, skip_flash: bool = False):
+    def __init__(
+        self,
+        target: str,
+        mode: str,
+        skip_flash: bool = False,
+        injection: bool = False,
+    ):
         self.target = target
         self.mode = mode
         self.skip_flash = skip_flash
         self.apps = discover_test_apps(mode, target)
+        self.injection = injection
         self.in_ci = bool(os.getenv("CI") or os.getenv("GITLAB_CI"))
         self.failed: list[str] = []
         self.passed: list[str] = []
@@ -182,7 +209,9 @@ class AppTestLoop:
             )
             logger.info("=" * 80)
 
-            executor = AppTestExecutor(self.target, app, self.mode, self.skip_flash)
+            executor = AppTestExecutor(
+                self.target, app, self.mode, self.skip_flash, self.injection
+            )
             ret = executor.execute()
 
             if ret != 0 and self.in_ci:
@@ -244,6 +273,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip ninja flash_boot (device mode only).",
     )
+    parser.add_argument(
+        "--injection",
+        action="store_true",
+        help="Include fault-injection tests.",
+    )
     return parser.parse_args()
 
 
@@ -259,7 +293,7 @@ def main() -> int:
     if mode == MODE_QEMU and args.skip_flash:
         logger.info("--skip-flash is ignored in QEMU mode")
 
-    loop = AppTestLoop(args.target, mode, args.skip_flash)
+    loop = AppTestLoop(args.target, mode, args.skip_flash, args.injection)
     loop.test_loop()
     loop.results_summary()
     return 1 if loop.failed else 0

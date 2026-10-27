@@ -1,12 +1,13 @@
 """
-Configuration and fixtures for pytest to support QEMU and GDB testing on RISC-V ESP32 architecture.
+Configuration and fixtures for pytest to support QEMU, OpenOCD and GDB testing on RISC-V ESP32 architecture.
 
-This module provides classes and pytest fixtures to manage QEMU emulation and GDB debugging sessions
-for ESP32 RISC-V based projects.
+This module provides classes and pytest fixtures to manage QEMU emulation, OpenOCD instance
+and GDB debugging sessions for ESP32 RISC-V based projects.
 
 Classes:
         QEMU_RISCV: Manages QEMU emulation process for a given target.
         GDB_RISCV: Manages GDB debugging session with script execution.
+        OpenOCD: Manages OpenOCD for on-device fault injection (ESP-IDF-inspired).
 
 Fixtures:
         qemu_instance: Provides a running QEMU instance for testing.
@@ -14,9 +15,11 @@ Fixtures:
         gdb_instance: Provides a GDB debugger instance for debugging.
         config / build_dir: ESP-IDF-style multi-config binary resolution
             (build_<target>_<config> → build_<target> → build_<config> → build).
+        openocd_instance: OpenOCD session for device JTAG/USB-JTAG.
 
 Command-line Options:
         --executable: Name of the executable file (without extension) to be tested/debugged.
+        --injection: Include tests marked ``injection``; they are excluded by default.
 
 QEMU uses the same ``target`` as idf-ci (``@pytest.mark.parametrize`` / ``tests/idf_targets.py``), not a separate CLI flag.
 """
@@ -28,8 +31,32 @@ import os
 import queue
 import subprocess
 import threading
+import signal
+import time
+import pexpect
 
 import pytest
+
+OPENOCD_BOARD_CFG = {
+    "esp32c3": "board/esp32c3-builtin.cfg",
+    "esp32c5": "board/esp32c5-builtin.cfg",
+    "esp32c6": "board/esp32c6-builtin.cfg",
+    "esp32c61": "board/esp32c61-builtin.cfg",
+    "esp32h2": "board/esp32h2-builtin.cfg",
+    "esp32p4": "board/esp32p4-builtin.cfg",
+    "esp32h4": "board/esp32h4-builtin.cfg",
+}
+
+OPENOCD_APPIMAGE_OFFSET = {
+    "esp32c3": "0x1000",
+    "esp32c5": "0x1000",
+    "esp32c6": "0x1000",
+    "esp32c61": "0x1000",
+    "esp32h2": "0x1000",
+    "esp32p4": "0x2000",
+    "esp32h4": "0x2000",
+}
+
 
 class QEMU_RISCV(object):
     def __init__(self, directory=None, executable=None, target="esp32c3"):
@@ -39,8 +66,12 @@ class QEMU_RISCV(object):
             executable = os.path.basename(os.path.normpath(directory))
             drive_path = os.path.join(directory, "build", executable + ".bin")
             if not os.path.isfile(drive_path):
-                raise ValueError(f"Executable {drive_path} not found in build directory.")
-            print(f"Executable is not specified. Using the default executable: {executable}")
+                raise ValueError(
+                    f"Executable {drive_path} not found in build directory."
+                )
+            print(
+                f"Executable is not specified. Using the default executable: {executable}"
+            )
 
         self.current_dir = directory
         self.executable = executable
@@ -49,25 +80,57 @@ class QEMU_RISCV(object):
     def start(self, debug=False):
         """Starts QEMU and returns the process and output queue."""
         qemu_image = "{}_qemu_image.bin".format(self.executable)
-        drive = "file={}/build/{},if=mtd,format=raw".format(self.current_dir, qemu_image)
-        qemu_command = ["qemu-system-riscv32", "-nographic", "-icount", "3", "-machine", self.target, "-drive", drive]
+        drive = "file={}/build/{},if=mtd,format=raw".format(
+            self.current_dir, qemu_image
+        )
+        qemu_command = [
+            "qemu-system-riscv32",
+            "-nographic",
+            "-icount",
+            "3",
+            "-machine",
+            self.target,
+            "-drive",
+            drive,
+        ]
         if debug:
-            qemu_command = ["qemu-system-riscv32", "-s", "-S", "-nographic", "-icount", "3", "-machine", self.target, "-drive", drive]
+            qemu_command = [
+                "qemu-system-riscv32",
+                "-s",
+                "-S",
+                "-nographic",
+                "-icount",
+                "3",
+                "-machine",
+                self.target,
+                "-drive",
+                drive,
+            ]
         print("Starting QEMU with command: " + " ".join(qemu_command))
-        qemu_process = subprocess.Popen(qemu_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
+        qemu_process = subprocess.Popen(
+            qemu_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
         output_queue = queue.Queue()
 
         # Function to read process output in a separate thread
         def enqueue_output(out, queue):
-            for line in iter(out.readline, ''):
+            for line in iter(out.readline, ""):
                 self.log(line)
                 queue.put(line)
             out.close()
 
         # Start threads for reading stdout and stderr
-        threading.Thread(target=enqueue_output, args=(qemu_process.stdout, output_queue)).start()
-        threading.Thread(target=enqueue_output, args=(qemu_process.stderr, output_queue)).start()
-
+        threading.Thread(
+            target=enqueue_output, args=(qemu_process.stdout, output_queue)
+        ).start()
+        threading.Thread(
+            target=enqueue_output, args=(qemu_process.stderr, output_queue)
+        ).start()
         return qemu_process, output_queue
 
     def stop(self, qemu_process):
@@ -89,6 +152,7 @@ class QEMU_RISCV(object):
         """Logs a message."""
         print("QEMU: " + message)
 
+
 class GDB_RISCV(object):
     TEMP_FILE_NAME = "gdb_script_temp.gdb"
 
@@ -99,22 +163,30 @@ class GDB_RISCV(object):
             executable = os.path.basename(os.path.normpath(directory))
             drive_path = os.path.join(directory, "build", executable + ".bin")
             if not os.path.isfile(drive_path):
-                raise ValueError(f"Executable {drive_path} not found in build directory.")
-            print(f"Executable is not specified. Using the default executable: {executable}")
+                raise ValueError(
+                    f"Executable {drive_path} not found in build directory."
+                )
+            print(
+                f"Executable is not specified. Using the default executable: {executable}"
+            )
 
         self.current_dir = directory
         self.executable = executable
-        self.temp_file_path = self.current_dir + "/" + self.TEMP_FILE_NAME
+        self.temp_file_path = os.path.join(self.current_dir, self.TEMP_FILE_NAME)
         self._gdb_process = None
 
     def attach(self, script):
         # Creates a temporary file with script content
         with open(self.temp_file_path, "w") as file:
             file.write(script)
-
         # Starts GDB and runs the script
         elf_file = "{}.elf".format(self.executable)
-        gdb_command = ["riscv32-esp-elf-gdb", f"{self.current_dir}/build/{elf_file}","-q", f"--command={self.temp_file_path}"]
+        gdb_command = [
+            "riscv32-esp-elf-gdb",
+            f"{self.current_dir}/build/{elf_file}",
+            "-q",
+            f"--command={self.temp_file_path}",
+        ]
         print("Starting GDB with command: " + " ".join(gdb_command))
         self._gdb_process = subprocess.Popen(gdb_command)
         return self._gdb_process
@@ -135,10 +207,109 @@ class GDB_RISCV(object):
                 proc.wait()
         self._gdb_process = None
 
+
+class OpenOCD(object):
+    MAX_RETRIES = 3
+    RETRY_DELAY = 1
+    GDB_PORT = 3333
+
+    def __init__(self, target):
+        if target not in OPENOCD_BOARD_CFG:
+            raise ValueError(f"No OpenOCD board config mapped for target '{target}'")
+        if target not in OPENOCD_APPIMAGE_OFFSET:
+            raise ValueError(f"No OpenOCD appimage_offset mapped for target '{target}'")
+        self.target = target
+        self.board_cfg = OPENOCD_BOARD_CFG[target]
+        self.appimage_offset = OPENOCD_APPIMAGE_OFFSET[target]
+        self.proc = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        self.kill()
+
+    def run(self):
+        """
+        Start OpenOCD and return ``self`` for use as a context manager.
+        """
+        openocd_scripts = os.getenv("OPENOCD_SCRIPTS")
+        if not openocd_scripts:
+            raise RuntimeError(
+                "OPENOCD_SCRIPTS is not set. Source IDF export.sh "
+                "(and install openocd-esp32 if needed)."
+            )
+
+        args = [
+            "-s",
+            openocd_scripts,
+            "-c",
+            "set ESP_RTOS none",
+            "-f",
+            self.board_cfg,
+            "-c",
+            "init",
+            "-c",
+            "halt",
+            "-c",
+            f"esp appimage_offset {self.appimage_offset}",
+        ]
+        ocd_env = os.environ.copy()
+
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                print(
+                    f"Starting OpenOCD (attempt {attempt}/{self.MAX_RETRIES}): "
+                    f"openocd {' '.join(args)}"
+                )
+                self.proc = pexpect.spawn(
+                    command="openocd",
+                    args=args,
+                    timeout=10,
+                    encoding="utf-8",
+                    codec_errors="ignore",
+                    env=ocd_env,
+                )
+                if self.proc and self.proc.isalive():
+                    self.proc.expect_exact(
+                        f"Info : Listening on port {self.GDB_PORT} for gdb connections",
+                        timeout=10,
+                    )
+                    return self
+            except Exception as e:
+                logging.error("OpenOCD start failed (%s): %s", type(e).__name__, e)
+                self.kill()
+            time.sleep(self.RETRY_DELAY)
+
+        raise RuntimeError(f"Failed to run OpenOCD after {self.MAX_RETRIES} attempts")
+
+    def kill(self):
+        if self.proc is not None and self.proc.isalive():
+            print("Terminating OpenOCD process.")
+            self.proc.terminate(force=False)
+            try:
+                self.proc.wait(timeout=5)
+            except Exception:
+                self.proc.kill(signal.SIGKILL)
+        self.proc = None
+
+
+def _cli_target(request):
+    cli_target = request.config.getoption("target", None)
+    if not cli_target or cli_target == "auto":
+        raise ValueError(
+            "OpenOCD injection requires an explicit --target=<soc> "
+            "(e.g. --target=esp32c6), not 'auto'"
+        )
+    return cli_target
+
+
 @pytest.fixture
 def qemu_instance(request, target):
     executable = request.config.getoption("--executable")
-    qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable, target=target)
+    qemu = QEMU_RISCV(
+        os.path.dirname(request.fspath), executable=executable, target=target
+    )
     qemu_process, output_queue = qemu.start()
     yield qemu, qemu_process, output_queue
     qemu.stop(qemu_process)
@@ -147,7 +318,9 @@ def qemu_instance(request, target):
 @pytest.fixture
 def qemu_debug_instance(request, target):
     executable = request.config.getoption("--executable")
-    qemu = QEMU_RISCV(os.path.dirname(request.fspath), executable=executable, target=target)
+    qemu = QEMU_RISCV(
+        os.path.dirname(request.fspath), executable=executable, target=target
+    )
     qemu_process, output_queue = qemu.start(debug=True)
     yield qemu, qemu_process, output_queue
     qemu.stop(qemu_process)
@@ -162,23 +335,62 @@ def gdb_instance(request):
         gdb.stop()
 
 
+@pytest.fixture
+def openocd_dut(request):
+    target = _cli_target(request)
+    print(
+        f"OpenOCD using CLI --target={target} -> {OPENOCD_BOARD_CFG[target]}, "
+        f"appimage_offset {OPENOCD_APPIMAGE_OFFSET[target]}"
+    )
+    return OpenOCD(target=target)
+
+
 def pytest_addoption(parser):
     """Add custom command-line options for pytest."""
     parser.addoption(
         "--executable",
         action="store",
-        help="Name of the executable (without file extension). "
+        help="Name of the executable (without file extension). ",
     )
+    parser.addoption(
+        "--injection",
+        action="store_true",
+        default=False,
+        help="Include fault-injection tests (excluded by default).",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Exclude hardware fault-injection tests unless explicitly requested."""
+    if config.getoption("--injection"):
+        return
+
+    selected = []
+    deselected = []
+    for item in items:
+        if item.get_closest_marker("injection"):
+            deselected.append(item)
+        else:
+            selected.append(item)
+
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
 
 
 @pytest.fixture
 def config(request: pytest.FixtureRequest) -> str | None:
     """sdkconfig.ci.<config> name from @pytest.mark.parametrize('config', ...)."""
-    return getattr(request, 'param', None)
+    return getattr(request, "param", None)
 
 
 @pytest.fixture
-def build_dir(request: pytest.FixtureRequest, app_path: str, target: str | None, config: str | None) -> str:
+def build_dir(
+    request: pytest.FixtureRequest,
+    app_path: str,
+    target: str | None,
+    config: str | None,
+) -> str:
     """
     Resolve a local build directory the same way ESP-IDF examples do:
 
@@ -188,26 +400,32 @@ def build_dir(request: pytest.FixtureRequest, app_path: str, target: str | None,
     4. build
     """
     check_dirs: list[str] = []
-    build_dir_arg = request.config.getoption('build_dir', None)
-    if build_dir_arg and '{target}' not in str(build_dir_arg) and '{config}' not in str(build_dir_arg):
+    build_dir_arg = request.config.getoption("build_dir", None)
+    if (
+        build_dir_arg
+        and "{target}" not in str(build_dir_arg)
+        and "{config}" not in str(build_dir_arg)
+    ):
         check_dirs.append(build_dir_arg)
 
     if target is not None and config is not None:
-        check_dirs.append(f'build_{target}_{config}')
+        check_dirs.append(f"build_{target}_{config}")
     if target is not None:
-        check_dirs.append(f'build_{target}')
+        check_dirs.append(f"build_{target}")
     if config is not None:
-        check_dirs.append(f'build_{config}')
-    check_dirs.append('build')
+        check_dirs.append(f"build_{config}")
+    check_dirs.append("build")
 
     for check_dir in check_dirs:
         binary_path = os.path.join(app_path, check_dir)
         if os.path.isdir(binary_path):
-            logging.info('found valid binary path: %s', binary_path)
+            logging.info("found valid binary path: %s", binary_path)
             return check_dir
-        logging.warning('checking binary path: %s... missing... try another place', binary_path)
+        logging.warning(
+            "checking binary path: %s... missing... try another place", binary_path
+        )
 
     raise ValueError(
         f'no build dir valid. Please build the binary via "idf.py -B {check_dirs[0]} build" '
-        f'and run pytest again'
+        f"and run pytest again"
     )
