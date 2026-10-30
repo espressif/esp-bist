@@ -16,7 +16,9 @@ CPU Tests
 ---------
 
 .. include-build-file:: inc/bist_cpu_regs.inc
+.. include-build-file:: inc/bist_cpu_regs_reciprocal.inc
 .. include-build-file:: inc/bist_cpu_csr_regs.inc
+.. include-build-file:: inc/bist_cpu_csr_regs_reciprocal.inc
 .. include-build-file:: inc/bist_cpu_instructions.inc
 .. include-build-file:: inc/bist_cpu_stack.inc
 .. include-build-file:: inc/bist_pc.inc
@@ -56,6 +58,11 @@ Utilities & Metrics
 -------------------
 
 .. include-build-file:: inc/bist_metrics.inc
+
+Multi-Core Dispatch
+-------------------
+
+.. include-build-file:: inc/bist_multicore.inc
 
 Driver Interfaces
 -----------------

@@ -23,14 +23,25 @@ Detailed Test Traceability
 CPU Register Test (IEC 60730 ID: 1.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Verify integrity of CPU general-purpose registers (X1–X31) and single-precision FPU registers (f0–f31 on FPU targets).
+**Requirement**: Verify integrity of CPU general-purpose registers (X1–X31) and single-precision FPU registers (f0–f31 on FPU targets). For Class C, perform dual-core reciprocal comparison (H.2.18.15).
 
-**Design**: ``src/bist/core/cpu/bist_cpu_regs.c`` (``bist_cpu_regs_test()``; :ref:`cpu-register-test`)
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_cpu_regs.c`` (Static), ``src/bist/core/cpu/bist_cpu_regs_reciprocal.c`` (Reciprocal)
+- Function: ``bist_cpu_regs_test()``
+- Design Doc: :ref:`cpu-register-test`
 
 **Test Implementation**:
 
-- QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (pattern pass test and GDB fault injection per register)
-- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per register)
+- Static:
+
+  - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (pattern pass test and GDB fault injection per register)
+  - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per register)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py`` (dual-core reciprocal walk and cross-validation pass; GDB fault injection)
+  - Hardware: ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py`` (dual-core reciprocal register test validated on real ESP32-P4 hardware; GDB fault injection per register across Core 0 and Core 1)
 
 **Test Results**:
 
@@ -42,14 +53,25 @@ CPU Register Test (IEC 60730 ID: 1.1)
 CPU CSR Test (IEC 60730 ID: 1.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Verify integrity of CPU Control and Status Registers, including FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU targets.
+**Requirement**: Verify integrity of CPU Control and Status Registers, including FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU targets. For Class C, perform dual-core reciprocal comparison (H.2.18.15).
 
-**Design**: ``src/bist/core/cpu/bist_cpu_csr_regs.c`` (``bist_cpu_csr_regs_test()``; :doc:`module_design_and_coding`)
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_cpu_csr_regs.c`` (Static), ``src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c`` (Reciprocal)
+- Function: ``bist_cpu_csr_regs_test()``
+- Design Doc: :doc:`module_design_and_coding` (CPU CSR Register Test section)
 
 **Test Implementation**:
 
-- QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (CSR pattern pass and GDB fault injection per CSR)
-- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per CSR)
+- Static:
+
+  - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (CSR pattern pass and GDB fault injection per CSR)
+  - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per CSR)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py`` (dual-core reciprocal CSR walk and cross-validation pass; GDB fault injection)
+  - Hardware: ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py`` (dual-core reciprocal CSR test validated on real ESP32-P4 hardware; GDB fault injection per CSR across Core 0 and Core 1)
 
 **Test Results**:
 

@@ -27,7 +27,7 @@ Key Build Properties
 Modules Architecture
 --------------------
 
-- **CPU tests** (``core/cpu/``): general-purpose and FPU register integrity, trap/PMP/PMA/FPU CSR integrity, instruction decoding and execution equivalence-class self-tests (``bist_cpu_instructions`` across 10 ISA groups: integer ALU, shifts, upper immediate LUI/AUIPC, control flow, load/store, RV32M multiply/divide, Zicsr/Zifencei CSR and fence, RV32A atomics, RV32F floating point, RV32C compressed instructions), PC integrity (functions placed in IRAM, Flash, RTC, and TCM on ESP32-P4), stack overflow sentinel protection
+- **CPU tests** (``core/cpu/``): general-purpose and FPU register integrity (static single-core walk and dual-core reciprocal comparison), trap/PMP/PMA/FPU CSR integrity (static and reciprocal), instruction decoding and execution equivalence-class self-tests (``bist_cpu_instructions`` across 10 ISA groups: integer ALU, shifts, upper immediate LUI/AUIPC, control flow, load/store, RV32M multiply/divide, Zicsr/Zifencei CSR and fence, RV32A atomics, RV32F floating point, RV32C compressed instructions), PC integrity (functions placed in IRAM, Flash, RTC, and TCM on ESP32-P4), stack overflow sentinel protection
 - **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC32 validation
 - **Interrupt tests** (``core/interrupt/``): software IRQ source mapping and dual timer-group hardware interrupt delivery
 - **Clock tests** (``core/clock/``): XT WDT 32 kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); main-crystal drift measurement at ``CONFIG_XTAL_FREQ``
@@ -87,6 +87,7 @@ Data Storage Model
 - **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
 - **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
 - **TCM (Tightly Coupled Memory)**: On ESP32-P4, ``.tcm.text`` at ``0x3010xxxx`` holds ``pc_test_4``.
+- **Shared SRAM**: On dual-core targets (e.g. ESP32-P4 reciprocal testing), HP SRAM is shared between both cores; statically allocated structures in ``.bss`` facilitate deterministic cross-core evidence exchange.
 - **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).
 
 Time-Based Dependencies

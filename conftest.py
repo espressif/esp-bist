@@ -253,6 +253,8 @@ class OpenOCD(object):
             "halt",
             "-c",
             f"esp appimage_offset {self.appimage_offset}",
+            "-c",
+            "echo bist_openocd_ready",
         ]
         ocd_env = os.environ.copy()
 
@@ -271,10 +273,7 @@ class OpenOCD(object):
                     env=ocd_env,
                 )
                 if self.proc and self.proc.isalive():
-                    self.proc.expect_exact(
-                        f"Info : Listening on port {self.GDB_PORT} for gdb connections",
-                        timeout=10,
-                    )
+                    self.proc.expect_exact("bist_openocd_ready", timeout=30)
                     return self
             except Exception as e:
                 logging.error("OpenOCD start failed (%s): %s", type(e).__name__, e)
