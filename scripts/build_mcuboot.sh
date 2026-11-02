@@ -53,7 +53,7 @@ for target in "${TARGETS[@]}"; do
     if cmake \
         -DCMAKE_TOOLCHAIN_FILE="$MCUBOOT_ESPRESSIF/tools/toolchain-${target}.cmake" \
         -DMCUBOOT_TARGET="${target}" \
-        -DESP_HAL_PATH="$IDF_PATH" \
+        -DESP_HAL_PATH="${MCUBOOT_IDF_PATH:-$IDF_PATH}" \
         -B "$BUILD_DIR" \
         -GNinja \
         "$MCUBOOT_ESPRESSIF" \

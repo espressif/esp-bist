@@ -12,7 +12,7 @@
 
 static const char *TAG = "BIST_ADC";
 
-#define BIST_ADC_DEPTH           SOC_ADC_RTC_MAX_BITWIDTH
+#define BIST_ADC_DEPTH           ADC_LL_RTC_MAX_BITWIDTH
 #define BIST_ADC_MAX_RAW         ((1 << BIST_ADC_DEPTH) - 1)
 #define BIST_ADC_TOLERANCE       BIST_ADC_MAX_RAW * CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION / 100
 
@@ -166,7 +166,7 @@ bist_esp_err_t bist_adc_reference_test(adc_unit_t unit, adc_channel_t channel)
         return BIST_ESP_ADC_TEST_ERR;
     }
 
-    if (channel >= SOC_ADC_CHANNEL_NUM(unit)) {
+    if (channel >= ADC_LL_CHANNEL_NUM(unit)) {
         ESP_LOGE(TAG, "ADC channel error: %d", channel);
         return BIST_ESP_ADC_TEST_ERR;
     }

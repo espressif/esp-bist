@@ -212,24 +212,16 @@ esp_err_t esp_timer_delete(esp_timer_handle_t timer)
         return ESP_ERR_INVALID_ARG;
     }
 
-    int64_t alarm = systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));
-    esp_err_t err;
-
-    /* Check if the timer is armed once the list is locked to avoid a data race */
+    /* BIST has no esp_timer task. Queueing the free onto the task list
+     * arms a deadline that nothing services, and that deadline is the
+     * hardware compare (min of both slots), so later ISR timers never run.
+     * Callers stop the timer before delete and are not in its callback. */
     if (timer_armed(timer)) {
-        err = ESP_ERR_INVALID_STATE;
-    } else {
-        // A case for the timer with ESP_TIMER_ISR:
-        // This ISR timer was removed from the ISR list in esp_timer_stop() or in timer_process_alarm() -> LIST_REMOVE(it, list_entry)
-        // and here this timer will be added to another the TASK list, see below.
-        // We do this because we want to free memory of the timer in a task context instead of an isr context.
-        timer->flags &= ~FL_ISR_DISPATCH_METHOD;
-        timer->event_id = EVENT_ID_DELETE_TIMER;
-        timer->alarm = alarm;
-        timer->period = 0;
-        err = timer_insert(timer, false);
+        return ESP_ERR_INVALID_STATE;
     }
-    return err;
+
+    free(timer);
+    return ESP_OK;
 }
 
 static void IRAM_ATTR esp_timer_impl_set_alarm_id(uint64_t timestamp, unsigned alarm_id)
@@ -297,7 +289,10 @@ static IRAM_ATTR bool timer_process_alarm(esp_timer_dispatch_t dispatch_method)
     while (1) {
         it = LIST_FIRST(&s_timers[dispatch_method]);
         int64_t now = systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));
-        if (it == NULL || it->alarm > now) {
+        /* ticks_to_us() truncates, and the comparator IRQ can arrive up to
+         * 1us before that value. Dropping the deadline here leaves the
+         * windowed watchdog closed for the rest of the test. */
+        if (it == NULL || it->alarm > (uint64_t)now + 1) {
             break;
         }
         processed = true;
@@ -326,13 +321,9 @@ static IRAM_ATTR bool timer_process_alarm(esp_timer_dispatch_t dispatch_method)
         }
     } // while(1)
     if (it) {
-        if (dispatch_method == ESP_TIMER_TASK || (dispatch_method != ESP_TIMER_TASK && processed == true)) {
-            esp_timer_impl_set_alarm_id(it->alarm, dispatch_method);
-        }
-    } else {
-        if (processed) {
-            esp_timer_impl_set_alarm_id(UINT64_MAX, dispatch_method);
-        }
+        esp_timer_impl_set_alarm_id(it->alarm, dispatch_method);
+    } else if (processed) {
+        esp_timer_impl_set_alarm_id(UINT64_MAX, dispatch_method);
     }
     return processed;
 }

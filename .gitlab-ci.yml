@@ -107,7 +107,7 @@ stages:
   - esp32h4
 
 default:
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script:
     - . $IDF_PATH/export.sh
     - mkdir -p $MCUBOOT_PATH/boot/espressif/build
@@ -121,8 +121,9 @@ default:
 
 mcp_data_drift:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
-  before_script: []
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
   tags: [build]
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
@@ -162,8 +163,9 @@ mcp_data_drift:
 
 pre_commit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
-  before_script: []
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
   variables:
     SKIP: "mcp-server-refresh"
   tags: [build]
@@ -177,7 +179,6 @@ pre_commit:
         GIT_FETCH_EXTRA_FLAGS: --prune --quiet --no-tags $CI_MERGE_REQUEST_DIFF_BASE_SHA
     - when: always
   script:
-    - pip install --quiet pre-commit
     - |
       if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
         echo "Running pre-commit on files changed in the merge request"
@@ -193,7 +194,7 @@ pre_commit:
 # Host-native Host Diagnostics protocol / challenge unit tests (no DUT / IDF).
 test_hd_protocol_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -209,7 +210,7 @@ test_hd_protocol_unit:
 # private counter starts at 1, steps by 1, and consumes IDs on send failures.
 test_hd_agent_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -226,7 +227,7 @@ test_hd_agent_unit:
 # frame, silence, late answer) against the real companion code.
 test_hd_companion_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -240,7 +241,7 @@ test_hd_companion_unit:
 
 test_clock_math_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -263,9 +264,9 @@ build_docker_image:
     DOCKERFILE: .devcontainer/Dockerfile
   parallel:
     matrix:
-      - IMAGE_NAME: espressif/esp-bist/build-env-2
+      - IMAGE_NAME: espressif/esp-bist/build-env-3
         DOCKER_PLATFORM: linux/amd64
-      - IMAGE_NAME: espressif/esp-bist/build-env-2_arm
+      - IMAGE_NAME: espressif/esp-bist/build-env-3_arm
         DOCKER_PLATFORM: linux/arm64
   script:
     - mkdir -p config
@@ -299,7 +300,7 @@ build_mcuboot:
       for SOC_TARGET in $MCUBOOT_TARGETS; do
         echo "Building MCUboot for $SOC_TARGET"
         rm -rf build
-        cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+        cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=${MCUBOOT_IDF_PATH:-$IDF_PATH} -B build -GNinja
         ninja -C build
         cp build/mcuboot_${SOC_TARGET}.bin $CI_PROJECT_DIR/mcuboot_build/
       done
@@ -497,7 +498,6 @@ build_zephyr_twister:
   before_script:
     - . $IDF_PATH/export.sh
   script:
-    - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch
     - cd $CI_PROJECT_DIR/samples/idf
     - idf.py -B build_${IDF_TARGET} set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET} build
@@ -530,7 +530,6 @@ build_idf_samples:
   stage: Test Device
   before_script:
     - . $IDF_PATH/export.sh
-    - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch || true
   script:
     - cd $CI_PROJECT_DIR/samples/idf
     - pytest pytest_device* --target=$IDF_TARGET --junitxml=build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml --reruns 2
@@ -679,7 +678,7 @@ test_qemu_remote:
 
 .test_device_template:
   stage: Test Device
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2_arm
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3_arm
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
     RUN_INJECTION_TEST: $[[ inputs.run_injection_test ]]
@@ -734,7 +733,7 @@ test_device:
 
 .test_samples_template:
   stage: Test Device
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2_arm
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3_arm
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
   script:
@@ -829,7 +828,7 @@ test_metrics:
 # merged snapshot after every report job has finished.
 cache_docs_reports:
   stage: Test Device
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   allow_failure: true
