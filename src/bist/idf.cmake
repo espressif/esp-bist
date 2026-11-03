@@ -143,7 +143,11 @@ set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
 # The function injects CRC32 checksums into the ELF:
 #   .text    -> .crc_section_text  (code integrity)
 #   .rodata  -> .crc_section_data  (read-only data integrity)
-set(BIST_CRC_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../../scripts/calculate_crc32.py" CACHE INTERNAL "")
+if(DEFINED BIST_ROOT_DIR)
+    set(BIST_CRC_SCRIPT "${BIST_ROOT_DIR}/scripts/calculate_crc32.py" CACHE INTERNAL "")
+else()
+    set(BIST_CRC_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../../scripts/calculate_crc32.py" CACHE INTERNAL "")
+endif()
 
 function(bist_add_crc_postbuild target)
     if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
