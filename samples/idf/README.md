@@ -16,9 +16,27 @@ This is deliberately the happy path only, so it works as a starting point for yo
 
 - ESP-IDF v6.2 (`release/v6.2`)
 
-The ULP sub-project uses ESP-IDF v6.2's native `LINKER_LAYOUT` parameter in `ulp_add_project()` (`src/soc/<target>/ld/idf.ld`) to place the BIST safe-stack and mailbox state below `_bist_ram_test_start`. No patch to ESP-IDF is required.
+The ULP sub-project uses ESP-IDF v6.2's native `LINKER_LAYOUT` parameter in `ulp_add_project()` (`${ESP_BIST_LP_LINKER_LAYOUT}`, resolved by `project_include.cmake` to `src/soc/<target>/ld/idf.ld`) to place the BIST safe-stack and mailbox state below `_bist_ram_test_start`. No patch to ESP-IDF is required.
 
-## Build
+## Using from the ESP Component Registry
+
+To create a standalone project from this example via the ESP Component Registry:
+
+```sh
+. $IDF_PATH/export.sh
+idf.py create-project-from-example "espressif/esp-bist==2.0.0-rc.1:idf"
+cd idf
+idf.py set-target <target_soc>
+idf.py build
+```
+
+Or to add `espressif/esp-bist` to an existing ESP-IDF project:
+
+```sh
+idf.py add-dependency "espressif/esp-bist==2.0.0-rc.1"
+```
+
+## Build (In-Tree)
 
 ```sh
 . $IDF_PATH/export.sh

@@ -14,8 +14,8 @@ ulp_apply_default_sources(${ULP_APP_NAME})
 
 ulp_add_build_binary_targets(${ULP_APP_NAME})
 
-# BIST library — repo root is 4 levels up from samples/idf/main/ulp/
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../../../../src/bist ${CMAKE_BINARY_DIR}/bist)
+# BIST library — BIST_ROOT_DIR is injected by esp-bist's project_include.cmake
+add_subdirectory(${BIST_ROOT_DIR}/src/bist ${CMAKE_BINARY_DIR}/bist)
 
 target_link_libraries(${ULP_APP_NAME} PUBLIC bist_esp)
 

@@ -6,7 +6,7 @@
 
 include("${CMAKE_CURRENT_LIST_DIR}/src/bist/cmake/apply_idf_hp.cmake")
 
-bist_idf_hp_collect(_bist_hd_srcs _bist_hd_incs)
+bist_idf_hp_collect(_bist_hd_srcs _bist_hd_incs _bist_hd_priv_incs)
 
 # Always listed so an empty LDFRAGMENTS argument cannot swallow PRIV_REQUIRES.
 # The fragment places .dram0.safe_ram. The live march span is a second script,
@@ -15,8 +15,10 @@ bist_idf_hp_collect(_bist_hd_srcs _bist_hd_incs)
 idf_component_register(
     SRCS ${_bist_hd_srcs}
     INCLUDE_DIRS ${_bist_hd_incs}
+    PRIV_INCLUDE_DIRS ${_bist_hd_priv_incs}
     LDFRAGMENTS "src/bist/ld/hd_ram_idf.lf"
     PRIV_REQUIRES ulp soc
+    REQUIRED_IDF_TARGETS esp32c5 esp32c6 esp32p4
 )
 
 if(CONFIG_ESP_BIST_HD_AUDIT_RAM)
