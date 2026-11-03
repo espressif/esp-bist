@@ -8,4 +8,4 @@ idf_component_register(SRCS ${app_sources}
                        WHOLE_ARCHIVE)
 
 ulp_add_project("ulp_idf_bist_sample" "${CMAKE_CURRENT_LIST_DIR}/ulp/"
-                LINKER_LAYOUT "${CMAKE_CURRENT_LIST_DIR}/../../../src/soc/${IDF_TARGET}/ld/idf.ld")
+                LINKER_LAYOUT "${ESP_BIST_LP_LINKER_LAYOUT}")
