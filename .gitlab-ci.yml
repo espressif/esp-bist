@@ -253,6 +253,24 @@ test_clock_math_unit:
     - cmake --build build/clock_math_test
     - ctest --test-dir build/clock_math_test --output-on-failure
 
+pack_idf_component:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
+  tags: [build]
+  rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
+    - when: always
+  script:
+    - compote component pack --name esp-bist
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - dist/
+
 build_docker_image:
   before_script: []
   image: espressif/dind:1
@@ -1072,3 +1090,16 @@ deploy_prod_docs:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_TAG
       when: always
+
+upload_idf_component:
+  stage: Deploy Docs
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
+  tags: [build]
+  needs:
+    - pack_idf_component
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - compote component upload --name esp-bist --namespace espressif
