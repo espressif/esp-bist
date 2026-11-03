@@ -4,3 +4,7 @@
 dependencies:
   # Required IDF version
   idf: "=6.2"
+  espressif/esp-bist:
+    version: "*"
+    pre_release: true
+    override_path: "../../../.."
