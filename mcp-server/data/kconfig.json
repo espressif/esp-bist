@@ -272,22 +272,82 @@
   {
     "name": "ESP_BIST_WDT_TIMEOUT_US",
     "type": "int",
-    "default": "50000",
-    "depends_on": "ESP_BIST",
-    "help": "Maximum time between watchdog feeds in microseconds.\n\nOn the LP core (ESP-IDF ULP integration), this configures the LP WDT\ntimeout via lp_wdt_init(). On HP core / standalone builds, this configures\nthe main watchdog timer (MWDT).",
+    "default": "ESP_BIST_LOG_LEVEL_INFO",
+    "depends_on": "ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Compile-time ceiling for BIST ESP_LOGx calls. Messages above this\nlevel are removed from the binary on the HP core, the LP core under\nZephyr, and the LP core under ESP-IDF.\n\n0 = no output, 1 = error, 2 = warning, 3 = info, 4 = debug, 5 = verbose.",
     "menu": "",
     "range": "",
     "prompt": "WDT Timeout (us)"
   },
   {
-    "name": "ESP_BIST_LP_DEBUG_LOG",
+    "name": "ESP_BIST_LOG_LEVEL_NONE",
     "type": "bool",
     "default": "",
-    "depends_on": "ESP_BIST && (IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE)",
-    "help": "Compile in ESP_LOGD output on the LP core. Disabled by default to keep\nLP firmware small (~16 KiB SRAM).",
+    "depends_on": "",
+    "help": "",
     "menu": "",
     "range": "",
-    "prompt": "Enable LP-core debug logging (ESP_LOGD)"
+    "prompt": "No output"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_ERROR",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Error"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_WARN",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Warning"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_INFO",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Info"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_DEBUG",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Debug"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_VERBOSE",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Verbose"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL",
+    "type": "",
+    "default": "5 if ESP_BIST_LOG_LEVEL_VERBOSE",
+    "depends_on": "ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": ""
   },
   {
     "name": "BIST_FLASH_TEST_CHUNK_SIZE",

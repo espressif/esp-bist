@@ -345,8 +345,8 @@
     "function_name": "test_callback",
     "body": "static void test_callback(void *arg)\n{\n    test_failed = true;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 34,
-    "line_end": 37,
+    "line_start": 36,
+    "line_end": 39,
     "module": "clock",
     "content_type": "source"
   },
@@ -354,8 +354,8 @@
     "function_name": "bist_ext_crystal_fail_test",
     "body": "bist_esp_err_t bist_ext_crystal_fail_test(void)\n{\n#if SOC_XT_WDT_SUPPORTED\n    esp_err_t err;\n\n    esp_xt_wdt_config_t cfg = {\n        .timeout = 200,\n        .auto_backup_clk_enable = false,\n    };\n\n    esp_xt_wdt_register_callback(test_callback, NULL);\n\n    err = esp_xt_wdt_init(&cfg);\n    if (err != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to initialize external watchdog timer\");\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    ets_delay_us(2000);\n\n    BIST_ADD_LABEL(\"bist_ext_crystal_check\");\n    if (test_failed) {\n        test_failed = false;\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n#else\n    /* SoCs without XT WDT have no hardware to detect 32k crystal\n     * failure; skip this test and report OK. */\n    ESP_LOGD(TAG, \"SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.\");\n#endif\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 40,
-    "line_end": 73,
+    "line_start": 42,
+    "line_end": 75,
     "module": "clock",
     "content_type": "source"
   },
@@ -363,8 +363,8 @@
     "function_name": "bist_main_crystal_test",
     "body": "bist_esp_err_t bist_main_crystal_test(void)\n{\n    uint32_t xtal_freq_mhz = rtc_clk_xtal_freq_get();\n    uint32_t expected_xtal_freq = xtal_freq_mhz * MHZ;\n\n    /*\n     * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).\n     * If the main XTAL drifts, the returned value shifts proportionally.\n     */\n    uint32_t cal_val = rtc_clk_cal(CLK_CAL_32K_XTAL, 500);\n    if (cal_val == 0) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    /*\n     * Derive actual XTAL frequency from the calibration result:\n     */\n    uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);\n    volatile float deviation = xtal_deviation_percent(xtal_freq, expected_xtal_freq);\n\n    /*\n     * Check if the calculated XTAL frequency is within\n     * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT\n     */\n    BIST_ADD_LABEL(\"bist_main_crystal_check\");\n    if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 75,
-    "line_end": 105,
+    "line_start": 77,
+    "line_end": 107,
     "module": "clock",
     "content_type": "source"
   },
@@ -703,10 +703,10 @@
   },
   {
     "function_name": "gpio_config",
-    "body": "esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)\n{\n    uint64_t gpio_pin_mask = (pGPIOConfig->pin_bit_mask);\n    uint32_t io_num = 0;\n    uint8_t input_en = 0;\n    uint8_t output_en = 0;\n    uint8_t od_en = 0;\n    uint8_t pu_en = 0;\n    uint8_t pd_en = 0;\n\n    if (pGPIOConfig->pin_bit_mask == 0 || pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_GPIO_MASK) {\n        ESP_LOGE(GPIO_TAG, \"GPIO_PIN mask error \");\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    if (pGPIOConfig->mode & GPIO_MODE_DEF_OUTPUT && pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_OUTPUT_GPIO_MASK) {\n        ESP_LOGE(GPIO_TAG, \"GPIO can only be used as input mode\");\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    do {\n        if (((gpio_pin_mask >> io_num) & BIT(0))) {\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_INPUT) {\n                input_en = 1;\n                gpio_input_enable(io_num);\n            } else {\n                gpio_input_disable(io_num);\n            }\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OD) {\n                od_en = 1;\n                gpio_od_enable(io_num);\n            } else {\n                gpio_od_disable(io_num);\n            }\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OUTPUT) {\n                output_en = 1;\n                gpio_output_enable(io_num);\n            } else {\n                gpio_output_disable(io_num);\n            }\n\n            if (pGPIOConfig->pull_up_en) {\n                pu_en = 1;\n                gpio_pullup_en(io_num);\n            } else {\n                gpio_pullup_dis(io_num);\n            }\n\n            if (pGPIOConfig->pull_down_en) {\n                pd_en = 1;\n                gpio_pulldown_en(io_num);\n            } else {\n                gpio_pulldown_dis(io_num);\n            }\n\n            ESP_LOGD(GPIO_TAG,\n                     \"GPIO[%\" PRIu32 \"]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d\",\n                     io_num, input_en, output_en, od_en, pu_en, pd_en);\n\n            gpio_hal_func_sel(gpio_context.gpio_hal, io_num, PIN_FUNC_GPIO);\n        }\n\n        io_num++;\n    } while (io_num < GPIO_PIN_COUNT);\n\n    return ESP_OK;\n}",
+    "body": "esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)\n{\n    uint64_t gpio_pin_mask = (pGPIOConfig->pin_bit_mask);\n    uint32_t io_num = 0;\n    uint8_t input_en = 0;\n    uint8_t output_en = 0;\n    uint8_t od_en = 0;\n    uint8_t pu_en = 0;\n    uint8_t pd_en = 0;\n\n#if CONFIG_ESP_BIST_LOG_LEVEL < 4\n    (void)(pd_en);\n    (void)(pu_en);\n    (void)(od_en);\n    (void)(output_en);\n    (void)(input_en);\n    (void)(io_num);\n#endif\n\n    if (pGPIOConfig->pin_bit_mask == 0 || pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_GPIO_MASK) {\n        ESP_LOGE(GPIO_TAG, \"GPIO_PIN mask error \");\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    if (pGPIOConfig->mode & GPIO_MODE_DEF_OUTPUT && pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_OUTPUT_GPIO_MASK) {\n        ESP_LOGE(GPIO_TAG, \"GPIO can only be used as input mode\");\n        return ESP_ERR_INVALID_ARG;\n    }\n\n    do {\n        if (((gpio_pin_mask >> io_num) & BIT(0))) {\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_INPUT) {\n                input_en = 1;\n                gpio_input_enable(io_num);\n            } else {\n                gpio_input_disable(io_num);\n            }\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OD) {\n                od_en = 1;\n                gpio_od_enable(io_num);\n            } else {\n                gpio_od_disable(io_num);\n            }\n\n            if ((pGPIOConfig->mode) & GPIO_MODE_DEF_OUTPUT) {\n                output_en = 1;\n                gpio_output_enable(io_num);\n            } else {\n                gpio_output_disable(io_num);\n            }\n\n            if (pGPIOConfig->pull_up_en) {\n                pu_en = 1;\n                gpio_pullup_en(io_num);\n            } else {\n                gpio_pullup_dis(io_num);\n            }\n\n            if (pGPIOConfig->pull_down_en) {\n                pd_en = 1;\n                gpio_pulldown_en(io_num);\n            } else {\n                gpio_pulldown_dis(io_num);\n            }\n\n            ESP_LOGD(GPIO_TAG,\n                     \"GPIO[%\" PRIu32 \"]| InputEn: %d| OutputEn: %d| OpenDrain: %d| Pullup: %d| Pulldown: %d\",\n                     io_num, input_en, output_en, od_en, pu_en, pd_en);\n\n            gpio_hal_func_sel(gpio_context.gpio_hal, io_num, PIN_FUNC_GPIO);\n        }\n\n        io_num++;\n    } while (io_num < GPIO_PIN_COUNT);\n\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/gpio.c",
     "line_start": 216,
-    "line_end": 285,
+    "line_end": 294,
     "module": "drivers",
     "content_type": "source"
   },
@@ -714,8 +714,8 @@
     "function_name": "gpio_config_as_analog",
     "body": "esp_err_t gpio_config_as_analog(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_input_disable(gpio_num);\n    gpio_output_disable(gpio_num);\n    gpio_pullup_dis(gpio_num);\n    gpio_pulldown_dis(gpio_num);\n    gpio_hal_func_sel(gpio_context.gpio_hal, gpio_num, PIN_FUNC_GPIO);\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/gpio.c",
-    "line_start": 287,
-    "line_end": 296,
+    "line_start": 296,
+    "line_end": 305,
     "module": "drivers",
     "content_type": "source"
   },
@@ -723,8 +723,8 @@
     "function_name": "gpio_reset_pin",
     "body": "esp_err_t gpio_reset_pin(gpio_num_t gpio_num)\n{\n    assert(GPIO_IS_VALID_GPIO(gpio_num));\n    gpio_config_t cfg = {\n        .pin_bit_mask = BIT64(gpio_num),\n        .mode = GPIO_MODE_DISABLE,\n        // for powersave reasons, the GPIO should not be floating, select pullup\n        .pull_up_en = true,\n        .pull_down_en = false,\n    };\n    gpio_config(&cfg);\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/gpio.c",
-    "line_start": 298,
-    "line_end": 310,
+    "line_start": 307,
+    "line_end": 319,
     "module": "drivers",
     "content_type": "source"
   },
