@@ -223,6 +223,15 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig)
     uint8_t pu_en = 0;
     uint8_t pd_en = 0;
 
+#if CONFIG_ESP_BIST_LOG_LEVEL < 4
+    (void)(pd_en);
+    (void)(pu_en);
+    (void)(od_en);
+    (void)(output_en);
+    (void)(input_en);
+    (void)(io_num);
+#endif
+
     if (pGPIOConfig->pin_bit_mask == 0 || pGPIOConfig->pin_bit_mask & ~SOC_GPIO_VALID_GPIO_MASK) {
         ESP_LOGE(GPIO_TAG, "GPIO_PIN mask error ");
         return ESP_ERR_INVALID_ARG;

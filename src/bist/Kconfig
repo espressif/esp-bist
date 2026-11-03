@@ -250,12 +250,40 @@ config ESP_BIST_WDT_TIMEOUT_US
       timeout via lp_wdt_init(). On HP core / standalone builds, this configures
       the main watchdog timer (MWDT).
 
-config ESP_BIST_LP_DEBUG_LOG
-    bool "Enable LP-core debug logging (ESP_LOGD)"
-    depends on ESP_BIST && (IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE)
+choice ESP_BIST_LOG_LEVEL
+    prompt "Log level"
+    default ESP_BIST_LOG_LEVEL_INFO
+    depends on ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS
     help
-      Compile in ESP_LOGD output on the LP core. Disabled by default to keep
-      LP firmware small (~16 KiB SRAM).
+      Compile-time ceiling for BIST ESP_LOGx calls. Messages above this
+      level are removed from the binary on the HP core, the LP core under
+      Zephyr, and the LP core under ESP-IDF.
+
+      0 = no output, 1 = error, 2 = warning, 3 = info, 4 = debug, 5 = verbose.
+
+    config ESP_BIST_LOG_LEVEL_NONE
+        bool "No output"
+    config ESP_BIST_LOG_LEVEL_ERROR
+        bool "Error"
+    config ESP_BIST_LOG_LEVEL_WARN
+        bool "Warning"
+    config ESP_BIST_LOG_LEVEL_INFO
+        bool "Info"
+    config ESP_BIST_LOG_LEVEL_DEBUG
+        bool "Debug"
+    config ESP_BIST_LOG_LEVEL_VERBOSE
+        bool "Verbose"
+endchoice
+
+config ESP_BIST_LOG_LEVEL
+    int
+    depends on ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS
+    default 0 if ESP_BIST_LOG_LEVEL_NONE
+    default 1 if ESP_BIST_LOG_LEVEL_ERROR
+    default 2 if ESP_BIST_LOG_LEVEL_WARN
+    default 3 if ESP_BIST_LOG_LEVEL_INFO
+    default 4 if ESP_BIST_LOG_LEVEL_DEBUG
+    default 5 if ESP_BIST_LOG_LEVEL_VERBOSE
 
 config BIST_FLASH_TEST_CHUNK_SIZE
     hex "Flash Test Chunk Size"

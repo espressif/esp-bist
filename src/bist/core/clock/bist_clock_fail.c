@@ -28,7 +28,9 @@
 #include "esp_xt_wdt.h"
 static volatile bool test_failed = false;
 #endif
+#if SOC_XT_WDT_SUPPORTED || CONFIG_ESP_BIST_LOG_LEVEL >= 4
 static const char *TAG = "BIST_CLOCK";
+#endif
 
 #if SOC_XT_WDT_SUPPORTED
 static void test_callback(void *arg)
