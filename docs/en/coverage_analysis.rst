@@ -122,7 +122,7 @@ The following table provides code coverage information for each BIST module:
      - 3
      - 3 (100%)
      - 3 (invalid ADC, pull-down, pull-up; +1 VREF C3)
-     - Hardware-only (skipped on H4)
+     - Hardware-only
      - :doc:`software_validation` (ADC Test)
 
 Coverage Metrics
@@ -239,7 +239,7 @@ Requirements Coverage Matrix
    * - 7.2
      - Analog I/O Plausibility
      - ``bist_adc_low_level_test()``, ``bist_adc_high_level_test()``, ``bist_adc_reference_test()``
-     - Hardware-only (invalid ADC parameter rejection, pull-down, pull-up, VREF on ESP32-C3; skipped on ESP32-H4)
+     - Hardware-only (invalid ADC parameter rejection, pull-down, pull-up, VREF on ESP32-C3)
      - ``tests/analog_io_test/build/tests/*_report.xml``
 
 Coverage Gaps and Justification
@@ -252,7 +252,7 @@ Known Coverage Limitations
 
 2. **GPIO Tests (Hardware-Only)**: GPIO pad drivers and input buffers require physical silicon routing; validated on device via ``tests/digital_io_test/``.
 
-3. **ADC Tests (Hardware-Only & SoC Omission)**: ADC conversion and internal biasing (pull-down, pull-up, VREF) require physical analog silicon; validated on device via ``tests/analog_io_test/``. On ESP32-H4, the ADC peripheral is not present in hardware and the ADC test suite is skipped.
+3. **ADC Tests (Hardware-Only)**: ADC conversion and internal biasing (pull-down, pull-up, VREF) require physical analog silicon; validated on device via ``tests/analog_io_test/``.
 
 4. **Hardware Interrupt Path (TIMG)**: QEMU does not support Timer Group 0/1 hardware alarms used by ``bist_hardware_interrupt_test()``. The software interrupt source map path is validated in QEMU (including fault injection); the dual-TIMG hardware path is validated on physical devices.
 

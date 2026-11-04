@@ -125,7 +125,7 @@ The BIST library is supported on the following SoCs:
      - Yes
      - 35
      - - Has hardware FPU: tests 32 single-precision FPU registers (f0–f31) and 3 FPU CSRs
-       - Lacks ADC peripheral in hardware
+       - No ADC reference test
        - Lacks XT WDT hardware
    * - ESP32-P4
      - Dual-core RISC-V + LP RISC-V

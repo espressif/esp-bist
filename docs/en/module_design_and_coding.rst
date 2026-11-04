@@ -1926,7 +1926,7 @@ ADC Low Level
         PullDown -> Delay -> Read;
         Read -> Error [label = "Fail"];
         Read -> Check;
-        Check -> Error [label = "raw > tolerance"];
+        Check -> Error [label = "out of range"];
         Check -> Cleanup [label = "OK"];
         Cleanup -> Success;
 
@@ -1936,7 +1936,7 @@ ADC Low Level
         PullDown [label = "gpio_set_pull_mode PULLDOWN_ONLY"];
         Delay [label = "ets_delay_us 10000"];
         Read [label = "adc_oneshot_read"];
-        Check [label = "raw <= tolerance?", shape = diamond];
+        Check [label = "raw in low range?", shape = diamond];
         Cleanup [label = "gpio_reset_pin\nadc_oneshot_del_unit"];
         Error [label = "Return BIST_ESP_ADC_TEST_ERR"];
         Success [label = "Return BIST_ESP_OK"];
@@ -1949,7 +1949,7 @@ ADC Low Level
 - Maps ADC channel to GPIO and enables internal pull-down with ``gpio_set_pull_mode``
 - Waits 10 ms for the pin to settle
 - Reads raw ADC value with ``adc_oneshot_read``
-- Verifies raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` (derived tolerance threshold) of zero
+- Verifies raw value is within tolerance of the SoC-specific low reference (``BIST_ADC_LOW_VAL``)
 - Resets GPIO and deletes ADC unit on completion or error
 
 ADC High Level
@@ -2047,10 +2047,6 @@ Module API
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_adc_low_level_test, bist_adc_high_level_test, bist_adc_reference_test
-
-.. only:: esp32h4
-
-   ADC tests are not linked. ``core/io/bist_adc.c`` is omitted from the ESP32-H4 image.
 
 
 

@@ -2070,8 +2070,6 @@ QEMU/Emulation Validation
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
 
-**Note:** The ESP32-H4 does not feature an ADC peripheral; the ADC test suite is skipped for ESP32-H4 targets.
-
 **Test Script:** ``tests/analog_io_test/pytest_device_analog_io_test.py``
 
 **Test Cases:**
@@ -2098,7 +2096,7 @@ Hardware Validation
    - Configure ADC1 channel 2 with 12 dB attenuation
    - Enable internal pull-down on the mapped GPIO
    - Read raw ADC value after 10 ms settling time
-   - Verify raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` of zero
+   - Verify raw value is within tolerance of the SoC-specific low reference (``BIST_ADC_LOW_VAL``)
    - Reset GPIO and delete ADC unit
    - Returns ``BIST_ESP_OK`` if reading is within tolerance
 
@@ -2162,7 +2160,7 @@ Hardware Validation
 **Expected Behavior:**
 
 - Invalid ADC unit/channel numbers properly rejected
-- ADC channel reads near zero with internal pull-down
+- ADC channel reads near the SoC-specific low reference with internal pull-down
 - ADC channel reads near high reference with internal pull-up
 - On ESP32-C3, VREF-biased reading is within mid-scale reference range
 - All ADC and GPIO configurations properly reset after test
@@ -2188,7 +2186,7 @@ Hardware Validation
     end
     continue
 
-High and reference checks use ``bist_adc_high_check`` / ``bist_adc_reference_check`` with ``raw=0``. Low/high cases are skipped on ESP32-H4; reference runs on ESP32-C3 only.
+High and reference checks use ``bist_adc_high_check`` / ``bist_adc_reference_check`` with ``raw=0``. Reference runs on ESP32-C3 only.
 
 **Fault Injection Method:**
 

@@ -120,16 +120,16 @@ Post-Boot Self-Tests
 9. **ADC Low Level Test** (``bist_adc_low_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
 
    - **IEC 60730 Component**: 7.2 (Analog I/O)
-   - **Purpose**: Verifies ADC reads near zero with internal pull-down
+   - **Purpose**: Verifies ADC reads the SoC-specific low reference with internal pull-down
    - **Rationale**: Analog input functionality must be validated before use in safety-critical applications
-   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of zero (skipped on ESP32-H4)
+   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of SoC-specific low reference
 
 10. **ADC High Level Test** (``bist_adc_high_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
 
     - **IEC 60730 Component**: 7.2 (Analog I/O)
     - **Purpose**: Verifies ADC reads near full scale with internal pull-up
     - **Rationale**: Detects stuck-at-low faults and verifies ADC conversion path
-    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference (skipped on ESP32-H4)
+    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference
 
 11. **ADC Reference Test** (``bist_adc_reference_test(ADC_UNIT_1, ADC_CHANNEL_2)``) — ESP32-C3 only
 

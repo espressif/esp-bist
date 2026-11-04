@@ -294,13 +294,13 @@ ADC Test (IEC 60730 ID: 7.2)
 
 **Test Implementation**:
 
-- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py`` (invalid parameter rejection, pull-down, pull-up, and VREF on ESP32-C3; skipped on ESP32-H4 and GDB raw read corruption)
+- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py`` (invalid parameter rejection, pull-down, pull-up, and VREF on ESP32-C3; GDB raw read corruption)
 
 **Test Results**:
 
 - Hardware: ``tests/analog_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases (pass + fail) (4 on ESP32-C3); skipped on ESP32-H4.
+**Coverage**: 3 test cases (pass + fail) (4 on ESP32-C3).
 
 Traceability Summary
 --------------------
