@@ -7,14 +7,6 @@
 #define BIST_TEST_ADC_UNIT                      ADC_UNIT_1
 #define BIST_TEST_ADC_CHANNEL                   ADC_CHANNEL_2
 
-#if defined(SOC_TARGET_ESP32H4)
-#warning "ADC is not supported for ESP32-H4!"
-
-int main()
-{
-    return 0;
-}
-#else
 #include "hal/adc_ll.h"
 
 void setUp(void)
@@ -73,4 +65,3 @@ int main()
 #endif
     return UNITY_END();
 }
-#endif

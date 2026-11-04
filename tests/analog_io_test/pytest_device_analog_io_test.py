@@ -6,9 +6,6 @@ from tests.idf_targets import pytestmark  # noqa: F401
 
 
 def test_io(dut, target):
-    if target in ("esp32h4"):
-        pytest.skip("Test is not available for this board")
-
     tests_names = [
         "test_BIST_ANALOG_IO_INVALID_ADC",
         "test_BIST_ANALOG_IO_LOW_LEVEL",
@@ -56,8 +53,6 @@ def analog_io_error_test(
 
 @pytest.mark.injection
 def test_analog_io_low_level_error_device(openocd_dut, gdb_instance, dut, target):
-    if target in ("esp32h4"):
-        pytest.skip("Test is not available for this board")
     analog_io_error_test(
         openocd_dut,
         gdb_instance,
@@ -70,8 +65,6 @@ def test_analog_io_low_level_error_device(openocd_dut, gdb_instance, dut, target
 
 @pytest.mark.injection
 def test_analog_io_high_level_error_device(openocd_dut, gdb_instance, dut, target):
-    if target in ("esp32h4"):
-        pytest.skip("Test is not available for this board")
     analog_io_error_test(
         openocd_dut,
         gdb_instance,
