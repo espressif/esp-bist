@@ -5,6 +5,7 @@
  */
 
 #pragma once
+#include "bist_conf.h"
 
 #define CONFIG_MMU_PAGE_SIZE                      0x10000
 #define CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ           80
@@ -14,8 +15,8 @@
 #define CONFIG_IDF_TARGET                         "esp32c5"
 #define CONFIG_IDF_TARGET_ARCH_RISCV              1
 #define CONFIG_XTAL_FREQ                          48
-#define CONFIG_LOG_MAXIMUM_LEVEL                  5
 #define CONFIG_LOG_DEFAULT_LEVEL                  3
+#define CONFIG_LOG_MAXIMUM_LEVEL                  CONFIG_ESP_BIST_LOG_LEVEL
 #define CONFIG_LOG_TIMESTAMP_SOURCE_SYSTEM        1
 #define CONFIG_SOC_RTC_FAST_MEM_SUPPORTED         1
 #define CONFIG_ESP_INT_WDT                        1
