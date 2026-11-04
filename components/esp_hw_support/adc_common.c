@@ -90,6 +90,8 @@ void adc_hw_calibration(void)
     }
     ANALOG_CLOCK_DISABLE();
 }
+#else
+void adc_hw_calibration(void) {}
 #endif //#if SOC_ADC_CALIBRATION_V1_SUPPORTED
 
 #if ADC_LL_SW_WEIGHT_CALIBRATION_SUPPORTED
