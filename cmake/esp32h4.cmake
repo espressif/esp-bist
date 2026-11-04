@@ -27,11 +27,15 @@ set(include_hal
     ${IDF_PATH}/components/esp_hal_gpio/include
     ${IDF_PATH}/components/esp_hal_clock/include
     ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_dma/include
     ${IDF_PATH}/components/esp_hal_rtc_timer/include
     ${IDF_PATH}/components/esp_hal_rtc_timer/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_pmu/include
     ${IDF_PATH}/components/esp_hal_ana_conv/include
     ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_adc/include
+    ${IDF_PATH}/components/esp_adc
+    ${IDF_PATH}/components/esp_adc/interface
     ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_stdio/include
     ${IDF_PATH}/components/hal/platform_port/include
@@ -74,9 +78,13 @@ set(idf_ow_srcs
     ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/sar_periph_ctrl_common.c
     ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/port/esp_clk_tree_common.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/esp_clk_tree.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_common.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/adc_share_hw_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali_curve_fitting.c
     )
 
 set(idf_srcs
@@ -96,6 +104,7 @@ set(idf_srcs
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_param.c
     ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/clk_tree_hal.c
     ${IDF_PATH}/components/esp_system/panic.c
+    ${IDF_PATH}/components/esp_system/esp_err.c
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/log/src/noos/log_timestamp.c
     ${IDF_PATH}/components/riscv/interrupt.c
@@ -103,6 +112,9 @@ set(idf_srcs
     ${IDF_PATH}/components/riscv/rv_utils.c
     ${IDF_PATH}/components/esp_stdio/stdio_simple.c
     ${IDF_PATH}/components/esp_stdio/stdio_syscalls_simple.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_oneshot_hal.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_hal_common.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/adc_periph.c
     )
 
 set(rom_ld
