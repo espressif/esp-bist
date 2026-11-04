@@ -319,12 +319,13 @@ Tolerance is controlled by `CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION` (default: 1%)
 
 #### Low Level Test
 
-The low level test (`bist_adc_low_level_test`) checks if an ADC channel reads near zero with internal pull-down:
+The low level test (`bist_adc_low_level_test`) checks if an ADC channel reads the SoC-specific low reference (`BIST_ADC_LOW_VAL`) with internal pull-down:
 
 1. The ADC unit and channel are configured with 12 dB attenuation.
 2. Internal pull-down is enabled on the mapped GPIO.
 3. After a 10 ms settling delay, the raw ADC value is read.
-4. If the reading exceeds the configured tolerance, the test fails with `BIST_ESP_ADC_TEST_ERR`.
+4. The reading is compared against that SoC-specific low reference.
+5. If the reading is outside the tolerance, the test fails with `BIST_ESP_ADC_TEST_ERR`.
 
 #### High Level Test
 

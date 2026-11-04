@@ -17,19 +17,29 @@ static const char *TAG = "BIST_ADC";
 #define BIST_ADC_TOLERANCE       BIST_ADC_MAX_RAW * CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION / 100
 
 #if defined(SOC_TARGET_ESP32C3)
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        BIST_ADC_MAX_RAW
 #define BIST_ADC_REFERENCE       1500
 #elif defined(SOC_TARGET_ESP32C6)
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        3350
 #elif defined(SOC_TARGET_ESP32H2)
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        3390
 #elif defined(SOC_TARGET_ESP32C5)
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        3375
 #elif defined(SOC_TARGET_ESP32C61)
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        3329
 #elif defined(SOC_TARGET_ESP32P4)
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        3360
+#elif defined(SOC_TARGET_ESP32H4)
+#define BIST_ADC_LOW_VAL         2100
+#define BIST_ADC_HIGH_VAL        4095
 #else
+#define BIST_ADC_LOW_VAL         0
 #define BIST_ADC_HIGH_VAL        BIST_ADC_MAX_RAW
 #endif
 
@@ -89,9 +99,10 @@ bist_esp_err_t bist_adc_low_level_test(adc_unit_t unit, adc_channel_t channel)
     ESP_LOGI(TAG, "ADC%d channel %d low raw: %d", unit + 1, channel, raw);
 
     BIST_ADD_LABEL("bist_adc_low_check");
-    if (raw > BIST_ADC_TOLERANCE) {
-        ESP_LOGE(TAG, "ADC%d channel %d low test failed, raw: %d, expected: 0",
-                 unit + 1, channel, raw);
+    if (raw < (BIST_ADC_LOW_VAL - BIST_ADC_TOLERANCE) ||
+            raw > (BIST_ADC_LOW_VAL + BIST_ADC_TOLERANCE)) {
+        ESP_LOGE(TAG, "ADC%d channel %d low test failed, raw: %d, expected: %d",
+                 unit + 1, channel, raw, BIST_ADC_LOW_VAL);
         goto cleanup;
     }
 
