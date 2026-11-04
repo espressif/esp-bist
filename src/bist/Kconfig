@@ -13,7 +13,7 @@ menu "ESP-BIST Tests"
 
 config ESP_BIST_CPU_REG_TEST
     bool "CPU Register Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for CPU registers.
 
@@ -42,7 +42,7 @@ endchoice
 
 config ESP_BIST_CPU_CSR_REG_TEST
     bool "CPU CSR Register Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for CPU Control and Status Registers (CSRs).
 
@@ -71,7 +71,8 @@ endchoice
 
 menuconfig ESP_BIST_CPU_INSTRUCTION_TEST
     bool "CPU Instruction Equivalence Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE && !NUTTX_ESP_BIST_MODULE
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       IEC 60730 Annex H component 1.2 periodic self-test using an
       equivalence-class instruction test (H.2.18.5). Enable individual
@@ -157,7 +158,7 @@ endif # ESP_BIST_CPU_INSTRUCTION_TEST
 
 config ESP_BIST_MEMORY_RAM_TEST
     bool "Memory RAM Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
         Enable tests for the RAM memory integrity (March A, March X, and
         Abraham).
@@ -185,55 +186,55 @@ config ESP_BIST_RAM_PARTITION_SIZE
 
 config ESP_BIST_STACK_TEST
     bool "Stack Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for the stack integrity.
 
 config ESP_BIST_PROGRAM_COUNTER_TEST
     bool "Program Counter Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the program counter.
 
 config ESP_BIST_MEMORY_FLASH_TEST
     bool "Memory Flash Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for the Flash memory integrity.
 
 config ESP_BIST_CLOCK_TEST
     bool "Clock Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the main crystal clock.
 
 config ESP_BIST_GPIO_TEST
     bool "GPIO Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the GPIO pins.
 
 config ESP_BIST_ADC_TEST
     bool "ADC Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the ADC pins.
 
 config ESP_BIST_WATCHDOG_TEST
     bool "Watchdog Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the HP main watchdog timer (MWDT).
 
 config ESP_BIST_INTERRUPT_TEST
     bool "Interrupt Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for software and hardware interrupts.
 
@@ -363,7 +364,7 @@ config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
 config ESP_BIST_METRICS
     bool "BIST Metrics Collection"
     depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable the collection of performance metrics during BIST operations, such as
       execution time, CPU cycles, and instruction counts.

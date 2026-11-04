@@ -2443,7 +2443,7 @@
     "id": "doc:README.md:kconfig_test_configuration",
     "title": "Kconfig Test Configuration",
     "section": "kconfig_test_configuration",
-    "body": "Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable or disable individual tests:\n\n```\nCONFIG_ESP_BIST_CPU_REG_TEST=y\nCONFIG_ESP_BIST_CPU_CSR_REG_TEST=y\nCONFIG_ESP_BIST_MEMORY_RAM_TEST=n\n...\n```",
+    "body": "Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable individual tests:\n\n```\nCONFIG_ESP_BIST_CPU_REG_TEST=y\nCONFIG_ESP_BIST_CPU_CSR_REG_TEST=y\n...\n```",
     "source_file": "README.md",
     "content_type": "doc"
   },

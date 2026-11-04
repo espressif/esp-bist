@@ -220,12 +220,11 @@ FAIL cases in the same files use OpenOCD (USB-JTAG) and GDB. They are skipped by
 
 ### Kconfig Test Configuration
 
-Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable or disable individual tests:
+Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable individual tests:
 
 ```
 CONFIG_ESP_BIST_CPU_REG_TEST=y
 CONFIG_ESP_BIST_CPU_CSR_REG_TEST=y
-CONFIG_ESP_BIST_MEMORY_RAM_TEST=n
 ...
 ```
 
