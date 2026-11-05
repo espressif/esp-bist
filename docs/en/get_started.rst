@@ -53,6 +53,7 @@ The BIST library is supported on the following SoCs:
 - ESP32-P4
 
 .. list-table:: SoC Comparison
+   :class: longtable hazard-table
    :header-rows: 1
    :widths: 9 12 7 10 6 6 30
 
