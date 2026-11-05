@@ -3503,6 +3503,17 @@
     "kconfig_guards": []
   },
   {
+    "function": "esp_timer_is_initialized",
+    "signature": "esp_err_t esp_timer_is_initialized(void)",
+    "module": "drivers",
+    "description": "Check whether esp_timer_init has completed",
+    "params": [],
+    "returns": "*      - ESP_OK if esp_timer_init() has run - ESP_ERR_INVALID_STATE if not yet initialized",
+    "note": "",
+    "header_file": "src/bist/drivers/include/esp_timer.h",
+    "kconfig_guards": []
+  },
+  {
     "function": "esp_timer_create",
     "signature": "esp_err_t esp_timer_create(const esp_timer_create_args_t* create_args,\n                           esp_timer_handle_t* out_handle)",
     "module": "drivers",

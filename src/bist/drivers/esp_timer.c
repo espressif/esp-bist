@@ -484,3 +484,10 @@ int64_t esp_timer_get_time(void)
     // thus, to save one function call, we didn't use the existing `systimer_hal_get_time`
     return systimer_hal.ticks_to_us(systimer_hal_get_counter_value(&systimer_hal, SYSTIMER_COUNTER_ESPTIMER));
 }
+
+esp_err_t esp_timer_is_initialized(void)
+{
+    /* systimer_hal.ticks_to_us is only stored by esp_timer_init(); it is NULL
+     * before that, so callers can use this as a read-only precondition check. */
+    return (systimer_hal.ticks_to_us != NULL) ? ESP_OK : ESP_ERR_INVALID_STATE;
+}

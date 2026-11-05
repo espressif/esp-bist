@@ -576,6 +576,15 @@
     "content_type": "source"
   },
   {
+    "function_name": "esp_timer_is_initialized",
+    "body": "esp_err_t esp_timer_is_initialized(void)\n{\n    /* systimer_hal.ticks_to_us is only stored by esp_timer_init(); it is NULL\n     * before that, so callers can use this as a read-only precondition check. */\n    return (systimer_hal.ticks_to_us != NULL) ? ESP_OK : ESP_ERR_INVALID_STATE;\n}",
+    "file": "src/bist/drivers/esp_timer.c",
+    "line_start": 488,
+    "line_end": 493,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
     "function_name": "gpio_pullup_en",
     "body": "esp_err_t gpio_pullup_en(gpio_num_t gpio_num)\n{\n    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), \"GPIO number error\", ESP_ERR_INVALID_ARG);\n    gpio_hal_pullup_en(gpio_context.gpio_hal, gpio_num);\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/gpio.c",
