@@ -16,7 +16,7 @@ This documentation provides a comprehensive overview of ESP-BIST, including its 
      - Jan 23, 2026
      - Initial release
    * - v1.1.0
-     - TBD
+     - 29 Oct 2026
      - Enhanced SoC support across all targets, expanded self-test coverage (Abraham RAM, ADC, hardware interrupts). See :doc:`changelog`.
 
 .. only:: html
