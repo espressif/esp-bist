@@ -26,6 +26,9 @@
 #include "stdint.h"
 #include "bist_esp_types.h"
 #include "gpio.h"
+#ifndef __ZEPHYR__
+#include "bist_conf.h"
+#endif
 
 /**
  * @brief Test GPIO output functionality
@@ -64,3 +67,7 @@ bist_esp_err_t bist_gpio_output_test(gpio_num_t gpio_num);
  * @note Requires external hardware setup to provide known logic level
  */
 bist_esp_err_t bist_gpio_input_test(gpio_num_t gpio_num, bool expected_level);
+
+#if defined(CONFIG_ESP_BIST_GPIO_TEST_RECIPROCAL)
+#include "bist_gpio_reciprocal.h"
+#endif

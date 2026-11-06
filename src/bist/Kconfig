@@ -263,6 +263,18 @@ config ESP_BIST_GPIO_TEST
     help
       Enable tests for the GPIO pins.
 
+config ESP_BIST_GPIO_TEST_RECIPROCAL
+    bool "Reciprocal GPIO input test"
+    depends on ESP_BIST_GPIO_TEST && ESP_BIST_MULTICORE
+    default n
+    help
+      Build the runtime reciprocal GPIO input test in addition to the static
+      GPIO plausibility tests. Both HP cores read the same input pin and
+      cross-compare the two levels (IEC 60730 H.2.18.15).
+
+      Requires the HP-core 1 dispatch of ESP_BIST_MULTICORE and only builds on
+      targets with two HP cores (currently ESP32-P4).
+
 config ESP_BIST_ADC_TEST
     bool "ADC Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
