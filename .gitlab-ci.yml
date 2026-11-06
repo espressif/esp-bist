@@ -339,7 +339,7 @@ build_qemu_remote:
   stage: Build
   timeout: 2h
   variables:
-    QEMU_BRANCH: 'feature/esp32h4'
+    QEMU_BRANCH: 'esp-develop'
   before_script:
     - . $IDF_PATH/export.sh
   script:
