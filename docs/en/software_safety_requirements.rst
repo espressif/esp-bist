@@ -66,9 +66,9 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 7.1
      - Digital I/O
-     - Verifies GPIO configuration and plausibility of IO levels
+     - Verifies GPIO configuration, plausibility of IO levels, and dual-core reciprocal cross-validation on supported SoCs
      - Peripheral misconfiguration, stuck-at faults, IO line failures, unexpected HW state
-     - :ref:`gpio-plausibility-test`
+     - :ref:`digital-io-test`
 
    * - 7.2
      - Analog I/O

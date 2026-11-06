@@ -280,6 +280,16 @@
     "prompt": "GPIO Test"
   },
   {
+    "name": "ESP_BIST_GPIO_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "n",
+    "depends_on": "ESP_BIST_GPIO_TEST && ESP_BIST_MULTICORE",
+    "help": "Build the runtime reciprocal GPIO input test in addition to the static\nGPIO plausibility tests. Both HP cores read the same input pin and\ncross-compare the two levels (IEC 60730 H.2.18.15).\n\nRequires the HP-core 1 dispatch of ESP_BIST_MULTICORE and only builds on\ntargets with two HP cores (currently ESP32-P4).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal GPIO input test"
+  },
+  {
     "name": "ESP_BIST_ADC_TEST",
     "type": "bool",
     "default": "n",

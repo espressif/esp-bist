@@ -3430,6 +3430,22 @@
     "kconfig_guards": []
   },
   {
+    "function": "bist_gpio_input_reciprocal_test",
+    "signature": "bist_esp_err_t bist_gpio_input_reciprocal_test(gpio_num_t gpio_num)",
+    "module": "io",
+    "description": "Fixed-layout evidence for the reciprocal GPIO input test",
+    "params": [
+      {
+        "name": "gpio_num",
+        "description": "GPIO number sampled by both HP cores"
+      }
+    ],
+    "returns": "BIST_ESP_OK if both samples completed and reported the same level; BIST_ESP_IO_TEST_ERR if the pin is invalid, a dispatch failed, a sample did not complete, a level was neither 0 nor 1, or the two levels differ",
+    "note": "The pin must already have its input buffer enabled. The application must configure a functional output as GPIO_MODE_INPUT_OUTPUT, because gpio_get_level() returns 0 when a pad is not an input.",
+    "header_file": "src/bist/core/io/include/bist_gpio_reciprocal.h",
+    "kconfig_guards": []
+  },
+  {
     "function": "adc_hw_calibration",
     "signature": "void adc_hw_calibration(void)",
     "module": "drivers",

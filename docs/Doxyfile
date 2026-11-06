@@ -37,6 +37,7 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/core/interrupt/include/bist_interrupt.h \
     $(PROJECT_PATH)/src/bist/core/interrupt/include/bist_interrupt_reciprocal.h \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_gpio.h \
+    $(PROJECT_PATH)/src/bist/core/io/include/bist_gpio_reciprocal.h \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_adc.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash_reciprocal.h \
