@@ -56,7 +56,7 @@ RUN : \
     && :
 
 # Install QEMU for RISC-V
-ARG QEMU_VER_SUFFIX=develop-8.2.0-20240122
+ARG QEMU_VER_SUFFIX=develop-9.2.2-20261109
 ARG QEMU_VER=esp-${QEMU_VER_SUFFIX}
 
 ARG QEMU_RISCV32_PREFIX=qemu-riscv32-softmmu
@@ -64,12 +64,13 @@ RUN : \
     && ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && case "${ARCH}" in \
          amd64)  QEMU_HOST=x86_64-linux-gnu; \
-                 QEMU_RISCV32_SHA256=95ac86d7b53bf98b5ff19c33aa926189b849f5a0daf8f41e160bc86c5e31abd4 ;; \
+                 QEMU_RISCV32_SHA256=afa59465495295b8aa4f804768983fa30b0bbf33d0f68a047f9caa436b9164c0 ;; \
          arm64)  QEMU_HOST=aarch64-linux-gnu; \
-                 QEMU_RISCV32_SHA256=4089f7958f753779e5b4c93fe2469d62850a1f209b0bda8b75d55fe4a61ca39b ;; \
+                 QEMU_RISCV32_SHA256=4038e03d6e312b2372106516855a2c72eda02b49f6480917c55e56e04d958781 ;; \
          *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;; \
        esac \
-    && QEMU_RISCV32_DIST=${QEMU_RISCV32_PREFIX}-esp_develop_8.2.0_20240122-${QEMU_HOST}.tar.xz \
+    && QEMU_DIST_TAG="$(printf '%s' "${QEMU_VER_SUFFIX}" | tr '-' '_')" \
+    && QEMU_RISCV32_DIST=${QEMU_RISCV32_PREFIX}-esp_${QEMU_DIST_TAG}-${QEMU_HOST}.tar.xz \
     && wget --no-verbose https://github.com/espressif/qemu/releases/download/${QEMU_VER}/${QEMU_RISCV32_DIST} \
     && echo "${QEMU_RISCV32_SHA256} ${QEMU_RISCV32_DIST}" | sha256sum --check --strict - \
     && mkdir -p /opt/${QEMU_RISCV32_PREFIX} \
