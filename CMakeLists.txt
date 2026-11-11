@@ -17,7 +17,7 @@ idf_component_register(
     INCLUDE_DIRS ${_bist_hd_incs}
     PRIV_INCLUDE_DIRS ${_bist_hd_priv_incs}
     LDFRAGMENTS "src/bist/ld/hd_ram_idf.lf"
-    PRIV_REQUIRES ulp soc
+    PRIV_REQUIRES ulp soc heap esp_hw_support
     REQUIRED_IDF_TARGETS esp32c5 esp32c6 esp32p4
 )
 

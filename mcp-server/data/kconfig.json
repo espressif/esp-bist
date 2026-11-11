@@ -560,6 +560,16 @@
     "prompt": "Host RAM March partition size (words)"
   },
   {
+    "name": "ESP_BIST_HD_SAFE_DMA_POOL_SIZE",
+    "type": "int",
+    "default": "16384",
+    "depends_on": "ESP_BIST_HD_AUDIT_RAM && IDF_ESP_BIST_COMPONENT",
+    "help": "Size in bytes of the dedicated MALLOC_CAP_DMA internal SRAM heap\nplaced in .dram0.safe_ram (below _data_start). At startup,\nMALLOC_CAP_DMA is removed from the general internal heap and\nassigned exclusively to this pool so Wi-Fi MAC, BLE baseband, and\nGDMA descriptors/buffers stay outside the live March-A span\n[_bist_hp_ram_start, _bist_hp_ram_end). Set to 0 to disable.",
+    "menu": "Host Diagnostics Audits",
+    "range": "0 131072",
+    "prompt": "Dedicated safe-RAM DMA heap pool size (bytes)"
+  },
+  {
     "name": "ESP_BIST_HD_CHALLENGE_WINDOW_US",
     "type": "int",
     "default": "10000",

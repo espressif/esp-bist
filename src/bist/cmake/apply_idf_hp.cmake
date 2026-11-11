@@ -33,6 +33,12 @@ function(bist_idf_hp_collect out_srcs out_incs)
                 list(APPEND _priv_incs "src/bist/${_inc}")
             endif()
         endforeach()
+        if(CONFIG_ESP_BIST_HD_AUDIT_RAM)
+            list(APPEND _priv_incs
+                "$ENV{IDF_PATH}/components/heap"
+                "$ENV{IDF_PATH}/components/heap/private_include"
+            )
+        endif()
         message(STATUS "ESP-BIST Host Diagnostics: registering HP agent sources (no IS_ULP_COCPU)")
     endif()
 

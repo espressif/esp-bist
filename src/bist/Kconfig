@@ -474,6 +474,19 @@ config ESP_BIST_HD_RAM_PARTITION_SIZE
       backed up and restored more often. The safe-RAM backup buffer is
       2 x partition_size x 4 bytes.
 
+config ESP_BIST_HD_SAFE_DMA_POOL_SIZE
+    int "Dedicated safe-RAM DMA heap pool size (bytes)"
+    depends on ESP_BIST_HD_AUDIT_RAM && IDF_ESP_BIST_COMPONENT
+    default 16384
+    range 0 131072
+    help
+      Size in bytes of the dedicated MALLOC_CAP_DMA internal SRAM heap
+      placed in .dram0.safe_ram (below _data_start). At startup,
+      MALLOC_CAP_DMA is removed from the general internal heap and
+      assigned exclusively to this pool so Wi-Fi MAC, BLE baseband, and
+      GDMA descriptors/buffers stay outside the live March-A span
+      [_bist_hp_ram_start, _bist_hp_ram_end). Set to 0 to disable.
+
 endmenu # Host Diagnostics Audits
 
 config ESP_BIST_HD_CHALLENGE_WINDOW_US

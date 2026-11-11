@@ -1,8 +1,11 @@
 /*
  * Live HP DRAM march for the host RAM audit.
  *
- * The span is the heap through the end of sram_seg. Task stacks live in
- * that heap. .dram0.safe_ram and the mailbox are in .bss, below _heap_start.
+ * The span is one contiguous linear region from _data_start through the end of
+ * sram_seg, covering .dram0.data, .noinit, .dram0.bss, .sbss, and the general
+ * internal SRAM heap (including task stacks). .dram0.safe_ram and the
+ * dedicated MALLOC_CAP_DMA heap pool are placed in .iram0.bss below
+ * _data_start by hd_ram_idf.lf, so they stay outside the marched span.
  *
  * P4 rev >= 3: IDF defines SRAM_START as "0x4FF00000 + CONFIG_CACHE_L2_CACHE_SIZE"
  * without parentheses, so LENGTH(sram_seg) is SRAM_END - 0x4FF00000 + cache.
@@ -12,10 +15,14 @@
  */
 #include "sdkconfig.h"
 
-_bist_hp_ram_start = _heap_start;
-#if CONFIG_IDF_TARGET_ESP32P4 && !CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+#if CONFIG_IDF_TARGET_ESP32P4 && CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+_bist_hp_ram_start = _data_start_high;
+_bist_hp_ram_end = ORIGIN(sram_high) + LENGTH(sram_high);
+#elif CONFIG_IDF_TARGET_ESP32P4
+_bist_hp_ram_start = _data_start;
 _bist_hp_ram_limit = ORIGIN(sram_seg) + LENGTH(sram_seg);
 _bist_hp_ram_end = (_bist_hp_ram_limit > 0x4FFAEFC0) ? 0x4FFAEFC0 : _bist_hp_ram_limit;
 #else
+_bist_hp_ram_start = _data_start;
 _bist_hp_ram_end = ORIGIN(sram_seg) + LENGTH(sram_seg);
 #endif
