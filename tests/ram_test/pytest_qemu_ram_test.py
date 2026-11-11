@@ -6,8 +6,12 @@ from tests.idf_targets import pytestmark  # noqa: F401
 
 def test_ram_success(qemu_instance, target):
     qemu, qemu_process, output_queue = qemu_instance
-    tests_names = ["test_BIST_ram_march_a", "test_BIST_ram_march_x",
-                   "test_BIST_ram_abraham", "test_BIST_ram_abraham_full"]
+    tests_names = [
+        "test_BIST_ram_march_a",
+        "test_BIST_ram_march_x",
+        "test_BIST_ram_abraham",
+        "test_BIST_ram_abraham_full",
+    ]
     expected_outputs = [f"{test}:PASS" for test in tests_names]
     output_lines = []
     found_outputs = []
@@ -28,27 +32,38 @@ def test_ram_success(qemu_instance, target):
 
     # Assert that each expected output was found in the output_lines
     for expected_output in expected_outputs:
-        assert expected_output in found_outputs, f"Expected output '{expected_output}' not found in QEMU output"
+        assert expected_output in found_outputs, (
+            f"Expected output '{expected_output}' not found in QEMU output"
+        )
 
-def ram_error_test(qemu_debug_instance, gdb_instance, test_name, test_bp, injected_value):
+
+def ram_error_test(
+    qemu_debug_instance,
+    gdb_instance,
+    test_name,
+    test_bp,
+    injected_value,
+    ignore_count=2,
+):
     qemu, qemu_process, output_queue = qemu_debug_instance
     gdb = gdb_instance
     expected_output = "{}:FAIL".format(test_name)
     output_lines = []
-    script = '''
+    script = """
     #connect to remote server
     target remote :1234
 
     # Set a breakpoint at the specific address
     tb {}
+    ignore $bpnum {}
     commands
         set _bist_ram_test_start={}
         continue
     end
     continue
-    '''.format(test_bp, injected_value)
+    """.format(test_bp, ignore_count, injected_value)
     gdb_process = gdb_instance.attach(script)
-    time.sleep(5) # Wait for GDB to attach and run the script
+    time.sleep(5)  # Wait for GDB to attach and run the script
     try:
         # Attempt to read all current output from QEMU
         while True:
@@ -60,14 +75,39 @@ def ram_error_test(qemu_debug_instance, gdb_instance, test_name, test_bp, inject
         print("No more output from QEMU.")
 
     gdb.stop(gdb_process)
-    assert any(expected_output in line for line in output_lines), "Expected output not found in QEMU output"
+    assert any(expected_output in line for line in output_lines), (
+        "Expected output not found in QEMU output"
+    )
 
 
 def test_ram_march_a_error(qemu_debug_instance, gdb_instance, target):
-    ram_error_test(qemu_debug_instance, gdb_instance, "test_BIST_ram_march_a", "bist_ram_test_march_a_step2", "0xFF")
+    ram_error_test(
+        qemu_debug_instance,
+        gdb_instance,
+        "test_BIST_ram_march_a",
+        "bist_ram_test_march_a_step2",
+        "0xFF",
+        ignore_count=2,
+    )
+
 
 def test_ram_march_x_error(qemu_debug_instance, gdb_instance, target):
-    ram_error_test(qemu_debug_instance, gdb_instance, "test_BIST_ram_march_x",  "bist_ram_test_march_x_step2", "0xFF")
+    ram_error_test(
+        qemu_debug_instance,
+        gdb_instance,
+        "test_BIST_ram_march_x",
+        "bist_ram_test_march_x_step2",
+        "0xFF",
+        ignore_count=2,
+    )
+
 
 def test_ram_abraham_error(qemu_debug_instance, gdb_instance, target):
-    ram_error_test(qemu_debug_instance, gdb_instance, "test_BIST_ram_abraham", "bist_ram_test_abraham_seq1", "0xFF")
+    ram_error_test(
+        qemu_debug_instance,
+        gdb_instance,
+        "test_BIST_ram_abraham",
+        "bist_ram_test_abraham_seq1",
+        "0xFF",
+        ignore_count=1,
+    )

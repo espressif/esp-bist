@@ -19,7 +19,9 @@ def test_ram_success(dut, target):
         dut.expect(expected_output)
 
 
-def ram_error_test(openocd_dut, gdb_instance, dut, test_name, test_bp, injected_value):
+def ram_error_test(
+    openocd_dut, gdb_instance, dut, test_name, test_bp, injected_value, ignore_count=2
+):
     expected_output = "{}:FAIL".format(test_name)
     script = """
     #connect to remote server
@@ -30,13 +32,14 @@ def ram_error_test(openocd_dut, gdb_instance, dut, test_name, test_bp, injected_
 
     # Set a breakpoint at the specific address
     tb {}
+    ignore $bpnum {}
     commands
         set _bist_ram_test_start={}
         monitor step
         monitor resume
     end
     continue
-    """.format(test_bp, injected_value)
+    """.format(test_bp, ignore_count, injected_value)
     time.sleep(1)
     with openocd_dut.run():
         gdb_process = gdb_instance.attach(script)
@@ -56,6 +59,7 @@ def test_ram_march_a_error_device(openocd_dut, gdb_instance, dut, target):
         "test_BIST_ram_march_a",
         "bist_ram_test_march_a_step2",
         "0xFF",
+        ignore_count=2,
     )
 
 
@@ -68,6 +72,7 @@ def test_ram_march_x_error_device(openocd_dut, gdb_instance, dut, target):
         "test_BIST_ram_march_x",
         "bist_ram_test_march_x_step2",
         "0xFF",
+        ignore_count=2,
     )
 
 
@@ -80,4 +85,5 @@ def test_ram_abraham_error_device(openocd_dut, gdb_instance, dut, target):
         "test_BIST_ram_abraham",
         "bist_ram_test_abraham_seq1",
         "0xFF",
+        ignore_count=1,
     )

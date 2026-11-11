@@ -29,5 +29,6 @@ def test_hd_idf_fail_closed(dut, target, config):
     """Wrong/missing Q&A answer or missing checkpoint → safe state → LP WDT reset."""
     dut.expect("test_HD_agent_ready:PASS", timeout=30)
     dut.expect("test_BIST_postboot:PASS", timeout=30)
+    dut.expect("test_HD_safe_dma_pool:PASS", timeout=30)
     dut.expect("test_HD_fail_closed_armed:PASS", timeout=30)
     dut.expect("CPU has been reset by WDT", timeout=30)
