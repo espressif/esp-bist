@@ -83,7 +83,7 @@ Data Storage Model
 
 - **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash sections (``.crc_section_text``, ``.crc_section_data``). No executable code is mapped to DROM.
 - **IRAM**: All ``libbist_esp.a`` code, startup routines, exception vectors, and ``pc_test_0`` placed in IRAM for deterministic timing.
-- **DRAM**: ``.data``/``.bss`` for app and BIST; all BIST library rodata (``*libbist_esp.a:*(.rodata*)``) placed in DRAM to ensure cache-independent access during self-tests; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
+- **DRAM**: ``.data``/``.bss`` for app and BIST; all BIST library rodata (``*libbist_esp.a:*(.rodata*)``) placed in DRAM to ensure cache-independent access during self-tests; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer, the 256-byte RAM-test safe stack, and (on Host Diagnostics ESP-IDF builds) the dedicated safe DMA heap pool, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
 - **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
 - **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
 - **TCM (Tightly Coupled Memory)**: On ESP32-P4, ``.tcm.text`` at ``0x3010xxxx`` holds ``pc_test_4``.

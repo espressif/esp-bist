@@ -670,14 +670,34 @@ The worker thread runs an infinite receive loop:
    Checkpoints are not flushed here; they ride the Q&A window only.
 
    The marched span is live HP DRAM. On ESP-IDF it runs from
-   ``_heap_start`` to the end of ``sram_seg`` (task stacks, including
-   the agent, are allocated from that heap). On Zephyr it runs from the
-   first byte of ``.dram0.noinit`` to the end of ``sram0_0_seg`` (static
-   stacks, ``.dram0.bss``, and the heap). The March backup buffer and safe stack
-   live in ``.dram0.safe_ram``, and the mailbox stays below the span, so
-   covered. A march mismatch is ``BIST_HD_STATUS_FAIL``. The scheduler
-   lock does not stop DMA; a peripheral writing a buffer inside the span
-   during the march is not covered.
+   ``_bist_hp_ram_start = _data_start`` (or ``_data_start_high`` on
+   ESP32-P4 rev < 3) through the end of ``sram_seg``, covering
+   ``.dram0.data``, ``.noinit``, ``.dram0.bss``, ``.sbss``, and the general
+   internal SRAM heap (including task stacks) in a single contiguous
+   linear loop. On Zephyr it runs from the first byte of ``.dram0.noinit``
+   to the end of ``sram0_0_seg`` (static stacks, ``.dram0.bss``, and the heap).
+   The March backup buffer and safe stack live in ``.dram0.safe_ram``. On
+   ESP-IDF, ``.dram0.safe_ram`` is mapped to ``iram0_bss``, placing it
+   immediately below ``_data_start`` within the non-executable RW DRAM PMP
+   region. Before ``run_on_safe_stack()`` switches ``sp`` to ``ram_test_stack``,
+   ``bist_ram_test_march_a()`` destructively tests ``backup_chunk[]`` and
+   ``ram_test_stack[]`` using March A steps, ensuring ``backup_chunk[]`` has
+   no stuck-at faults before live memory is copied into it.
+
+   To isolate autonomous DMA traffic from the live marched span on ESP-IDF,
+   ``CONFIG_ESP_BIST_HD_SAFE_DMA_POOL_SIZE`` allocates a dedicated
+   ``MALLOC_CAP_DMA`` heap arena (``s_safe_dma_pool[]``) inside
+   ``.dram0.safe_ram``. During startup before ``app_main()``,
+   ``bist_hd_init_safe_dma_heap()`` runs a destructive post-boot RAM check on
+   ``s_safe_dma_pool[]``, removes ``MALLOC_CAP_DMA`` from the general internal
+   heaps, and registers ``s_safe_dma_pool[]`` with ``MALLOC_CAP_DMA``. Active
+   Wi-Fi MAC RX/TX rings (``libpp.a``), BLE baseband buffers (``libble_app.a``),
+   and peripheral GDMA linked-list descriptors allocate exclusively from this
+   pool below ``_data_start``, leaving the live marched span free of concurrent
+   DMA traffic. On multicore targets (such as ESP32-P4), the secondary core is
+   stalled via ``esp_cpu_stall()`` while interrupts are masked to prevent L1
+   cache writebacks during the march. A march mismatch returns
+   ``BIST_HD_STATUS_FAIL``.
 #. Unsupported or unknown incoming command frames (e.g.
    ``SAFE_STATE_NOTIFY``) are dropped.
 
@@ -917,6 +937,12 @@ Q&A, checkpoint, and IRQ latency stay independent of ``CONFIG_ESP_BIST_HD_AUDIT`
        companion keeps ``CONFIG_ESP_BIST_RAM_PARTITION_SIZE``. One RAM
        ``DIAG_REQ`` still marches the whole host span. A smaller
        partition makes that call take longer.
+   * - ``CONFIG_ESP_BIST_HD_SAFE_DMA_POOL_SIZE``
+     - Size in bytes of the dedicated ``MALLOC_CAP_DMA`` internal SRAM heap
+       placed in ``.dram0.safe_ram`` below ``_data_start`` (default 16384).
+       Strips ``MALLOC_CAP_DMA`` from general internal heaps at startup so
+       active Wi-Fi, BLE, and GDMA buffers/descriptors stay outside the live
+       marched span. Set to 0 to disable.
 
 Timing Parameters
 ^^^^^^^^^^^^^^^^^

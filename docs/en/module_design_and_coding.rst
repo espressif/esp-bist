@@ -896,7 +896,7 @@ Source Files
      - MD5
    * - ``src/bist/core/memory/bist_ram.c``
      - v1.1.0
-     - 4bfcb2a2c082412aaadea00e5b55559e
+     - 114ee28b46bbfa0cb241bfa61d61f9b9
 
 Stack-Pointer Relocation (Safe Stack)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -926,9 +926,14 @@ To eliminate this class of failure the public entry points ``bist_ram_test_march
 ``bist_ram_test_march_x()``, and ``bist_ram_test_abraham()`` relocate the stack pointer
 into a 256-byte buffer (``ram_test_stack``) placed in ``.dram0.safe_ram`` — the same
 linker section that holds ``backup_chunk``.  Because ``.dram0.safe_ram`` sits **below**
-``_bist_ram_test_start``,
-the march algorithm never writes to the relocated stack, and the full linker-defined
-region — including the normal stack — is tested.
+``_bist_ram_test_start``, the march algorithm never writes to the relocated stack, and the full
+linker-defined region — including the normal stack — is tested.
+
+Before ``run_on_safe_stack()`` switches SP to ``ram_test_stack``, each public entry point
+destructively tests ``backup_chunk`` and ``ram_test_stack`` in place using the steps of the
+requested algorithm (March A, March X, or Abraham). Because neither buffer holds live state
+prior to stack relocation, this pre-march check verifies that ``.dram0.safe_ram`` itself has
+no stuck-at or coupling faults before live RAM is backed up into it.
 
 The relocation is performed by ``run_on_safe_stack()``, a thin wrapper that:
 
@@ -950,7 +955,7 @@ Coding and Interfaces
 - This test uses linker-defined symbols for the region boundaries
   (``_bist_ram_test_start`` / ``_bist_ram_test_end``) and computes the size from
   their difference at run time.
-- Uses a statically allocated backup buffer (``backup_chunk``) and a 256-byte safe stack (``ram_test_stack``), both placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region.
+- Uses a statically allocated backup buffer (``backup_chunk``) and a 256-byte safe stack (``ram_test_stack``), both placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region and destructively self-tested on each call before live data is backed up.
 - The stack pointer is temporarily relocated to ``ram_test_stack`` via inline assembly before calling the march implementation, ensuring the march algorithm can test the entire linker-defined region — including the normal stack — without corrupting its own frame. See *Stack-Pointer Relocation* above.
 - No dynamic memory is used.
 - The main function has a single entry and, under normal conditions, a single exit. The use of ``goto`` for cleanup is documented and justified for resource safety.
