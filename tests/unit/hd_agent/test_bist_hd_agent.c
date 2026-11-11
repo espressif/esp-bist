@@ -22,12 +22,15 @@
 #include "bist_hd_audits.h"
 #include "bist_hd_platform.h"
 #include "bist_hd_protocol.h"
+#include "bist_cpu_regs.h"
+#include "bist_cpu_csr_regs.h"
+#include "bist_ram.h"
 
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 
-#define SENT_MAX 16
+#define SENT_MAX 32
 
 static bist_hd_msg_t g_sent[SENT_MAX];
 static int g_sent_count;
@@ -159,34 +162,60 @@ void bist_hd_platform_sleep_ms(uint32_t ms)
     (void)ms;
 }
 
+static int g_irq_lock_depth;
+static int g_preempt_lock_depth;
+static int g_march_saw_locks_held;
+
 uint32_t bist_hd_platform_irq_lock(void)
 {
+    g_irq_lock_depth++;
     return 0;
 }
 
 void bist_hd_platform_irq_unlock(uint32_t key)
 {
     (void)key;
+    g_irq_lock_depth--;
 }
 
-/* ----- audit stub ------------------------------------------------------ */
-
-static bist_hd_msg_t g_last_diag_req;
-static int g_diag_handled_count;
-
-int bist_hd_audit_handle_challenge(const bist_hd_msg_t *challenge)
+void bist_hd_platform_preempt_lock(void)
 {
-    (void)challenge;
-    return 0;
+    g_preempt_lock_depth++;
 }
 
-int bist_hd_audit_handle_diag(const bist_hd_msg_t *req)
+void bist_hd_platform_preempt_unlock(void)
 {
-    if (req != NULL) {
-        g_last_diag_req = *req;
-        g_diag_handled_count++;
+    g_preempt_lock_depth--;
+}
+
+/* ----- core BIST stubs (invoked by bist_hd_audits.c) ------------------- */
+
+static bist_esp_err_t g_cpu_regs_result = BIST_ESP_OK;
+static bist_esp_err_t g_cpu_csr_result = BIST_ESP_OK;
+static bist_esp_err_t g_ram_march_result = BIST_ESP_OK;
+static int g_cpu_regs_calls;
+static int g_cpu_csr_calls;
+static int g_ram_march_calls;
+
+bist_esp_err_t bist_cpu_regs_test(void)
+{
+    g_cpu_regs_calls++;
+    return g_cpu_regs_result;
+}
+
+bist_esp_err_t bist_cpu_csr_regs_test(void)
+{
+    g_cpu_csr_calls++;
+    return g_cpu_csr_result;
+}
+
+bist_esp_err_t bist_ram_test_march_a(void)
+{
+    g_ram_march_calls++;
+    if (g_preempt_lock_depth > 0 && g_irq_lock_depth > 0) {
+        g_march_saw_locks_held++;
     }
-    return 0;
+    return g_ram_march_result;
 }
 
 /* ----- worker mailbox helpers ------------------------------------------ */
@@ -251,17 +280,22 @@ static void agent_start(void)
 }
 
 /*
- * Return the index of the first CHECKPOINT message in g_sent[], starting at
+ * Return the index of the first message of 'type' in g_sent[], starting at
  * 'from'. Returns -1 when not found.
  */
-static int find_checkpoint(int from)
+static int find_sent_type(uint8_t type, int from)
 {
     for (int i = from; i < g_sent_count; i++) {
-        if (g_sent[i].type == BIST_HD_MSG_CHECKPOINT) {
+        if (g_sent[i].type == type) {
             return i;
         }
     }
     return -1;
+}
+
+static int find_checkpoint(int from)
+{
+    return find_sent_type(BIST_HD_MSG_CHECKPOINT, from);
 }
 
 /* ----- scenarios ------------------------------------------------------- */
@@ -355,12 +389,64 @@ static void scenario_checkpoint_send_failure_consumes_id(void)
 
 static void scenario_diag_req_handled(void)
 {
+    bist_hd_audit_result_t result = {0};
+    int idx;
+
     agent_start();
     deliver_diag_req(BIST_HD_AUDIT_CPU);
 
-    expect_eq_int(g_diag_handled_count, 1, "DIAG_REQ was dispatched to handler");
-    expect_eq_int(g_last_diag_req.type, BIST_HD_MSG_DIAG_REQ, "type is DIAG_REQ");
-    expect_eq_int(g_last_diag_req.audit_id, BIST_HD_AUDIT_CPU, "audit_id is CPU");
+    expect_eq_int(g_cpu_regs_calls, 1, "DIAG_REQ dispatched to bist_cpu_regs_test");
+    idx = find_sent_type(BIST_HD_MSG_DIAG_RSP, 0);
+    expect_true(idx >= 0, "DIAG_RSP was sent");
+    if (idx >= 0) {
+        expect_eq_int(g_sent[idx].audit_id, BIST_HD_AUDIT_CPU, "audit_id is CPU");
+        expect_eq_u32(g_sent[idx].payload, BIST_HD_STATUS_OK, "payload is STATUS_OK");
+    }
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_CPU, &result), 0,
+                  "audit_get CPU succeeds");
+    expect_eq_int(result.valid, 1, "CPU audit context committed");
+    expect_eq_u32(result.status, BIST_HD_STATUS_OK, "CPU audit status is OK");
+}
+
+static void scenario_diag_ram_audit(void)
+{
+    bist_hd_audit_result_t result = {0};
+    int idx;
+
+    agent_start();
+    deliver_diag_req(BIST_HD_AUDIT_RAM);
+
+    expect_eq_int(g_ram_march_calls, 1, "BIST_HD_AUDIT_RAM invoked bist_ram_test_march_a");
+    expect_eq_int(g_march_saw_locks_held, 1, "march called with preempt+irq locks held");
+    expect_eq_int(g_preempt_lock_depth, 0, "preempt_lock balanced after RAM audit");
+    expect_eq_int(g_irq_lock_depth, 0, "irq_lock balanced after RAM audit");
+
+    idx = find_sent_type(BIST_HD_MSG_DIAG_RSP, 0);
+    expect_true(idx >= 0, "DIAG_RSP sent for RAM audit");
+    if (idx >= 0) {
+        expect_eq_int(g_sent[idx].audit_id, BIST_HD_AUDIT_RAM, "audit_id is RAM");
+        expect_eq_u32(g_sent[idx].payload, BIST_HD_STATUS_OK, "RAM payload is STATUS_OK");
+    }
+
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_RAM, &result), 0,
+                  "audit_get RAM succeeds");
+    expect_eq_int(result.valid, 1, "RAM audit context is valid");
+    expect_eq_u32(result.status, BIST_HD_STATUS_OK, "RAM audit status is OK");
+
+    /* Verify failure propagation and context commit when March-A fails. */
+    g_ram_march_result = BIST_ESP_RAM_TEST_ERR;
+    deliver_diag_req(BIST_HD_AUDIT_RAM);
+
+    expect_eq_int(g_ram_march_calls, 2, "second BIST_HD_AUDIT_RAM invoked bist_ram_test_march_a");
+    expect_eq_int(g_march_saw_locks_held, 2, "second march called with preempt+irq locks held");
+    idx = find_sent_type(BIST_HD_MSG_DIAG_RSP, idx + 1);
+    expect_true(idx >= 0, "second DIAG_RSP sent for RAM audit");
+    if (idx >= 0) {
+        expect_eq_u32(g_sent[idx].payload, BIST_HD_STATUS_FAIL, "RAM payload is STATUS_FAIL");
+    }
+    expect_eq_int(bist_hd_agent_audit_get(BIST_HD_AUDIT_RAM, &result), 0,
+                  "audit_get RAM after failure succeeds");
+    expect_eq_u32(result.status, BIST_HD_STATUS_FAIL, "RAM audit status updated to FAIL");
 }
 
 static void scenario_audit_ctx(void)
@@ -402,7 +488,6 @@ int main(int argc, char **argv)
     g_sent_count = 0;
     g_send_result = 0;
     g_challenge_seq = 0;
-    g_diag_handled_count = 0;
 
     if (strcmp(scenario, "checkpoint_first_id") == 0) {
         scenario_checkpoint_first_id();
@@ -412,6 +497,8 @@ int main(int argc, char **argv)
         scenario_checkpoint_send_failure_consumes_id();
     } else if (strcmp(scenario, "diag_req_handled") == 0) {
         scenario_diag_req_handled();
+    } else if (strcmp(scenario, "diag_ram_audit") == 0) {
+        scenario_diag_ram_audit();
     } else if (strcmp(scenario, "audit_ctx") == 0) {
         scenario_audit_ctx();
     } else {
