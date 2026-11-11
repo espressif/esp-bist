@@ -61,6 +61,9 @@ static volatile size_t __attribute__((section(".dram0.safe_ram"))) abraham_pair_
 static uint8_t __attribute__((section(".dram0.safe_ram"), aligned(16)))
 ram_test_stack[MARCH_STACK_SIZE];
 
+#define SAFE_RAM_BACKUP_WORDS (2u * BIST_ESP_RAM_BACKUP_CHUNK_SIZE)
+#define SAFE_RAM_STACK_WORDS  (MARCH_STACK_SIZE / sizeof(uint32_t))
+
 /*
  * Run fn() with SP relocated to ram_test_stack (.dram0.safe_ram).
  * safe_ram sits outside the marched span, so the march algorithms can
@@ -96,6 +99,32 @@ static bist_esp_err_t run_on_safe_stack(bist_esp_err_t (*fn)(void))
     return result;
 }
 
+static bool __attribute__((noinline)) march_a_steps(volatile uint32_t *buf, size_t words)
+{
+    // 1. ↑ {W0} (Write 0 in ascending order)
+    for (size_t i = 0; i < words; i++) {
+        buf[i] = 0;
+    }
+
+    // 2. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
+    ASM("bist_ram_test_march_a_step2:");
+    for (size_t i = 0; i < words; i++) {
+        if (buf[i] != 0) {
+            return false;
+        }
+        buf[i] = 0xFFFFFFFF;
+    }
+
+    // 3. ↑ {R1} (Read 1 in ascending order)
+    for (size_t i = 0; i < words; i++) {
+        if (buf[i] != 0xFFFFFFFF) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
 {
     bool test_passed = true;
@@ -112,31 +141,8 @@ static bist_esp_err_t __attribute__((noinline)) march_a_impl(void)
             backup_chunk[i] = start_addr[offset + i];
         }
 
-        // March A Test Sequence
-        // 1. ↑ {W0} (Write 0 in ascending order)
-        for (size_t i = 0; i < current_chunk_size; i++) {
-            start_addr[offset + i] = 0;
-        }
+        test_passed = march_a_steps(&start_addr[offset], current_chunk_size);
 
-        // 2. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
-        ASM("bist_ram_test_march_a_step2:");
-        for (size_t i = 0; i < current_chunk_size; i++) {
-            if (start_addr[offset + i] != 0) {
-                test_passed = false;
-                goto restore_a;
-            }
-            start_addr[offset + i] = 0xFFFFFFFF;
-        }
-
-        // 3. ↑ {R1} (Read 1 in ascending order)
-        for (size_t i = 0; i < current_chunk_size; i++) {
-            if (start_addr[offset + i] != 0xFFFFFFFF) {
-                test_passed = false;
-                goto restore_a;
-            }
-        }
-
-restore_a:
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = backup_chunk[i];
         }
@@ -147,6 +153,49 @@ restore_a:
     }
 
     return BIST_ESP_OK;
+}
+
+static bool __attribute__((noinline)) march_x_steps(volatile uint32_t *buf, size_t words)
+{
+    // 1. ↑ {W0} (Write 0 in ascending order)
+    for (size_t i = 0; i < words; i++) {
+        buf[i] = 0;
+    }
+
+    // 2. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
+    ASM("bist_ram_test_march_x_step2:");
+    for (size_t i = 0; i < words; i++) {
+        if (buf[i] != 0) {
+            return false;
+        }
+        buf[i] = 0xFFFFFFFF; // Write 1
+    }
+
+    // 3. ↓ {R1, W0} (Read 1, Write 0 in descending order)
+    for (size_t i = words; i != 0; i--) {
+        if (buf[i - 1] != 0xFFFFFFFF) {
+            return false;
+        }
+        buf[i - 1] = 0; // Write 0
+    }
+
+    // 4. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
+    for (size_t i = 0; i < words; i++) {
+        if (buf[i] != 0) {
+            return false;
+        }
+        buf[i] = 0xFFFFFFFF; // Write 1
+    }
+
+    // 5. ↓ {R1, W0} (Read 1, Write 0 in descending order)
+    for (size_t i = words; i != 0; i--) {
+        if (buf[i - 1] != 0xFFFFFFFF) {
+            return false;
+        }
+        buf[i - 1] = 0; // Write 0
+    }
+
+    return true;
 }
 
 static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
@@ -165,50 +214,8 @@ static bist_esp_err_t __attribute__((noinline)) march_x_impl(void)
             backup_chunk[i] = start_addr[offset + i];
         }
 
-        // March X Test Sequence
-        // 1. ↑ {W0} (Write 0 in ascending order)
-        for (size_t i = 0; i < current_chunk_size; i++) {
-            start_addr[offset + i] = 0;
-        }
+        test_passed = march_x_steps(&start_addr[offset], current_chunk_size);
 
-        // 2. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
-        ASM("bist_ram_test_march_x_step2:");
-        for (size_t i = 0; i < current_chunk_size; i++) {
-            if (start_addr[offset + i] != 0) {
-                test_passed = false;
-                goto restore_x;
-            }
-            start_addr[offset + i] = 0xFFFFFFFF; // Write 1
-        }
-
-        // 3. ↓ {R1, W0} (Read 1, Write 0 in descending order)
-        for (size_t i = current_chunk_size; i != 0; i--) {
-            if (start_addr[offset + i - 1] != 0xFFFFFFFF) {
-                test_passed = false;
-                goto restore_x;
-            }
-            start_addr[offset + i - 1] = 0; // Write 0
-        }
-
-        // 4. ↑ {R0, W1} (Read 0, Write 1 in ascending order)
-        for (size_t i = 0; i < current_chunk_size; i++) {
-            if (start_addr[offset + i] != 0) {
-                test_passed = false;
-                goto restore_x;
-            }
-            start_addr[offset + i] = 0xFFFFFFFF; // Write 1
-        }
-
-        // 5. ↓ {R1, W0} (Read 1, Write 0 in descending order)
-        for (size_t i = current_chunk_size; i != 0; i--) {
-            if (start_addr[offset + i - 1] != 0xFFFFFFFF) {
-                test_passed = false;
-                goto restore_x;
-            }
-            start_addr[offset + i - 1] = 0; // Write 0
-        }
-
-restore_x:
         for (size_t i = 0; i < current_chunk_size; i++) {
             start_addr[offset + i] = backup_chunk[i];
         }
@@ -223,11 +230,19 @@ restore_x:
 
 bist_esp_err_t bist_ram_test_march_a(void)
 {
+    if (!march_a_steps(backup_chunk, SAFE_RAM_BACKUP_WORDS) ||
+            !march_a_steps((volatile uint32_t *)ram_test_stack, SAFE_RAM_STACK_WORDS)) {
+        return BIST_ESP_RAM_TEST_ERR;
+    }
     return run_on_safe_stack(march_a_impl);
 }
 
 bist_esp_err_t bist_ram_test_march_x(void)
 {
+    if (!march_x_steps(backup_chunk, SAFE_RAM_BACKUP_WORDS) ||
+            !march_x_steps((volatile uint32_t *)ram_test_stack, SAFE_RAM_STACK_WORDS)) {
+        return BIST_ESP_RAM_TEST_ERR;
+    }
     return run_on_safe_stack(march_x_impl);
 }
 
@@ -250,9 +265,283 @@ bist_esp_err_t bist_ram_test_march_x(void)
  *   ↑(r1,w0,w1) ↑(r1)    — Seq 7
  *   ↓(r1,w0,w1) ↑(r1)    — Seq 8
  */
-static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
+static bool __attribute__((noinline)) abraham_steps(volatile uint32_t *part_a, size_t size_a,
+                                                    volatile uint32_t *part_b, size_t size_b)
 {
     bool test_passed = true;
+
+    // --- ↕(w0): Initialize all cells to 0 ---
+    for (size_t i = 0; i < size_a; i++) {
+        part_a[i] = 0;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        part_b[i] = 0;
+    }
+
+    // --- Seq 1: ↓(r0,w1) ↑(r1) ---
+    ASM("bist_ram_test_abraham_seq1:");
+    // ↓(r0,w1)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i - 1] = 0xFFFFFFFF;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i - 1] = 0xFFFFFFFF;
+    }
+    // ↑(r1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- Seq 2: ↓(r1,w0) ↑(r0) ---
+    // ↓(r1,w0)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i - 1] = 0;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i - 1] = 0;
+    }
+    // ↑(r0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- Seq 3: ↑(r0,w1) ↓(r1) ---
+    // ↑(r0,w1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i] = 0xFFFFFFFF;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i] = 0xFFFFFFFF;
+    }
+    // ↓(r1)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- Seq 4: ↑(r1,w0) ↓(r0) ---
+    // ↑(r1,w0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i] = 0;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i] = 0;
+    }
+    // ↓(r0)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- Seq 5: ↓(r0,w1,w0) ↑(r0) ---
+    // ↓(r0,w1,w0)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i - 1] = 0xFFFFFFFF;
+        part_b[i - 1] = 0;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i - 1] = 0xFFFFFFFF;
+        part_a[i - 1] = 0;
+    }
+    // ↑(r0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- Seq 6: ↑(r0,w1,w0) ↑(r0) ---
+    // ↑(r0,w1,w0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i] = 0xFFFFFFFF;
+        part_a[i] = 0;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i] = 0xFFFFFFFF;
+        part_b[i] = 0;
+    }
+    // ↑(r0)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- ↕(w1): Reset all cells to 1 ---
+    for (size_t i = 0; i < size_a; i++) {
+        part_a[i] = 0xFFFFFFFF;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        part_b[i] = 0xFFFFFFFF;
+    }
+
+    // --- Seq 7: ↑(r1,w0,w1) ↑(r1) ---
+    // ↑(r1,w0,w1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i] = 0;
+        part_a[i] = 0xFFFFFFFF;
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i] = 0;
+        part_b[i] = 0xFFFFFFFF;
+    }
+    // ↑(r1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+    // --- Seq 8: ↓(r1,w0,w1) ↑(r1) ---
+    // ↓(r1,w0,w1)
+    for (size_t i = size_b; i != 0; i--) {
+        if (part_b[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_b[i - 1] = 0;
+        part_b[i - 1] = 0xFFFFFFFF;
+    }
+    for (size_t i = size_a; i != 0; i--) {
+        if (part_a[i - 1] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+        part_a[i - 1] = 0;
+        part_a[i - 1] = 0xFFFFFFFF;
+    }
+    // ↑(r1)
+    for (size_t i = 0; i < size_a; i++) {
+        if (part_a[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+    for (size_t i = 0; i < size_b; i++) {
+        if (part_b[i] != 0xFFFFFFFF) {
+            test_passed = false;
+            goto done_abraham;
+        }
+    }
+
+done_abraham:
+    return test_passed;
+}
+
+static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
+{
+    bool test_passed;
     volatile uint32_t *start_addr = (uint32_t *)&BIST_RAM_SPAN_START;
     volatile uint32_t dram_test_size = bist_ram_test_words();
 
@@ -301,272 +590,8 @@ static bist_esp_err_t __attribute__((noinline)) abraham_impl(void)
         backup_chunk[BIST_ESP_RAM_BACKUP_CHUNK_SIZE + i] = part_b[i];
     }
 
-    // --- ↕(w0): Initialize all cells to 0 ---
-    for (size_t i = 0; i < size_a; i++) {
-        part_a[i] = 0;
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        part_b[i] = 0;
-    }
+    test_passed = abraham_steps(part_a, size_a, part_b, size_b);
 
-    // --- Seq 1: ↓(r0,w1) ↑(r1) ---
-    ASM("bist_ram_test_abraham_seq1:");
-    // ↓(r0,w1)
-    for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i - 1] = 0xFFFFFFFF;
-    }
-    for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i - 1] = 0xFFFFFFFF;
-    }
-    // ↑(r1)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- Seq 2: ↓(r1,w0) ↑(r0) ---
-    // ↓(r1,w0)
-    for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i - 1] = 0;
-    }
-    for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i - 1] = 0;
-    }
-    // ↑(r0)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- Seq 3: ↑(r0,w1) ↓(r1) ---
-    // ↑(r0,w1)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i] = 0xFFFFFFFF;
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i] = 0xFFFFFFFF;
-    }
-    // ↓(r1)
-    for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- Seq 4: ↑(r1,w0) ↓(r0) ---
-    // ↑(r1,w0)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i] = 0;
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i] = 0;
-    }
-    // ↓(r0)
-    for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- Seq 5: ↓(r0,w1,w0) ↑(r0) ---
-    // ↓(r0,w1,w0)
-    for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i - 1] = 0xFFFFFFFF;
-        part_b[i - 1] = 0;
-    }
-    for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i - 1] = 0xFFFFFFFF;
-        part_a[i - 1] = 0;
-    }
-    // ↑(r0)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- Seq 6: ↑(r0,w1,w0) ↑(r0) ---
-    // ↑(r0,w1,w0)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i] = 0xFFFFFFFF;
-        part_a[i] = 0;
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i] = 0xFFFFFFFF;
-        part_b[i] = 0;
-    }
-    // ↑(r0)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- ↕(w1): Reset all cells to 1 ---
-    for (size_t i = 0; i < size_a; i++) {
-        part_a[i] = 0xFFFFFFFF;
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        part_b[i] = 0xFFFFFFFF;
-    }
-
-    // --- Seq 7: ↑(r1,w0,w1) ↑(r1) ---
-    // ↑(r1,w0,w1)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i] = 0;
-        part_a[i] = 0xFFFFFFFF;
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i] = 0;
-        part_b[i] = 0xFFFFFFFF;
-    }
-    // ↑(r1)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-    // --- Seq 8: ↓(r1,w0,w1) ↑(r1) ---
-    // ↓(r1,w0,w1)
-    for (size_t i = size_b; i != 0; i--) {
-        if (part_b[i - 1] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_b[i - 1] = 0;
-        part_b[i - 1] = 0xFFFFFFFF;
-    }
-    for (size_t i = size_a; i != 0; i--) {
-        if (part_a[i - 1] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-        part_a[i - 1] = 0;
-        part_a[i - 1] = 0xFFFFFFFF;
-    }
-    // ↑(r1)
-    for (size_t i = 0; i < size_a; i++) {
-        if (part_a[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-    for (size_t i = 0; i < size_b; i++) {
-        if (part_b[i] != 0xFFFFFFFF) {
-            test_passed = false;
-            goto restore_abraham;
-        }
-    }
-
-restore_abraham:
     // Restore partition A
     for (size_t i = 0; i < size_a; i++) {
         part_a[i] = backup_chunk[i];
@@ -600,6 +625,10 @@ static void abraham_advance_pair(size_t num_partitions)
 
 bist_esp_err_t bist_ram_test_abraham(void)
 {
+    if (!abraham_steps(backup_chunk, SAFE_RAM_BACKUP_WORDS,
+                       (volatile uint32_t *)ram_test_stack, SAFE_RAM_STACK_WORDS)) {
+        return BIST_ESP_RAM_TEST_ERR;
+    }
     bist_esp_err_t result = run_on_safe_stack(abraham_impl);
     volatile uint32_t dram_test_size = bist_ram_test_words();
     size_t num_partitions = (dram_test_size + BIST_ESP_RAM_BACKUP_CHUNK_SIZE - 1)
@@ -624,6 +653,11 @@ bist_esp_err_t bist_ram_test_abraham_full(void)
                          : (num_partitions * (num_partitions - 1)) / 2;
 
     bist_ram_test_abraham_reset();
+
+    if (!abraham_steps(backup_chunk, SAFE_RAM_BACKUP_WORDS,
+                       (volatile uint32_t *)ram_test_stack, SAFE_RAM_STACK_WORDS)) {
+        return BIST_ESP_RAM_TEST_ERR;
+    }
 
     for (size_t p = 0; p < total_pairs; p++) {
         bist_esp_err_t err = run_on_safe_stack(abraham_impl);
