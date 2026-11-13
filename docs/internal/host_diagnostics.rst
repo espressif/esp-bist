@@ -435,15 +435,29 @@ Timeouts
    * - Challenge window
      - ``CONFIG_ESP_BIST_HD_CHALLENGE_WINDOW_US``
      - 10 000 us (10 ms)
+   * - Companion mailbox TX
+     - ``CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US``
+     - 10 000 us (10 ms)
    * - Agent send
      - Hardcoded in ``bist_hd_agent_start()``
      - 10 000 ms
    * - Diagnostic response
      - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``
      - 50 000 us (50 ms)
+   * - Safe-state WDT tamper recovery
+     - ``2 * CONFIG_ESP_BIST_WDT_TIMEOUT_US``
+     - 100 000 us (100 ms)
    * - Generic tick compare
      - ``bist_hd_timeout_expired()``
      - Unsigned wrap-safe comparison
+
+``bist_hd_comp_port_send()`` bounds every LP-to-HP mailbox transmission by
+``CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US`` (10 ms default) on both ESP-IDF
+(``lp_core_mailbox_send()``) and Zephyr (``mbox_send_dt()``). Keeping this
+timeout below ``CONFIG_ESP_BIST_WDT_TIMEOUT_US`` ensures that a hung or
+warm-resetting HP host that stops draining or acknowledging mailbox frames
+cannot deadlock the LP companion and reaches ``bist_hd_safe_state()`` before
+the LP watchdog expires.
 
 ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US`` is used by the companion when waiting
 for ``DIAG_RSP`` after issuing a ``DIAG_REQ``. During the wait, the companion
@@ -510,14 +524,19 @@ Ordered steps:
 #. ``bist_hd_comp_port_init()`` -- mailbox hardware.
 #. (Optional) ``bist_cpu_stack_overflow_init()`` if stack test enabled.
 #. Block on ``bist_hd_comp_port_recv()`` until ``AGENT_READY`` arrives or
-   ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US`` expires.
+   ``CONFIG_ESP_BIST_HD_AGENT_READY_TIMEOUT_US`` expires. On timeout or a
+   non-``AGENT_READY`` frame: ``bist_hd_safe_state()``.
 #. Run post-boot LP BIST (CPU regs, CPU CSR, RAM March-X + Abraham full, flash
    CRC -- depending on Kconfig). OR the ``BIST_HD_BIT_POSTBOOT`` flag into the
    result bitmask.
-#. Send ``LP_STATUS`` with the post-boot bitmask.
+#. Send ``LP_STATUS`` with the post-boot bitmask. On bounded TX failure:
+   ``bist_hd_safe_state()``.
 #. Verify that all expected bits are set. If not: ``bist_hd_safe_state()``.
-#. **Arm LP WDT** (``lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US)``). The WDT is
-   armed **only after** post-boot BIST passes; a pre-init failure never arms it.
+#. **Arm LP WDT** (``lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US)``). If any
+   step after ``bist_hd_comp_port_init()`` fails, ``bist_hd_safe_state()``
+   likewise arms ``LP_WDT`` immediately so pre-handshake and post-boot
+   failures also fail closed via full system reset rather than leaving the SoC
+   running unsupervised.
 
 Runtime Loop (``bist_hd_companion_loop``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -561,8 +580,14 @@ Runtime Loop (``bist_hd_companion_loop``)
 
 Each iteration:
 
-#. **Safe-State Check**: If already in safe state (``s_in_safe_state`` is set),
-   return immediately (no WDT feed).
+#. **Safe-State Check & WDT Tamper Recovery**: If already in safe state
+   (``s_in_safe_state`` is set), the companion never calls ``lp_wdt_feed()``.
+   Instead, if ``bist_hd_comp_port_elapsed_us(s_safe_state_enter_tick) >=
+   2 * CONFIG_ESP_BIST_WDT_TIMEOUT_US`` has elapsed without a chip reset (for
+   example, because an illegal HP ``SW_CPU`` warm reboot disarmed ``LP_WDT``
+   during ``esp_restart_noos()`` / ``init_disable_rtc_wdt``), it refreshes
+   ``s_safe_state_enter_tick`` and re-arms
+   ``lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US)`` before returning ``0``.
 #. **Feed LP WDT**: ``lp_wdt_feed()`` feeds the hardware watchdog timer.
 #. **Drain Checkpoints**: If ``CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT`` is enabled:
    clear the loop-received flag (``s_checkpoint_received = false``) and drain
@@ -768,13 +793,35 @@ Safe State and LP WDT
 
 ``bist_hd_safe_state()`` is a weak function. The default implementation:
 
-#. Latches ``s_in_safe_state = 1`` (once latched, subsequent loop iterations are
-   no-ops with no WDT feed).
-#. Sends a best-effort ``SAFE_STATE_NOTIFY`` to HP.
+#. Latches ``s_in_safe_state = true`` (a strict one-way latch: subsequent loop
+   iterations never call ``lp_wdt_feed()`` or re-handshake with the host).
+#. Records ``s_safe_state_enter_tick = bist_hd_comp_port_tick()`` and
+   unconditionally calls ``lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US)`` so
+   both pre-handshake/post-boot failures and runtime failures arm the hardware
+   system-reset countdown.
+#. Sends a best-effort ``SAFE_STATE_NOTIFY`` to HP (bounded by the companion
+   mailbox TX timeout so a dead or stalled host cannot block safe-state entry).
 
 Because the loop stops feeding the LP WDT, the watchdog fires
-(``WDT_STAGE_ACTION_RESET_SYSTEM``) and resets the entire chip. This is the
-**fail-closed** mechanism.
+(``WDT_STAGE_ACTION_RESET_RTC``, ``rst:0x10`` ``LP_WDT_SYS`` / ``RTC_WDT_SYS``)
+and resets both the HP digital domain and the LP/RTC domain, bringing the
+entire chip back to a clean reset state. This is the **fail-closed** mechanism.
+
+**FFI and Prohibition of HP Warm-Restart Re-Handshaking:**
+
+On an HP warm reboot (``SW_CPU`` via ``esp_restart()``), ESP-IDF's
+``esp_restart_noos()``, bootloader, and ``init_disable_rtc_wdt`` overwrite and
+disable ``LP_WDT`` (``WDT_RWDT``) while the LP core continues running. Allowing
+the QM HP host to warm-reset and re-handshake with the companion would violate
+**Freedom From Interference (FFI)**: a malfunctioning QM host could repeatedly
+warm-reset itself to disarm ``LP_WDT`` or clear companion fault latches.
+Therefore, warm-restart re-handshaking is prohibited: ``s_in_safe_state`` is a
+one-way latch, and if ``2 * CONFIG_ESP_BIST_WDT_TIMEOUT_US`` elapses in
+``bist_hd_companion_loop()`` while ``s_in_safe_state`` is latched, the
+companion re-arms ``lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US)`` to escalate
+any ``LP_WDT`` tamper into a full ``RTCWDT_SYS_RST`` system reset. Controlled
+application reboots must withhold checkpoints/Q&A so the companion performs a
+clean full-system ``LP_WDT`` reset.
 
 Triggers for safe state:
 
@@ -783,12 +830,14 @@ Triggers for safe state:
 - Missed host checkpoint deadline (exceeding ``CONFIG_ESP_BIST_HD_CHECKPOINT_PERIOD_LOOPS`` consecutive loops without a checkpoint, including a host that never reports).
 - Out-of-order or duplicate checkpoint ID (monotonicity violation or non-forward step).
 - Post-boot or runtime LP BIST failure.
-- Protocol / FFI violation (bad sequence, corrupted frame).
-- Transport failure during init or runtime.
+- Protocol / FFI violation (bad sequence, corrupted frame, or illegal HP warm reboot).
+- Bounded mailbox TX timeout or RX timeout during init or runtime.
 - ``AGENT_READY`` timeout or wrong frame type during init.
 
 Applications may override the weak ``bist_hd_safe_state()`` to drive
-product-specific cut-offs (GPIO, relay, power) before the WDT reset.
+product-specific cut-offs (GPIO, relay, power) before the WDT reset; any custom
+override must ensure ``LP_WDT`` remains armed if a full-chip reset is part of
+the product's safe state.
 
 .. _hd-audit-catalog:
 
@@ -959,6 +1008,12 @@ Timing Parameters
      - int
      - 10000
      - Max time for host to answer a Q&A challenge (us)
+   * - ``CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US``
+     - int
+     - 10000
+     - Max time for the LP companion to wait on an outgoing LP-to-HP mailbox
+       transmission before failing closed (us); keep below
+       ``CONFIG_ESP_BIST_WDT_TIMEOUT_US``
    * - ``CONFIG_ESP_BIST_HD_DIAG_TIMEOUT_US``
      - int
      - 50000 (1000000 if RAM audit)
@@ -1028,7 +1083,7 @@ Runs host-native via ``cmake`` + ``ctest``; no device required.
 **Companion verdict matrix** (``tests/unit/hd_companion/``):
 
 Drives the real ``bist_hd_companion.c`` state machine against a scripted fake
-agent. 27 scenarios cover the judgment logic without hardware:
+agent. 29 scenarios cover the judgment logic without hardware:
 
 .. list-table::
    :header-rows: 1
@@ -1039,11 +1094,11 @@ agent. 27 scenarios cover the judgment logic without hardware:
    * - ``ready``
      - Normal ``AGENT_READY`` handshake accepted
    * - ``no_ready``
-     - Timeout when no ``AGENT_READY`` arrives
+     - Timeout when no ``AGENT_READY`` arrives enters safe state and arms ``LP_WDT``
    * - ``ready_wrong_type``
-     - Companion rejects non-``AGENT_READY`` frame during init
+     - Non-``AGENT_READY`` first frame enters safe state and arms ``LP_WDT``
    * - ``postboot_fail``
-     - Post-boot BIST failure triggers safe state
+     - Post-boot BIST failure reports failing status, enters safe state, and arms ``LP_WDT``
    * - ``qa_pass``
      - Correct Q&A answer accepted
    * - ``qa_wrong_value``
@@ -1058,6 +1113,13 @@ agent. 27 scenarios cover the judgment logic without hardware:
      - Answer arrives after window expires
    * - ``safe_state_latched``
      - Once in safe state, no further WDT feeds or challenges
+   * - ``safe_state_wdt_rearm``
+     - Safe-state entry immediately arms ``LP_WDT``, waits until
+       ``2 * CONFIG_ESP_BIST_WDT_TIMEOUT_US``, and re-arms ``LP_WDT`` to
+       recover from any illegal HP warm-reboot ``LP_WDT`` disarm
+   * - ``send_timeout``
+     - Unacknowledged companion mailbox TX failure enters safe state, arms
+       ``LP_WDT`` without hanging, and stays latched
    * - ``runtime_fail``
      - Runtime BIST failure triggers safe state
    * - ``checkpoint_pass``
@@ -1124,7 +1186,7 @@ On-Target Fail-Closed Tests
 **ESP-IDF** (``tests/integration/hd_idf/``):
 
 The test application makes the host misbehave; the companion enters safe state;
-the LP WDT resets the chip. Three configurations:
+the LP WDT resets the chip. Four configurations:
 
 - ``hd_key_mismatch``: HP is built with ``BIST_HD_CHALLENGE_KEY=0x5A5A5A5A``
   (a key the LP companion does not share), so the production answer path
@@ -1138,13 +1200,20 @@ the LP WDT resets the chip. Three configurations:
   ``bist_hd_checkpoint_reached()`` (``CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT``).
   The companion's checkpoint deadline is the only path to safe state, proving
   the checkpoint audit alone triggers the fail-closed reaction.
+- ``hd_host_sw_reset``: After supervision is armed, HP illegally calls
+  ``esp_restart()`` (``CONFIG_BIST_HD_TEST_HOST_SW_RESET``), triggering an
+  unauthorized ``SW_CPU`` warm reboot whose startup path disarms ``LP_WDT``
+  (``init_disable_rtc_wdt``). The companion refuses re-handshaking, recovers
+  from the ``LP_WDT`` tamper via its ``2 * CONFIG_ESP_BIST_WDT_TIMEOUT_US``
+  re-arm check, and escalates the violation into a full ``WDT`` system reset.
 
 The pytest (``pytest_device_hd_idf.py``) asserts:
 
 #. ``test_HD_agent_ready:PASS``
 #. ``test_BIST_postboot:PASS``
+#. ``test_HD_safe_dma_pool:PASS``
 #. ``test_HD_fail_closed_armed:PASS``
-#. ``CPU has been reset by WDT``
+#. ``rst:0x10 (LP_WDT_SYS|RTC_WDT_SYS|CHIP_LP_WDT_RESET)``
 
 Targets: ESP32-C5, ESP32-C6, ESP32-P4.
 
@@ -1184,9 +1253,10 @@ Per-Platform Verification Depth
      - Coverage scope
    * - ESP-IDF
      - pytest happy-path + fail-closed (key mismatch, starved agent, skip
-       checkpoint); targets ESP32-C5, C6, P4
-     - Q&A, checkpoint, IRQ latency, CPU/CSR, RAM March — pass; fail-closed
-       via starve (DIAG timeout) and unit ``diag_fail`` / ``diag_ram_fail``
+       checkpoint, illegal host ``SW_CPU`` warm reset); targets ESP32-C5, C6, P4
+     - Q&A, checkpoint, IRQ latency, CPU/CSR, RAM March, ``LP_WDT`` tamper
+       recovery — pass; fail-closed via starve (DIAG timeout), ``esp_restart()``
+       escalation, and unit ``diag_fail`` / ``diag_ram_fail``
    * - Zephyr
      - Twister ztest + console harness (selftest, reset_cause, key_mismatch,
        starved_agent, skip_checkpoint); targets ESP32-C5, C6, P4
