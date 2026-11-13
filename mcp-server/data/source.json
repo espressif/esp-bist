@@ -892,10 +892,10 @@
   },
   {
     "function_name": "lp_wdt_init",
-    "body": "void lp_wdt_init(uint32_t timeout_us)\n{\n    uint32_t timeout_ticks = (uint32_t)((uint64_t)timeout_us * LP_SLOW_CLK_FREQ_HZ / 1000000);\n\n    lpwdt_ll_write_protect_disable(&LP_WDT);\n    lpwdt_ll_disable(&LP_WDT);\n\n    lpwdt_ll_config_stage(&LP_WDT, WDT_STAGE0, timeout_ticks, WDT_STAGE_ACTION_RESET_SYSTEM);\n    lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE1);\n    lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE2);\n    lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE3);\n\n    lpwdt_ll_set_flashboot_en(&LP_WDT, false);\n    lpwdt_ll_set_pause_in_sleep_en(&LP_WDT, false);\n\n    lpwdt_ll_enable(&LP_WDT);\n    lpwdt_ll_feed(&LP_WDT);\n    lpwdt_ll_write_protect_enable(&LP_WDT);\n}",
+    "body": "void lp_wdt_init(uint32_t timeout_us)\n{\n    uint32_t timeout_ticks = (uint32_t)((uint64_t)timeout_us * LP_SLOW_CLK_FREQ_HZ / 1000000);\n\n    lpwdt_ll_write_protect_disable(&LP_WDT);\n    lpwdt_ll_disable(&LP_WDT);\n\n    lpwdt_ll_config_stage(&LP_WDT, WDT_STAGE0, timeout_ticks, WDT_STAGE_ACTION_RESET_RTC);\n    lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE1);\n    lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE2);\n    lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE3);\n\n    lpwdt_ll_set_flashboot_en(&LP_WDT, false);\n    lpwdt_ll_set_pause_in_sleep_en(&LP_WDT, false);\n\n    lpwdt_ll_enable(&LP_WDT);\n    lpwdt_ll_feed(&LP_WDT);\n    lpwdt_ll_write_protect_enable(&LP_WDT);\n}",
     "file": "src/bist/drivers/lp_wdt.c",
-    "line_start": 42,
-    "line_end": 60,
+    "line_start": 43,
+    "line_end": 61,
     "module": "drivers",
     "content_type": "source"
   },
@@ -903,8 +903,8 @@
     "function_name": "lp_wdt_feed",
     "body": "void lp_wdt_feed(void)\n{\n    lpwdt_ll_write_protect_disable(&LP_WDT);\n    lpwdt_ll_feed(&LP_WDT);\n    lpwdt_ll_write_protect_enable(&LP_WDT);\n}",
     "file": "src/bist/drivers/lp_wdt.c",
-    "line_start": 62,
-    "line_end": 67,
+    "line_start": 63,
+    "line_end": 68,
     "module": "drivers",
     "content_type": "source"
   },
@@ -912,8 +912,8 @@
     "function_name": "lp_wdt_disable",
     "body": "void lp_wdt_disable(void)\n{\n    lpwdt_ll_write_protect_disable(&LP_WDT);\n    lpwdt_ll_disable(&LP_WDT);\n    lpwdt_ll_write_protect_enable(&LP_WDT);\n}",
     "file": "src/bist/drivers/lp_wdt.c",
-    "line_start": 69,
-    "line_end": 74,
+    "line_start": 70,
+    "line_end": 75,
     "module": "drivers",
     "content_type": "source"
   },
