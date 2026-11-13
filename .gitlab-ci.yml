@@ -105,12 +105,47 @@ stages:
   - esp32p4
 
 .qemu_remote_socs: &qemu_remote_socs
-  - esp32c5
-  - esp32c6
-  - esp32c61
-  - esp32h2
+  - esp32c3
+
+.reciprocal_suite_socs: &reciprocal_suite_socs
   - esp32p4
-  - esp32h4
+
+.main_suite_parts: &main_suite_parts
+  - "main_suite-1/2"
+  - "main_suite-2/2"
+
+.reciprocal_suite_parts: &reciprocal_suite_parts
+  - "reciprocal_suite"
+
+.resolve_test_apps: &resolve_test_apps |
+  _full="${TEST_APPS}"
+  case "${TEST_SUITE}" in
+    main_suite-1/2)
+      TEST_APPS="cpu_reg_test"
+      ;;
+    main_suite-2/2)
+      TEST_APPS=""
+      for app in ${_full}; do
+        [ "$app" = "cpu_reg_test" ] && continue
+        case "$app" in *reciprocal*) continue ;; esac
+        TEST_APPS="${TEST_APPS:+$TEST_APPS }${app}"
+      done
+      ;;
+    reciprocal_suite)
+      TEST_APPS=""
+      for app in ${_full}; do
+        case "$app" in *reciprocal*)
+          TEST_APPS="${TEST_APPS:+$TEST_APPS }${app}"
+          ;;
+        esac
+      done
+      ;;
+    *)
+      echo "Unknown TEST_SUITE=${TEST_SUITE}"
+      exit 1
+      ;;
+  esac
+  export TEST_APPS
 
 default:
   image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
@@ -368,7 +403,7 @@ build_qemu_remote:
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
-    # - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
     - if: '"$[[ inputs.build_qemu_remote ]]" == "true"'
   tags: [build]
 
@@ -588,12 +623,14 @@ test_idf_device:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
+    - *resolve_test_apps
   script:
     - |
       if [ ! -d "tests/${SOC_TARGET}" ]; then
         echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
         exit 1
       fi
+      echo "TEST_APPS=${TEST_APPS}"
       for TEST_APP in $TEST_APPS; do
         if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
           rm -rf "tests/$TEST_APP/build"
@@ -620,6 +657,7 @@ test_idf_device:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
+    - *resolve_test_apps
     - |
       if [ ! -x "$CI_PROJECT_DIR/qemu_build/qemu-system-riscv32" ]; then
         echo "QEMU binary missing under qemu_build/."
@@ -632,6 +670,7 @@ test_idf_device:
         echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
         exit 1
       fi
+      echo "TEST_APPS=${TEST_APPS}"
       for TEST_APP in $TEST_APPS; do
         if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
           rm -rf "tests/$TEST_APP/build"
@@ -675,6 +714,9 @@ test_idf_device:
   parallel:
     matrix:
       - SOC_TARGET: *qemu_upstream_socs
+        TEST_SUITE: *main_suite_parts
+      - SOC_TARGET: *reciprocal_suite_socs
+        TEST_SUITE: *reciprocal_suite_parts
 
 test_qemu_upstream:
   extends:
@@ -691,6 +733,9 @@ test_qemu_upstream:
   parallel:
     matrix:
       - SOC_TARGET: *qemu_remote_socs
+        TEST_SUITE: *main_suite_parts
+      - SOC_TARGET: *reciprocal_suite_socs
+        TEST_SUITE: *reciprocal_suite_parts
 
 test_qemu_remote:
   extends:
@@ -703,12 +748,18 @@ test_qemu_remote:
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
     RUN_INJECTION_TEST: $[[ inputs.run_injection_test ]]
+  before_script:
+    - . $IDF_PATH/export.sh
+    - mkdir -p $MCUBOOT_PATH/boot/espressif/build
+    - cp mcuboot_build/mcuboot_${SOC_TARGET}.bin $MCUBOOT_PATH/boot/espressif/build/
+    - *resolve_test_apps
   script:
     - |
       if [ ! -d "tests/${SOC_TARGET}" ]; then
         echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
         exit 1
       fi
+      echo "TEST_APPS=${TEST_APPS}"
       for TEST_APP in $TEST_APPS; do
         if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
           rm -rf "tests/$TEST_APP/build"
@@ -750,7 +801,12 @@ test_qemu_remote:
 test_device:
   extends:
     - .test_device_template
-  <<: *test_device_matrix
+  parallel:
+    matrix:
+      - SOC_TARGET: *socs
+        TEST_SUITE: *main_suite_parts
+      - SOC_TARGET: *reciprocal_suite_socs
+        TEST_SUITE: *reciprocal_suite_parts
 
 .test_samples_template:
   stage: Test Device
@@ -859,17 +915,26 @@ cache_docs_reports:
       parallel:
         matrix:
           - SOC_TARGET: *qemu_upstream_socs
+            TEST_SUITE: *main_suite_parts
+          - SOC_TARGET: *reciprocal_suite_socs
+            TEST_SUITE: *reciprocal_suite_parts
     - job: test_qemu_remote
       optional: true
       artifacts: true
       parallel:
         matrix:
           - SOC_TARGET: *qemu_remote_socs
+            TEST_SUITE: *main_suite_parts
+          - SOC_TARGET: *reciprocal_suite_socs
+            TEST_SUITE: *reciprocal_suite_parts
     - job: test_device
       artifacts: true
       parallel:
         matrix:
           - SOC_TARGET: *socs
+            TEST_SUITE: *main_suite_parts
+          - SOC_TARGET: *reciprocal_suite_socs
+            TEST_SUITE: *reciprocal_suite_parts
     - job: test_metrics
       artifacts: true
       parallel:
@@ -1004,8 +1069,8 @@ test_zephyr_device:
   needs:
     - job: test_qemu_upstream
       optional: true
-    # - job: test_qemu_remote
-    #   optional: true
+    - job: test_qemu_remote
+      optional: true
     - job: test_device
       optional: true
     - job: test_metrics
