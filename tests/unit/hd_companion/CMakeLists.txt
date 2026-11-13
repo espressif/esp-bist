@@ -50,6 +50,8 @@ set(HD_COMPANION_SCENARIOS
     qa_silent
     qa_late
     safe_state_latched
+    safe_state_wdt_rearm
+    send_timeout
     runtime_fail
     checkpoint_pass
     checkpoint_missing
