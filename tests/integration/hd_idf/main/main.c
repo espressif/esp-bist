@@ -25,6 +25,7 @@
 #include "esp_heap_caps.h"
 #include "esp_rom_sys.h"
 #include "esp_sleep.h"
+#include "esp_system.h"
 #include "sdkconfig.h"
 #include "ulp_lp_core.h"
 #include "lp_core_uart.h"
@@ -36,8 +37,9 @@
 
 #if !defined(CONFIG_BIST_HD_TEST_KEY_MISMATCH) && \
     !defined(CONFIG_BIST_HD_TEST_STARVE_AGENT) && \
-    !defined(CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT)
-#error "Select a fault: CONFIG_BIST_HD_TEST_KEY_MISMATCH, CONFIG_BIST_HD_TEST_STARVE_AGENT or CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT"
+    !defined(CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT) && \
+    !defined(CONFIG_BIST_HD_TEST_HOST_SW_RESET)
+#error "Select a fault: CONFIG_BIST_HD_TEST_KEY_MISMATCH, CONFIG_BIST_HD_TEST_STARVE_AGENT, CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT or CONFIG_BIST_HD_TEST_HOST_SW_RESET"
 #endif
 
 #define MAILBOX_TIMEOUT_MS   10000
@@ -211,6 +213,12 @@ void app_main(void)
 
 #ifdef CONFIG_BIST_HD_TEST_STARVE_AGENT
     starve_agent();
+#endif
+
+#ifdef CONFIG_BIST_HD_TEST_HOST_SW_RESET
+    fflush(stdout);
+    esp_rom_delay_us(2000);
+    esp_restart();
 #endif
 
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());

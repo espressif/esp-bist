@@ -31,4 +31,13 @@ config BIST_HD_TEST_SKIP_CHECKPOINT
       is the only path to safe state. Proves the checkpoint audit alone
       triggers the fail-closed reaction.
 
+config BIST_HD_TEST_HOST_SW_RESET
+    bool "Illegally call esp_restart() from the QM HP host at runtime"
+    default n
+    help
+      After supervision is armed, app_main() calls esp_restart() to attempt
+      an unauthorized HP warm reboot (SW_CPU). The LP companion recovers
+      from init_disable_rtc_wdt by re-arming LP_WDT to force a full system
+      reset.
+
 endmenu

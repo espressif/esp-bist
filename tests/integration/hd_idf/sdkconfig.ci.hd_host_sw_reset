@@ -1,0 +1,4 @@
+# Fail-closed FFI: the QM HP host illegally calls esp_restart() (SW_CPU) after
+# supervision is armed; LP_WDT tamper recovery escalates it into a full LP_WDT
+# system reset.
+CONFIG_BIST_HD_TEST_HOST_SW_RESET=y
