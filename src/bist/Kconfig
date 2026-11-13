@@ -561,6 +561,17 @@ config ESP_BIST_HD_AGENT_READY_TIMEOUT_US
       Maximum time the companion waits for AGENT_READY after its own BIST before
       entering safe state.
 
+config ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US
+    int "Companion mailbox TX timeout (us)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 10000
+    range 100 10000000
+    help
+      Maximum time in microseconds the LP companion waits for the HP host to
+      acknowledge or drain an outgoing mailbox transmission before failing
+      closed. Keep below ESP_BIST_WDT_TIMEOUT_US so an unacknowledged TX
+      reaches bist_hd_safe_state() before the LP watchdog expires.
+
 config ESP_BIST_HD_AGENT_TASK_STACK
     int "Host Diagnostic Agent stack size (bytes)"
     depends on ESP_BIST_HOST_DIAGNOSTICS

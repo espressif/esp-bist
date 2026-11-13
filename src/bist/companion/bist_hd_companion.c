@@ -54,16 +54,23 @@
 static const char *TAG = "hd_comp";
 
 static bool s_in_safe_state;
+static uint32_t s_safe_state_enter_tick;
 static uint16_t s_seq;
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
 static uint32_t s_challenge_prng;
 #endif
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
 static bool s_checkpoint_armed;
-static uint32_t s_checkpoint_last_id;
 static bool s_checkpoint_received;
-static uint32_t s_checkpoint_miss_count;
+static uint8_t s_checkpoint_miss_count;
+static uint32_t s_checkpoint_last_id;
 #endif
+
+static __attribute__((noinline)) void arm_lp_wdt(void)
+{
+    s_safe_state_enter_tick = bist_hd_comp_port_tick();
+    lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
+}
 
 void __attribute__((weak)) bist_hd_safe_state(void)
 {
@@ -73,6 +80,7 @@ void __attribute__((weak)) bist_hd_safe_state(void)
         return;
     }
     s_in_safe_state = true;
+    arm_lp_wdt();
     ESP_LOGE(TAG, "safe_state");
     /* Best-effort notify so HP/pytest can observe companion judgment. */
     notify.type = BIST_HD_MSG_SAFE_STATE_NOTIFY;
@@ -449,27 +457,28 @@ int bist_hd_companion_init(void)
     if (bist_hd_comp_port_recv(&msg, ready_timeout_us) != 0 ||
             msg.type != BIST_HD_MSG_AGENT_READY) {
         ESP_LOGE(TAG, "no AGENT_READY");
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
     ESP_LOGD(TAG, "init: AGENT_READY");
 
     result = run_postboot_tests() | BIST_HD_BIT_POSTBOOT;
     ESP_LOGD(TAG, "init: send postboot status 0x%08lx", (unsigned long)result);
     if (send_lp_status(result) != 0) {
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
     if ((result & expected_postboot_mask()) != expected_postboot_mask()) {
         ESP_LOGE(TAG, "postboot fail");
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
 
     ESP_LOGD(TAG, "init: lp_wdt %u us", (unsigned)CONFIG_ESP_BIST_WDT_TIMEOUT_US);
-    lp_wdt_init(CONFIG_ESP_BIST_WDT_TIMEOUT_US);
+    arm_lp_wdt();
     ESP_LOGD(TAG, "init: done");
     return 0;
+
+fail:
+    bist_hd_safe_state();
+    return -1;
 }
 
 int bist_hd_companion_loop(void)
@@ -477,6 +486,10 @@ int bist_hd_companion_loop(void)
     uint32_t result;
 
     if (s_in_safe_state) {
+        if (bist_hd_comp_port_elapsed_us(s_safe_state_enter_tick) >=
+                (2u * (uint32_t)CONFIG_ESP_BIST_WDT_TIMEOUT_US)) {
+            arm_lp_wdt();
+        }
         return 0;
     }
 
@@ -486,8 +499,7 @@ int bist_hd_companion_loop(void)
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
     s_checkpoint_received = false;
     if (drain_checkpoints() != 0) {
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
 #endif
 
@@ -495,37 +507,36 @@ int bist_hd_companion_loop(void)
     result = run_runtime_tests() | BIST_HD_BIT_RUNTIME;
 
     if (send_lp_status(result) != 0) {
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
     ESP_LOGD(TAG, "runtime: status 0x%08lx", (unsigned long)result);
     if ((result & expected_runtime_mask()) != expected_runtime_mask()) {
         ESP_LOGE(TAG, "runtime fail");
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_QA
     ESP_LOGD(TAG, "runtime: host QA challenge");
     if (run_challenge_audit() != 0) {
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
 #endif
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT
     if (run_scheduled_diag_audits() != 0) {
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
 #endif
 
 #ifdef CONFIG_ESP_BIST_HD_AUDIT_CHECKPOINT
     if (check_checkpoint() != 0) {
-        bist_hd_safe_state();
-        return -1;
+        goto fail;
     }
 #endif
 
     return 0;
+
+fail:
+    bist_hd_safe_state();
+    return -1;
 }

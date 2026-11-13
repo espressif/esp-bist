@@ -29,8 +29,11 @@ int bist_hd_comp_port_init(void);
 /**
  * @brief Send an encoded Host Diagnostics message to the host agent.
  *
+ * Bounded by CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US (10 ms default) so an
+ * unresponsive or warm-resetting host cannot stall the companion indefinitely.
+ *
  * @param msg Message to send
- * @return 0 on success, negative errno-style value on failure
+ * @return 0 on success, negative errno-style value on failure / timeout
  */
 int bist_hd_comp_port_send(const bist_hd_msg_t *msg);
 

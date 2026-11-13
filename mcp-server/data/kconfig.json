@@ -640,6 +640,16 @@
     "prompt": "Agent ready timeout (us)"
   },
   {
+    "name": "ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US",
+    "type": "int",
+    "default": "10000",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Maximum time in microseconds the LP companion waits for the HP host to\nacknowledge or drain an outgoing mailbox transmission before failing\nclosed. Keep below ESP_BIST_WDT_TIMEOUT_US so an unacknowledged TX\nreaches bist_hd_safe_state() before the LP watchdog expires.",
+    "menu": "Host Diagnostics Audits",
+    "range": "100 10000000",
+    "prompt": "Companion mailbox TX timeout (us)"
+  },
+  {
     "name": "ESP_BIST_HD_AGENT_TASK_STACK",
     "type": "int",
     "default": "4096",
