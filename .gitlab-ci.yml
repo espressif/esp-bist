@@ -554,7 +554,7 @@ build_idf_samples:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
-  tags: [$IDF_TARGET]
+  tags: [$IDF_TARGET, "arm"]
   artifacts:
     when: always
     expire_in: 1 week
@@ -815,7 +815,7 @@ test_samples:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
-  tags: [$SOC_TARGET]
+  tags: [$SOC_TARGET, "arm"]
   needs:
     - job: build_mcuboot
       artifacts: true
@@ -920,7 +920,7 @@ cache_docs_reports:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_zephyr_test ]]" == "true"'
-  tags: [$SOC_TAG]
+  tags: [$SOC_TAG, "arm"]
   needs:
     - job: build_zephyr_twister
       artifacts: true
