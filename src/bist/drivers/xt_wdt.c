@@ -41,10 +41,14 @@ static void *s_callback_arg;
 
 static IRAM_ATTR void rtc_xt_wdt_default_isr_handler(void *arg)
 {
-    ESP_LOGE(TAG, "XTAL32K watchdog timer got triggered");
-
     uint32_t status = REG_READ(RTC_CNTL_INT_ST_REG);
+
     REG_WRITE(RTC_CNTL_INT_CLR_REG, status);
+    if ((status & RTC_CNTL_XTAL32K_DEAD_INT_ST_M) == 0) {
+        return;
+    }
+
+    ESP_LOGE(TAG, "XTAL32K watchdog timer got triggered");
 
     if (s_callback_func) {
         (*s_callback_func)(s_callback_arg);

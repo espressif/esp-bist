@@ -984,8 +984,8 @@
     "function_name": "esp_xt_wdt_init",
     "body": "esp_err_t esp_xt_wdt_init(const esp_xt_wdt_config_t *cfg)\n{\n    xt_wdt_hal_config_t hal_config = {\n        .timeout = cfg->timeout,\n    };\n\n    xt_wdt_hal_init(&s_hal_ctx, &hal_config);\n\n    if (cfg->auto_backup_clk_enable) {\n        /* Estimate frequency of internal RTC oscillator */\n        uint32_t rtc_clk_frequency_khz = rtc_clk_freq_cal(rtc_clk_cal(CLK_CAL_RC_SLOW, RTC_CLK_CAL_CYCLES)) / 1000;\n        ESP_LOGD(TAG, \"Calibrating backup clock from rtc clock with frequency %\" PRIu32, rtc_clk_frequency_khz);\n\n        xt_wdt_hal_enable_backup_clk(&s_hal_ctx, rtc_clk_frequency_khz);\n    }\n\n    esp_cpu_intr_disable(1 << ETS_RTC_CORE_INTR_SOURCE);\n    esp_rom_route_intr_matrix(esp_cpu_get_core_id(), ETS_RTC_CORE_INTR_SOURCE, ETS_RTC_CORE_INTR_SOURCE);\n\n    esp_cpu_intr_set_type(ETS_RTC_CORE_INTR_SOURCE, 0);\n    esp_cpu_intr_set_priority(ETS_RTC_CORE_INTR_SOURCE, SOC_INTERRUPT_LEVEL_MEDIUM);\n    esp_cpu_intr_set_handler(ETS_RTC_CORE_INTR_SOURCE, rtc_xt_wdt_default_isr_handler, NULL);\n    esp_cpu_intr_enable(1 << ETS_RTC_CORE_INTR_SOURCE);\n\n    xt_wdt_hal_enable(&s_hal_ctx, 1);\n\n    return ESP_OK;\n}",
     "file": "src/bist/drivers/xt_wdt.c",
-    "line_start": 54,
-    "line_end": 81,
+    "line_start": 58,
+    "line_end": 85,
     "module": "drivers",
     "content_type": "source"
   },
@@ -993,8 +993,8 @@
     "function_name": "esp_xt_wdt_restore_clk",
     "body": "void esp_xt_wdt_restore_clk(void)\n{\n    xt_wdt_hal_enable(&s_hal_ctx, false);\n\n    REG_CLR_BIT(RTC_CNTL_EXT_XTL_CONF_REG, RTC_CNTL_XPD_XTAL_32K);\n    REG_SET_BIT(RTC_CNTL_EXT_XTL_CONF_REG, RTC_CNTL_XPD_XTAL_32K);\n\n    /* Needs some time after switching to 32khz XTAL before turning on WDT again */\n    esp_rom_delay_us(300);\n\n    xt_wdt_hal_enable(&s_hal_ctx, true);\n}",
     "file": "src/bist/drivers/xt_wdt.c",
-    "line_start": 83,
-    "line_end": 94,
+    "line_start": 87,
+    "line_end": 98,
     "module": "drivers",
     "content_type": "source"
   },
@@ -1002,8 +1002,8 @@
     "function_name": "esp_xt_wdt_register_callback",
     "body": "void esp_xt_wdt_register_callback(esp_xt_callback_t func, void *arg)\n{\n    s_callback_func = func;\n    s_callback_arg = arg;\n}",
     "file": "src/bist/drivers/xt_wdt.c",
-    "line_start": 96,
-    "line_end": 100,
+    "line_start": 100,
+    "line_end": 104,
     "module": "drivers",
     "content_type": "source"
   }
