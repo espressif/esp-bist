@@ -1709,7 +1709,7 @@ External 32kHz Crystal
         Success [label = "Return BIST_ESP_OK"];
     }
 
-**External 32kHz Crystal Test:** On SoCs with ``SOC_XT_WDT_SUPPORTED``, uses XT WDT with 200-cycle timeout to detect 32kHz oscillator failure. Waits 2 ms and checks if the callback was triggered (indicating clock failure). If the callback fires during this wait period, it indicates the crystal has failed and the test returns an error. On SoCs without XT WDT hardware, this test is skipped and returns ``BIST_ESP_OK``.
+**External 32kHz Crystal Test:** On SoCs with ``SOC_XT_WDT_SUPPORTED``, uses XT WDT with 200-cycle timeout to detect 32kHz oscillator failure. Waits 2 ms and checks if the callback was triggered (indicating clock failure). If the callback fires during this wait period, it indicates the crystal has failed and the test returns an error. The watchdog is disabled before the function returns, so a later trip cannot interrupt the caller. On SoCs without XT WDT hardware, this test is skipped and returns ``BIST_ESP_OK``.
 
 Main Crystal
 ^^^^^^^^^^^^

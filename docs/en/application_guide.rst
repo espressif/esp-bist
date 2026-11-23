@@ -182,7 +182,7 @@ Watchdog Callback Registration
 
 **Implementation**:
 
-- XT WDT callback directly calls ``fail_safe_exit()`` for crystal failures (guarded by ``SOC_XT_WDT_SUPPORTED`` at compile time)
+- XT WDT callback directly calls ``fail_safe_exit()`` for crystal failures (guarded by ``SOC_XT_WDT_SUPPORTED`` at compile time). The crystal test disarms the watchdog, so the sample enables it again before registering this callback.
 - MWDT callback logs the event (callback executes in IRAM before reset)
 
 Runtime Tests
@@ -523,6 +523,10 @@ For maximum safety coverage (as in standalone application):
         // Initialize all safety mechanisms
         bist_cpu_stack_overflow_init();
     #if SOC_XT_WDT_SUPPORTED
+        esp_xt_wdt_init(&(esp_xt_wdt_config_t) {
+            .timeout = 200,
+            .auto_backup_clk_enable = false,
+        });
         esp_xt_wdt_register_callback(fail_safe_exit, NULL);
     #endif
         wdt_register_callback(wdt_callback, NULL);
