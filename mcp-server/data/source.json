@@ -505,10 +505,10 @@
   },
   {
     "function_name": "bist_ext_crystal_fail_test",
-    "body": "bist_esp_err_t bist_ext_crystal_fail_test(void)\n{\n#if SOC_XT_WDT_SUPPORTED\n    esp_err_t err;\n\n    esp_xt_wdt_config_t cfg = {\n        .timeout = 200,\n        .auto_backup_clk_enable = false,\n    };\n\n    esp_xt_wdt_register_callback(test_callback, NULL);\n\n    err = esp_xt_wdt_init(&cfg);\n    if (err != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to initialize external watchdog timer\");\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    ets_delay_us(2000);\n\n    BIST_ADD_LABEL(\"bist_ext_crystal_check\");\n    if (test_failed) {\n        test_failed = false;\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n#else\n    /* SoCs without XT WDT have no hardware to detect 32k crystal\n     * failure; skip this test and report OK. */\n    ESP_LOGD(TAG, \"SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.\");\n#endif\n\n    return BIST_ESP_OK;\n}",
+    "body": "bist_esp_err_t bist_ext_crystal_fail_test(void)\n{\n#if SOC_XT_WDT_SUPPORTED\n    esp_err_t err;\n\n    esp_xt_wdt_config_t cfg = {\n        .timeout = 200,\n        .auto_backup_clk_enable = false,\n    };\n\n    esp_xt_wdt_register_callback(test_callback, NULL);\n\n    err = esp_xt_wdt_init(&cfg);\n    if (err != ESP_OK) {\n        ESP_LOGE(TAG, \"Failed to initialize external watchdog timer\");\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    ets_delay_us(2000);\n\n    /*\n     * The watchdog stays pending after a healthy crystal: the 2 ms wait\n     * is shorter than the timeout, and a later trip logs from the ISR\n     * in the middle of whatever the caller is printing.\n     */\n    esp_xt_wdt_disable();\n\n    BIST_ADD_LABEL(\"bist_ext_crystal_check\");\n    if (test_failed) {\n        test_failed = false;\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n#else\n    /* SoCs without XT WDT have no hardware to detect 32k crystal\n     * failure; skip this test and report OK. */\n    ESP_LOGD(TAG, \"SoCs without XT WDT have no hardware to detect 32k crystal failure; skipping test.\");\n#endif\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 42,
-    "line_end": 75,
+    "line_start": 45,
+    "line_end": 85,
     "module": "clock",
     "content_type": "source"
   },
@@ -516,8 +516,8 @@
     "function_name": "bist_main_crystal_test",
     "body": "bist_esp_err_t bist_main_crystal_test(void)\n{\n    uint32_t xtal_freq_mhz = rtc_clk_xtal_freq_get();\n    uint32_t expected_xtal_freq = xtal_freq_mhz * MHZ;\n\n    /*\n     * rtc_clk_cal returns the 32K XTAL clock period in fixed-point format (Q13.19).\n     * If the main XTAL drifts, the returned value shifts proportionally.\n     */\n    uint32_t cal_val = rtc_clk_cal(CLK_CAL_32K_XTAL, 500);\n    if (cal_val == 0) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    /*\n     * Derive actual XTAL frequency from the calibration result:\n     */\n    uint32_t xtal_freq = (uint32_t)(((uint64_t)cal_val * xtal_freq_mhz * 32768) >> RTC_CLK_CAL_FRACT);\n    volatile float deviation = xtal_deviation_percent(xtal_freq, expected_xtal_freq);\n\n    /*\n     * Check if the calculated XTAL frequency is within\n     * CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT\n     */\n    BIST_ADD_LABEL(\"bist_main_crystal_check\");\n    if (deviation > CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT) {\n        return BIST_ESP_CLOCK_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
     "file": "src/bist/core/clock/bist_clock_fail.c",
-    "line_start": 77,
-    "line_end": 107,
+    "line_start": 87,
+    "line_end": 117,
     "module": "clock",
     "content_type": "source"
   },
@@ -990,11 +990,20 @@
     "content_type": "source"
   },
   {
+    "function_name": "esp_xt_wdt_disable",
+    "body": "void esp_xt_wdt_disable(void)\n{\n    /*\n     * Record a trip the ISR has not handled yet, then mask the source.\n     * Leaving it armed lets a later trip print from the ISR into\n     * whatever the caller is writing to the console.\n     */\n    uint32_t pending = REG_READ(RTC_CNTL_INT_RAW_REG) & RTC_CNTL_XTAL32K_DEAD_INT_RAW_M;\n\n    xt_wdt_hal_enable(&s_hal_ctx, false);\n    REG_WRITE(RTC_CNTL_INT_CLR_REG, RTC_CNTL_XTAL32K_DEAD_INT_CLR_M);\n    esp_cpu_intr_disable(1 << ETS_RTC_CORE_INTR_SOURCE);\n    if ((pending != 0) && (s_callback_func != NULL)) {\n        s_callback_func(s_callback_arg);\n    }\n    s_callback_func = NULL;\n    s_callback_arg = NULL;\n}",
+    "file": "src/bist/drivers/xt_wdt.c",
+    "line_start": 87,
+    "line_end": 104,
+    "module": "drivers",
+    "content_type": "source"
+  },
+  {
     "function_name": "esp_xt_wdt_restore_clk",
     "body": "void esp_xt_wdt_restore_clk(void)\n{\n    xt_wdt_hal_enable(&s_hal_ctx, false);\n\n    REG_CLR_BIT(RTC_CNTL_EXT_XTL_CONF_REG, RTC_CNTL_XPD_XTAL_32K);\n    REG_SET_BIT(RTC_CNTL_EXT_XTL_CONF_REG, RTC_CNTL_XPD_XTAL_32K);\n\n    /* Needs some time after switching to 32khz XTAL before turning on WDT again */\n    esp_rom_delay_us(300);\n\n    xt_wdt_hal_enable(&s_hal_ctx, true);\n}",
     "file": "src/bist/drivers/xt_wdt.c",
-    "line_start": 87,
-    "line_end": 98,
+    "line_start": 106,
+    "line_end": 117,
     "module": "drivers",
     "content_type": "source"
   },
@@ -1002,8 +1011,8 @@
     "function_name": "esp_xt_wdt_register_callback",
     "body": "void esp_xt_wdt_register_callback(esp_xt_callback_t func, void *arg)\n{\n    s_callback_func = func;\n    s_callback_arg = arg;\n}",
     "file": "src/bist/drivers/xt_wdt.c",
-    "line_start": 100,
-    "line_end": 104,
+    "line_start": 119,
+    "line_end": 123,
     "module": "drivers",
     "content_type": "source"
   }

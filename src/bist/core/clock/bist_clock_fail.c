@@ -37,6 +37,9 @@ static void test_callback(void *arg)
 {
     test_failed = true;
 }
+
+/* Defined in drivers/xt_wdt.c. The IDF header does not declare it. */
+extern void esp_xt_wdt_disable(void);
 #endif
 
 bist_esp_err_t bist_ext_crystal_fail_test(void)
@@ -58,6 +61,13 @@ bist_esp_err_t bist_ext_crystal_fail_test(void)
     }
 
     ets_delay_us(2000);
+
+    /*
+     * The watchdog stays pending after a healthy crystal: the 2 ms wait
+     * is shorter than the timeout, and a later trip logs from the ISR
+     * in the middle of whatever the caller is printing.
+     */
+    esp_xt_wdt_disable();
 
     BIST_ADD_LABEL("bist_ext_crystal_check");
     if (test_failed) {
