@@ -218,8 +218,16 @@ int main()
         fail_safe_exit();
     }
 
-    // Register Crystal WDT and Master WDT callbacks
+    // Register Crystal WDT and Master WDT callbacks.
+    // The crystal test disarms the XT WDT, so arm it again for runtime faults.
 #if SOC_XT_WDT_SUPPORTED
+    if (esp_xt_wdt_init(&(esp_xt_wdt_config_t) {
+    .timeout = 200,
+    .auto_backup_clk_enable = false,
+}) != ESP_OK) {
+        ESP_LOGE(TAG, "XT WDT initialization failed");
+        fail_safe_exit();
+    }
     esp_xt_wdt_register_callback((esp_xt_callback_t)fail_safe_exit, NULL);
 #endif
     wdt_register_callback(wdt_callback, NULL);
