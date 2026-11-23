@@ -27,19 +27,43 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "bist_esp_types.h"
+#ifndef __ZEPHYR__
+#include "bist_conf.h"
+#endif
 #include "sdkconfig.h"
+
+/**
+ * @brief Calculate CRC32 over a memory region in configured chunks
+ *
+ * Processes @p data in chunks of up to CONFIG_BIST_FLASH_TEST_CHUNK_SIZE bytes
+ * using the IEEE 802.3 CRC-32 lookup table.
+ *
+ * @param data Pointer to the start of the memory buffer
+ * @param length Number of bytes to checksum
+ * @return Calculated 32-bit CRC value
+ */
+uint32_t calculate_crc32(uint8_t *data, size_t length);
 
 /**
  * @brief Test flash memory integrity via CRC validation
  *
- * Computes CRC32 for:
- * - .flash.text section (executable code)
- * - .flash.rodata section (read-only data)
+ * The STATIC and RECIPROCAL implementations expose the same bist_flash_test()
+ * entry point. Both compute CRC32 for .flash.text and .flash.rodata in
+ * CONFIG_BIST_FLASH_TEST_CHUNK_SIZE-byte chunks and compare against the
+ * post-build references injected by scripts/calculate_crc32.py.
  *
- * Compares computed CRC against stored values (injected post-build).
- * Processes flash in 1024-byte chunks.
+ * In STATIC mode, the calling core computes and compares both CRCs.
  *
- * @return BIST_ESP_OK if both CRCs match
- * @return BIST_ESP_FLASH_TEST_ERR if any CRC mismatch detected
+ * In RECIPROCAL mode, call from HP core 0. Both HP cores compute
+ * the CRCs into fixed-layout slots in shared HP SRAM, then each core validates
+ * its own slot and the other core's slot. Only core 0 may post work to core 1.
+ *
+ * @return BIST_ESP_OK if the selected mode completes and the CRCs match
+ * @return BIST_ESP_FLASH_TEST_ERR on CRC mismatch, invalid reference, or
+ *         multicore dispatch failure
  */
 bist_esp_err_t bist_flash_test(void);
+
+#if CONFIG_ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL
+#include "bist_flash_reciprocal.h"
+#endif

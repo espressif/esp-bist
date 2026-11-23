@@ -88,12 +88,17 @@ function(bist_collect_sources out_var)
     if(CONFIG_ESP_BIST_MEMORY_RAM_TEST)
         list(APPEND _srcs "core/memory/bist_ram.c")
     endif()
+
     if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)
         list(APPEND _srcs
             "bist_hd_crc.c"
             "core/memory/bist_flash.c"
         )
+        if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL)
+            list(APPEND _srcs "core/memory/bist_flash_reciprocal.c")
+        endif()
     endif()
+
     if(CONFIG_ESP_BIST_CLOCK_TEST)
         list(APPEND _srcs "core/clock/bist_clock_fail.c")
     endif()

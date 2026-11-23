@@ -3170,14 +3170,49 @@
     "kconfig_guards": []
   },
   {
+    "function": "calculate_crc32",
+    "signature": "uint32_t calculate_crc32(uint8_t *data, size_t length)",
+    "module": "memory",
+    "description": "Flash memory CRC validation test",
+    "params": [
+      {
+        "name": "data",
+        "description": "Pointer to the start of the memory buffer"
+      },
+      {
+        "name": "length",
+        "description": "Number of bytes to checksum"
+      }
+    ],
+    "returns": "Calculated 32-bit CRC value",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_flash.h",
+    "kconfig_guards": [
+      "CONFIG_BIST_FLASH_TEST_CHUNK_SIZE"
+    ]
+  },
+  {
     "function": "bist_flash_test",
     "signature": "bist_esp_err_t bist_flash_test(void)",
     "module": "memory",
-    "description": "Flash memory CRC validation test",
+    "description": "Test flash memory integrity via CRC validation",
     "params": [],
-    "returns": "BIST_ESP_OK if both CRCs match; BIST_ESP_FLASH_TEST_ERR if any CRC mismatch detected",
+    "returns": "BIST_ESP_OK if the selected mode completes and the CRCs match; BIST_ESP_FLASH_TEST_ERR on CRC mismatch, invalid reference, or multicore dispatch failure",
     "note": "",
     "header_file": "src/bist/core/memory/include/bist_flash.h",
+    "kconfig_guards": [
+      "CONFIG_BIST_FLASH_TEST_CHUNK_SIZE"
+    ]
+  },
+  {
+    "function": "bist_flash_reciprocal",
+    "signature": "",
+    "module": "memory",
+    "description": "Fixed-layout evidence for the reciprocal flash CRC test",
+    "params": [],
+    "returns": "",
+    "note": "",
+    "header_file": "src/bist/core/memory/include/bist_flash_reciprocal.h",
     "kconfig_guards": []
   },
   {
