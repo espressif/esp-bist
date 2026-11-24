@@ -48,7 +48,7 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 4.1
      - Invariable Memory
-     - Validates flash image via CRC32 (post-build and runtime)
+     - Validates flash image via CRC32 (post-build and runtime; static single-core walk or dual-core reciprocal comparison on ESP32-P4)
      - Flash corruption, code/data tampering, image integrity loss
      - :ref:`flash-test`
 
@@ -122,7 +122,7 @@ Hardware/Software Interfaces
 The BIST library interfaces with hardware through a HAL layer; low-level access is implemented in ``components/`` and ``soc/`` directories. Key interfaces include:
 
 - **Clock control and RTC** (``components/esp_hw_support/esp_clk.c``, ``soc/rtc.h``): CPU frequency, APB frequency, XTAL frequency queries, and RTC clock calibration for the main-crystal test and, where ``SOC_XT_WDT_SUPPORTED`` is set, the 32 kHz crystal-fail test
-- **Flash memory mapping and CRC regions** (``src/bist/core/memory/bist_flash.c``, ``scripts/calculate_crc32.py``): Post-build CRC32 injection into reserved flash sections and runtime readback/validation of ``.flash.text`` and ``.flash.rodata`` sections
+- **Flash memory mapping and CRC regions** (``src/bist/core/memory/bist_flash.c``, ``src/bist/core/memory/bist_flash_reciprocal.c``, ``scripts/calculate_crc32.py``): Post-build CRC32 injection into reserved flash sections and runtime readback/validation of ``.flash.text`` and ``.flash.rodata`` sections
 - **GPIO and peripheral registers** (``src/bist/drivers/gpio.c``, ``hal/gpio_hal.h``): GPIO configuration, level setting/reading, pull-up/pull-down control for digital I/O plausibility tests
 - **ADC oneshot driver** (``src/bist/drivers/adc_oneshot.c``, ``src/bist/core/io/bist_adc.c``): ADC unit configuration, channel setup, raw reading, and GPIO pull control for analog I/O plausibility tests
 - **Watchdog APIs**:
@@ -138,7 +138,7 @@ The BIST library interfaces with hardware through a HAL layer; low-level access 
   - RAM direct access: Direct memory read/write for March A/X RAM tests (``src/bist/core/memory/bist_ram.c``)
   - RTC memory: RTC memory region for PC test function placement (``src/bist/core/cpu/bist_pc.c``, ``src/bist/core/cpu/bist_pc_reciprocal.c``)
   - Linker-defined memory regions: IRAM, Flash, RTC memory, and (ESP32-P4) TCM sections via linker scripts (``src/soc/{IDF_TARGET_PATH_NAME}/ld/linker.ld``)
-  - Shared HP SRAM (ESP32-P4 reciprocal tests): statically allocated result slots exchanged between HP cores by the CPU register, CSR, PC, and interrupt reciprocal tests
+  - Shared HP SRAM (ESP32-P4 reciprocal tests): statically allocated result slots exchanged between HP cores by the CPU register, CSR, PC, interrupt, and flash reciprocal tests
 
 Build System
 ------------

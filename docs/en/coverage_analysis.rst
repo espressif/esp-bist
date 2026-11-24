@@ -84,10 +84,10 @@ The following table provides code coverage information for each BIST module:
      - :doc:`software_validation` (RAM Test)
 
    * - Flash CRC
-     - 1
-     - 1 (100%)
-     - 1 (2 sections: text and rodata)
-     - 2 (data and text CRC corruption)
+     - 2
+     - 2 (100%)
+     - 2 (text and rodata in static and P4 reciprocal modes)
+     - 2 (data and text CRC corruption); 9 on P4 reciprocal QEMU + 4 on P4 reciprocal hardware
      - :doc:`software_validation` (Flash Test)
 
    * - Clock Test
@@ -202,9 +202,9 @@ Requirements Coverage Matrix
 
    * - 4.1
      - Flash Memory Integrity
-     - ``bist_flash_test()``
-     - QEMU + Hardware (CRC validation, fault injection)
-     - ``tests/flash_test/build/tests/*_report.xml``
+     - ``bist_flash_test()`` (static, or reciprocal on P4)
+     - QEMU + Hardware (CRC validation, fault injection; dual-core reciprocal on P4)
+     - ``tests/flash_test/build/tests/*_report.xml``, ``tests/flash_test_reciprocal/build/tests/*_report.xml``
 
    * - 4.2
      - RAM Integrity

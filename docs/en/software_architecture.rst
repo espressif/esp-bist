@@ -104,7 +104,7 @@ Hardware/Software Interfaces
 ----------------------------
 
 - Clock control via XT WDT (where supported) and ESP timer
-- Flash CRC injection/readback via ``scripts/calculate_crc32.py`` and runtime CRC in ``bist_flash_test``
+- Flash CRC injection/readback via ``scripts/calculate_crc32.py`` and runtime CRC in ``bist_flash_test`` (dual-core reciprocal comparison on ESP32-P4 when the reciprocal flash test is selected)
 - GPIO configuration and I/O via driver wrappers
 - ADC oneshot configuration and raw reading via driver wrappers
 - Watchdog APIs for MWDT/windowed and XT WDT callbacks

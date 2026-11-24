@@ -72,7 +72,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - Flash memory corruption leading to execution of incorrect code or use of corrupted data
      - High
      - 4.1 (Invariable Memory)
-     - ``bist_flash_test()`` computes CRC32 over ``.flash.text`` and ``.flash.rodata`` sections and compares against post-build injected checksums
+     - ``bist_flash_test()`` computes CRC32 over ``.flash.text`` and ``.flash.rodata`` sections and compares against post-build injected checksums; with the reciprocal flash test selected on ESP32-P4, both HP cores compute the CRCs and cross-validate each other's results
 
    * - H8
      - RAM corruption causing data integrity loss or stack overflow

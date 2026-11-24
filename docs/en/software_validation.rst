@@ -1289,6 +1289,55 @@ Hardware Validation
 
     test_BIST_flash:FAIL
 
+Flash CRC Reciprocal Comparison Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify on ESP32-P4 that both HP cores compute the CRC32 checksums of ``.flash.rodata`` and ``.flash.text`` and that each core's fixed-layout evidence is validated against the post-build reference checksums on both cores.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/flash_test_reciprocal/pytest_qemu_flash_test_reciprocal.py`` (ESP32-P4 only; skipped on other targets)
+
+**Execution:**
+
+1. ``bist_flash_test()`` runs the flash CRC walk on Core 0 (using ``calculate_crc32()``) into shared slot 0 (``bist_flash_shared_results[0]``) and validates it locally against ``_crc_section_data_start`` and ``_crc_section_text_start``.
+2. Core 0 dispatches ``bist_flash_walk_job`` to Core 1 via ``bist_multicore_call()``, which writes shared slot 1 (``bist_flash_shared_results[1]``).
+3. Core 1 validates slot 1 and then validates slot 0.
+4. Core 0 validates slot 1.
+5. The test returns ``BIST_ESP_OK`` only if both walks and all four validations pass, and prints ``test_BIST_flash:PASS``.
+
+**Fault Injection:**
+
+1. **Section Length Corruption (``test_flash_length_error_core0``, ``test_flash_length_error_core1``, ``test_flash_length_error_text``)**:
+
+   - At ``bist_flash_walk_rodata`` (first hit for Core 0; second hit via ``ignore $bpnum 1`` for Core 1) or ``bist_flash_walk_text``, GDB overwrites ``crc_section_len`` with ``0xFF``.
+   - Because ``bist_flash_walk_job`` is collect-only, the walk completes and records the wrong CRC in the core's slot, which the local verifier rejects with ``test_BIST_flash:FAIL``.
+
+2. **Cross-Core Evidence Corruption (``test_flash_slot0_cross_check_error``, ``test_flash_slot1_cross_check_error``)**:
+
+   - Parameterized across all three evidence fields (``status``, ``crc_rodata``, ``crc_text``) for both directions (6 cases total).
+   - At ``bist_flash_verify_core0_on_core1`` or ``bist_flash_verify_core1_on_core0`` (after both local validations have passed), GDB flips a bit (``^ 4``) in the target slot field.
+   - The peer core's cross-validation detects the corrupted evidence and reports ``test_BIST_flash:FAIL``.
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/flash_test_reciprocal/pytest_device_flash_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 in standalone bare-metal mode with both HP cores initialized
+- Firmware flashed with post-build CRC32 values injected into ``.crc_section_data`` and ``.crc_section_text``
+
+**Expected Behavior:**
+
+- ``test_BIST_flash:PASS`` is reported after both HP cores compute the flash section CRCs and all four validations complete.
+
+**Fault Injection:**
+
+``test_flash_crc_error_device`` runs with ``pytest --injection`` and is parameterized across both result slots (``core0``, ``core1``) and both CRC fields (``crc_rodata``, ``crc_text``) for 4 test cases total. At ``bist_flash_verify_core0_on_core1`` or ``bist_flash_verify_core1_on_core0``, GDB flips a bit (``^ 4``) in ``bist_flash_shared_results[core].<field>``. The peer core compares the corrupted checksum against the local post-build reference and reports ``test_BIST_flash:FAIL``.
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1297,10 +1346,20 @@ CI Test Results
 .. xml-junit-test-results:: tests/flash_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
     :title: Flash CRC QEMU Test Results
 
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/flash_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+        :title: Flash CRC Reciprocal QEMU Test Results
+
 **Device Test:**
 
 .. xml-junit-test-results:: tests/flash_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Flash CRC Device Test Results
+
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/flash_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+        :title: Flash CRC Reciprocal Device Test Results
 
 Program Counter Integrity Test
 ------------------------------

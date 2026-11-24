@@ -92,7 +92,7 @@ Post-Boot Self-Tests
 5. **Flash CRC Test** (``bist_flash_test()``)
 
    - **IEC 60730 Component**: 4.1 (Invariable Memory)
-   - **Purpose**: Validates flash memory integrity via CRC32 checksums
+   - **Purpose**: Validates flash memory integrity via CRC32 checksums. The static selection runs a single-core CRC32 check over ``.flash.rodata`` and ``.flash.text``. On ESP32-P4, ``CONFIG_ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL=y`` selects the reciprocal implementation of the same function: both HP cores reuse ``calculate_crc32()`` into fixed-layout shared SRAM slots and each core validates both results against the post-build reference.
    - **Rationale**: Flash corruption can cause code execution errors or data corruption
    - **Implementation**: Computes CRC32 over ``.flash.text`` and ``.flash.rodata`` sections; compares against post-build injected checksums
 
