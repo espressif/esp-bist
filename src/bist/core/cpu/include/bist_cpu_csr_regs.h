@@ -15,10 +15,13 @@
 
 /**
  * @file bist_cpu_csr_regs.h
- * @brief CPU Control and Status Register (CSR) integrity test
+ * @brief Stable API for the CPU Control and Status Register integrity test
  *
- * Tests RISC-V CSRs by writing alternating bit patterns while respecting
- * CSR-specific write masks. Original values are saved and restored.
+ * The STATIC and RECIPROCAL implementations expose the same
+ * bist_cpu_csr_regs_test() entry point. Both write the complementary
+ * 0xAAAAAAAA and 0x55555555 checkerboard patterns while respecting
+ * CSR-specific writable-bit masks, read the values back, and restore each
+ * original CSR value on both success and failure paths.
  *
  * Registers tested on all SOCs (except Zephyr builds):
  *   - Machine Trap Setup: MTVEC
@@ -28,18 +31,16 @@
  * lock PMP/PMA at boot, so checkerboard writes WARL-ignore):
  *   - PMP address: PMPADDR0-PMPADDR15
  *     - C3/C6/H2: full 32-bit mask (4-byte granularity)
- *     - C5/C61: mask 0x3FFFFFE0 (25 writable bits, 128-byte granularity)
+ *     - C5/C61/H4/P4: mask 0x3FFFFFE0 (25 writable bits, 128-byte granularity)
  *   - PMP configuration: PMPCFG0-PMPCFG3
  *     - C3/C6/H2: mask 0x1D1D1D1D (excludes L, reserved, and W bits)
- *     - C5/C61: mask 0x0D0D0D0D (additionally excludes upper A-field bit
+ *     - C5/C61/H4/P4: mask 0x0D0D0D0D (additionally excludes upper A-field bit
  *       because A=NA4 is not selectable at G=5 per RISC-V spec)
  *     W (bit 1) is excluded on all SOCs because the 0xAA test pattern
  *     sets R=0,W=1 which is a reserved RISC-V encoding — hardware
  *     WARL-clears W when R=0.
  *
- * PMA address registers on SOCs with PMA (C6, H2, C5; guarded by SOC_CPU_HAS_PMA):
- *   skipped on ULP and on HP OS ports for the same lock/WARL reason as PMP.
- *   When tested (bare-metal HP):
+ * PMA address registers on SOCs with PMA (guarded by SOC_CPU_HAS_PMA):
  *   - PMA address: pma_addr0-11 (mask 0x3FFFFFE0, 25 writable bits with
  *     32-byte granularity). Entries 12-15 are skipped because the ROM
  *     bootloader may configure them as active regions whose NAPOT/TOR
@@ -69,18 +70,25 @@
 #include "bist_conf.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Test CPU Control and Status Register integrity
  *
- * Verifies CSRs can be written and read reliably using alternating
- * patterns (0xAAAAAAAA / 0x55555555) masked to each register's writable
- * bits. Saves original values before testing and restores them afterward.
+ * In STATIC mode, verifies the target- and runtime-appropriate CSR set using
+ * 0xAAAAAAAA and 0x55555555 masked to each register's writable bits, saving
+ * and restoring every original value around its test. In RECIPROCAL mode on
+ * ESP32-P4, each HP core walks 40 CSRs, stores both raw read-backs for every
+ * CSR in its fixed-layout shared evidence slot, and validates both its own
+ * slot and the other core's slot.
  *
  * The number of CSRs tested varies by SOC and build:
  *   - HP OS (IDF / Zephyr): 5 trap CSRs (mtvec, mscratch, mepc,
  *     mcause, mtval); PMP/PMA are locked by the runtime
  *   - ESP32-C3: 25 CSRs (5 trap + 16 pmpaddr + 4 pmpcfg)
- *   - ESP32-C6/H2: 37 CSRs (25 common + 12 pma_addr)
+ *   - ESP32-C6/H2/C61: 37 CSRs (25 common + 12 pma_addr)
  *   - ESP32-C5: 39 CSRs (25 common + 12 pma_addr + mexstatus + mhint)
  *   - ESP32-H4/P4: 40 CSRs (25 common + 12 pma_addr + fflags + frm + fcsr)
  *
@@ -88,3 +96,11 @@
  * @return BIST_ESP_CPU_CSR_TEST_ERR if any CSR fails
  */
 bist_esp_err_t bist_cpu_csr_regs_test(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#if defined(CONFIG_ESP_BIST_CPU_CSR_REG_TEST_RECIPROCAL)
+#include "bist_cpu_csr_regs_reciprocal.h"
+#endif

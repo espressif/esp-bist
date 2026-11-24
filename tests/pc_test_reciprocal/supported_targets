@@ -1,0 +1,2 @@
+# SoCs that may build and run this test app. Absence of this file means all SoCs.
+esp32p4

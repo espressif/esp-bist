@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <string.h>
 #include "sdkconfig.h"
+#include "bist_conf.h"
+#include "bist_soc_multicore.h"
 #include "rom/ets_sys.h"
 #include "esp_rom_serial_output.h"
 #include "esp_log.h"
@@ -103,15 +105,19 @@ void __start(void)
 
     esp_rom_output_tx_wait_idle(0);
 
-    REG_SET_FIELD(PCR_MSPI_CLK_CONF_REG, PCR_MSPI_FUNC_CLK_SEL, 0);
+    /* Leave the bootloader flash clock (PLL 48 MHz). IDF does not move MSPI
+     * onto XTAL before esp_clk_init().
+     */
     REG_SET_BIT(PCR_MSPI_CLK_CONF_REG, PCR_MSPI_FUNC_CLK_EN);
     REG_SET_BIT(PCR_MSPI_CONF_REG, PCR_MSPI_CLK_EN);
 
     map_rom_segments(_app_drom_start, _app_drom_vaddr, _app_drom_size, _app_irom_start, _app_irom_vaddr, _app_irom_size);
 
+#ifndef CONFIG_ESP_BIST_MULTICORE
     /* Bare-metal single-core: keep core1 clock-gated and in reset (IDF cpu_start.c). */
     REG_CLR_BIT(PCR_CORE1_CONF_REG, PCR_CORE1_CLK_EN);
     REG_SET_BIT(PCR_CORE1_CONF_REG, PCR_CORE1_RST_EN);
+#endif
 
     esp_clk_init();
     esp_perip_clk_init();
@@ -121,6 +127,10 @@ void __start(void)
 
     ESP_EARLY_LOGI(TAG, "Initializing Stack pattern");
     init_stack_pattern();
+
+#ifdef CONFIG_ESP_BIST_MULTICORE
+    bist_cpu_start_core1();
+#endif
 
     ESP_EARLY_LOGI(TAG, "Calling main...");
     main();

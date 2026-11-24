@@ -12,6 +12,15 @@
 #include "sdkconfig.h"
 
 /* -------------------------------------------------------------------------
+ * Flash cache status (used by esp_err.c).
+ * In bare-metal BIST, the loader always has the flash cache mapped.
+ * ------------------------------------------------------------------------- */
+__attribute__((weak)) bool spi_flash_cache_enabled(void)
+{
+    return true;
+}
+
+/* -------------------------------------------------------------------------
  * Modem clock (optional for BIST). Stubs so rtc_clk and clock_init link.
  * ------------------------------------------------------------------------- */
 #include "esp_private/periph_ctrl.h"

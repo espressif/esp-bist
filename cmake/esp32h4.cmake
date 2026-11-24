@@ -1,12 +1,21 @@
 set(include_soc
     ${BIST_ROOT_DIR}/src/soc/include
+    ${BIST_ROOT_DIR}/src/soc/common/include
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/include
     )
 
 set(include_hal
-    ${BIST_ROOT_DIR}/components/hal/${SOC_TARGET}/include
-    ${IDF_PATH}/components/newlib/platform_include
+    ${IDF_PATH}/components/esp_libc/platform_include
+    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_cache/include
+    ${IDF_PATH}/components/esp_hal_cache/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_systimer/include
+    ${IDF_PATH}/components/esp_hal_systimer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_regi2c/include
+    ${IDF_PATH}/components/esp_hal_regi2c/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_wdt/include
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
@@ -16,13 +25,17 @@ set(include_hal
     ${IDF_PATH}/components/esp_hal_uart/include
     ${IDF_PATH}/components/esp_hal_uart/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
+    ${IDF_PATH}/components/esp_hal_clock/include
     ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/include
-    ${IDF_PATH}/components/hal/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_dma/include
     ${IDF_PATH}/components/esp_hal_rtc_timer/include
     ${IDF_PATH}/components/esp_hal_rtc_timer/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_pmu/include
     ${IDF_PATH}/components/esp_hal_ana_conv/include
     ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_adc/include
+    ${IDF_PATH}/components/esp_adc
+    ${IDF_PATH}/components/esp_adc/interface
     ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_stdio/include
     ${IDF_PATH}/components/hal/platform_port/include
@@ -30,12 +43,9 @@ set(include_hal
     ${IDF_PATH}/components/esp_common/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
-    ${IDF_PATH}/components/soc/${SOC_TARGET}/include/hw_ver_mp
     ${IDF_PATH}/components/soc/${SOC_TARGET}/register
-    ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver_mp
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
-    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/riscv/include
@@ -47,11 +57,13 @@ set(include_hal
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/private_include
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/spi_flash/include
+    ${IDF_PATH}/components/esp_mspi/include
     ${IDF_PATH}/components/log/include
     )
 
 set(soc_srcs
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/start.c
+    ${BIST_ROOT_DIR}/src/soc/common/cpu_multicore.c
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/vectors.S
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/clock_init.c
     ${BIST_ROOT_DIR}/src/soc/${SOC_TARGET}/bare_metal_stubs.c
@@ -64,24 +76,35 @@ set(idf_ow_srcs
     ${BIST_ROOT_DIR}/components/esp_hw_support/esp_clk.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/periph_ctrl.c
     ${BIST_ROOT_DIR}/components/esp_hw_support/regi2c_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/sar_periph_ctrl_common.c
     ${BIST_ROOT_DIR}/components/esp_system/port/esp_system_chip.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/sar_periph_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/esp_clk_tree_common.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/port/${SOC_TARGET}/esp_clk_tree.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_common.c
+    ${BIST_ROOT_DIR}/components/esp_hw_support/adc_share_hw_ctrl.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali.c
+    ${BIST_ROOT_DIR}/components/esp_adc/adc_cali_curve_fitting.c
     )
 
 set(idf_srcs
-    ${IDF_PATH}/components/hal/cache_hal.c
-    ${IDF_PATH}/components/hal/mmu_hal.c
+    ${IDF_PATH}/components/esp_hal_cache/cache_hal.c
+    ${IDF_PATH}/components/esp_hal_cache/mmu_hal.c
+    ${IDF_PATH}/components/esp_hal_cache/${SOC_TARGET}/cache_periph.c
     ${IDF_PATH}/components/hal/efuse_hal.c
     ${IDF_PATH}/components/hal/${SOC_TARGET}/efuse_hal.c
     ${IDF_PATH}/components/esp_hal_wdt/wdt_hal_iram.c
     ${IDF_PATH}/components/hal/${SOC_TARGET}/modem_clock_hal.c
     ${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c
-    ${IDF_PATH}/components/esp_rom/patches/esp_rom_regi2c_esp32h4.c
+    ${IDF_PATH}/components/esp_hal_regi2c/${SOC_TARGET}/regi2c_impl.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_clk_init.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/rtc_time.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_init.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/pmu_param.c
+    ${IDF_PATH}/components/esp_hal_clock/${SOC_TARGET}/clk_tree_hal.c
     ${IDF_PATH}/components/esp_system/panic.c
+    ${IDF_PATH}/components/esp_system/esp_err.c
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/log/src/noos/log_timestamp.c
     ${IDF_PATH}/components/riscv/interrupt.c
@@ -89,6 +112,9 @@ set(idf_srcs
     ${IDF_PATH}/components/riscv/rv_utils.c
     ${IDF_PATH}/components/esp_stdio/stdio_simple.c
     ${IDF_PATH}/components/esp_stdio/stdio_syscalls_simple.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_oneshot_hal.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/adc_hal_common.c
+    ${IDF_PATH}/components/esp_hal_ana_conv/${SOC_TARGET}/adc_periph.c
     )
 
 set(rom_ld

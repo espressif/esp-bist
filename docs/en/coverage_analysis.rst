@@ -44,22 +44,29 @@ The following table provides code coverage information for each BIST module:
    * - CPU CSRs
      - 1
      - 1 (100%)
-     - 1 (25–40 CSRs depending on SoC)
+     - 1 (25–40 CSRs depending on SoC: 25 C3, 37 C6/H2/C61, 39 C5, 40 H4/P4)
      - 25–40 (fault injection)
      - :doc:`software_validation` (CPU CSR Test)
+
+   * - CPU Instructions
+     - 3
+     - 3 (100%)
+     - 1 (10 groups, 381 vectors)
+     - 3 (fault injection: ALU/shift mutation, stack restoration, size witness)
+     - :doc:`software_validation` (CPU Instruction Decoding and Execution Test)
 
    * - Program Counter
      - 1
      - 1 (100%)
      - 1 (4 regions; 5 on ESP32-P4)
-     - 2 (fault injection)
+     - 2 (fault injection; 10 on P4 reciprocal)
      - :doc:`software_validation` (Program Counter Test)
 
    * - Interrupt Test
      - 2
      - 2 (100%)
      - 2 (SW source map, HW dual-timer)
-     - 1 (GDB fault injection)
+     - 1 (fault injection; 14 on P4 reciprocal)
      - :doc:`software_validation` (Interrupt Handling and Execution Test)
 
    * - Stack Overflow
@@ -115,7 +122,7 @@ The following table provides code coverage information for each BIST module:
      - 3
      - 3 (100%)
      - 3 (invalid ADC, pull-down, pull-up; +1 VREF C3)
-     - Hardware-only (skipped on H4)
+     - Hardware-only
      - :doc:`software_validation` (ADC Test)
 
 Coverage Metrics
@@ -163,23 +170,29 @@ Requirements Coverage Matrix
      - QEMU + Hardware (25–40 CSRs depending on SoC: 25 C3, 37 C6/H2/C61, 39 C5, 40 H4/P4; fault injection)
      - ``tests/cpu_reg_test/build/tests/*_report.xml``
 
+   * - 1.2
+     - CPU Instruction Decoding and Execution
+     - ``bist_cpu_instruction_test()``
+     - QEMU + Hardware (10 groups, 381 equivalence vectors, fault injection)
+     - ``tests/cpu_instruction_test/build/tests/*_report.xml``
+
    * - 1.3
      - Program Counter Integrity
      - ``bist_pc_test()``
-     - QEMU + Hardware (4 regions; 5 on ESP32-P4 with TCM; fault injection)
-     - ``tests/pc_test/build/tests/*_report.xml``
+     - QEMU + Hardware (4 regions; 5 on ESP32-P4 with TCM; dual-core reciprocal coverage on P4; fault injection)
+     - ``tests/pc_test*/build/tests/*_report.xml``
 
    * - 2
      - Interrupt Source Map
      - ``bist_interrupt_source_map_test()``
-     - QEMU + Hardware (``CPU_INTR_FROM_CPU_0..3``; fault injection)
-     - ``tests/interrupt_test/build/tests/*_report.xml``
+     - QEMU + Hardware (fault injection; dual-core reciprocal on P4)
+     - ``tests/interrupt_test*/build/tests/*_report.xml``
 
    * - 2
      - Hardware Interrupt Delivery
      - ``bist_hardware_interrupt_test()``
-     - Hardware (dual-timer TIMG 2:1 period ratio; QEMU TIMG unsupported)
-     - ``tests/interrupt_test/build/tests/*_report.xml``
+     - Hardware (dual-timer TIMG 2:1 period ratio; sequential dual-core reciprocal on P4)
+     - ``tests/interrupt_test*/build/tests/*_report.xml``
 
    * - 3
      - Clock Source Validation
@@ -226,7 +239,7 @@ Requirements Coverage Matrix
    * - 7.2
      - Analog I/O Plausibility
      - ``bist_adc_low_level_test()``, ``bist_adc_high_level_test()``, ``bist_adc_reference_test()``
-     - Hardware-only (invalid ADC parameter rejection, pull-down, pull-up, VREF on ESP32-C3; skipped on ESP32-H4)
+     - Hardware-only (invalid ADC parameter rejection, pull-down, pull-up, VREF on ESP32-C3)
      - ``tests/analog_io_test/build/tests/*_report.xml``
 
 Coverage Gaps and Justification
@@ -239,9 +252,11 @@ Known Coverage Limitations
 
 2. **GPIO Tests (Hardware-Only)**: GPIO pad drivers and input buffers require physical silicon routing; validated on device via ``tests/digital_io_test/``.
 
-3. **ADC Tests (Hardware-Only & SoC Omission)**: ADC conversion and internal biasing (pull-down, pull-up, VREF) require physical analog silicon; validated on device via ``tests/analog_io_test/``. On ESP32-H4, the ADC peripheral is not present in hardware and the ADC test suite is skipped.
+3. **ADC Tests (Hardware-Only)**: ADC conversion and internal biasing (pull-down, pull-up, VREF) require physical analog silicon; validated on device via ``tests/analog_io_test/``.
 
 4. **Hardware Interrupt Path (TIMG)**: QEMU does not support Timer Group 0/1 hardware alarms used by ``bist_hardware_interrupt_test()``. The software interrupt source map path is validated in QEMU (including fault injection); the dual-TIMG hardware path is validated on physical devices.
+
+5. **CPU Instruction Equivalence Exclusions**: Unaligned memory access is excluded to prevent unhandled traps; trap instructions (``c.ebreak``, ``c.unimp``) are excluded to avoid requiring an active exception vector table; compressed branch offset ranges are restricted to short displacements to guarantee 16-bit encoding without silent assembler widening.
 
 Justification
 ^^^^^^^^^^^^^
@@ -249,6 +264,8 @@ Justification
 All coverage limitations are justified:
 
 - **Hardware-Only Tests**: Physical hardware is required for accurate validation of clock, GPIO, ADC, and TIMG hardware-interrupt functionality. QEMU limitations are documented and hardware testing provides adequate coverage.
+
+- **CPU Instruction Equivalence Testing**: Equivalence classes cover all in-scope ALU, shift, upper immediate, control flow, load/store, multiply/divide, CSR, atomic, floating-point, and compressed formats. Exclusions of synchronous traps and unaligned accesses are safety-justified to ensure deterministic, trap-free execution.
 
 - **Test Environment**: Both QEMU (deterministic, repeatable) and hardware (real-world conditions) testing provide complementary coverage.
 

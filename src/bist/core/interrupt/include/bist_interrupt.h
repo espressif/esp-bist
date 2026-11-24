@@ -15,40 +15,70 @@
 
 /**
  * @file bist_interrupt.h
- * @brief Software and hardware interrupt tests (IEC 60730 Table H.1 ID 2)
+ * @brief Stable API for the software and hardware interrupt tests
  *
- * Validates interrupt handling and execution: software IRQ source mapping
- * through the interrupt matrix, and concurrent hardware interrupt delivery
- * via dual timer-group alarms.
+ * The STATIC and RECIPROCAL implementations expose the same software
+ * source-map and hardware timer test entry points.
  */
 
 #pragma once
 
 #include "stdint.h"
 #include "bist_esp_types.h"
+#ifndef __ZEPHYR__
+#include "bist_conf.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Test interrupt-matrix mapping for software IRQ sources
  *
- * Exercises the four SoC software interrupt sources ``CPU_INTR_FROM_CPU_0``
- * through ``CPU_INTR_FROM_CPU_3``. Each source is routed to a free CPU
- * interrupt line, triggered eight times, then unmapped. The test verifies
- * the enable mask and that the ISR count matches the number of triggers.
+ * In STATIC mode, walks ``CPU_INTR_FROM_CPU_0`` through
+ * ``CPU_INTR_FROM_CPU_3``. Each source is mapped to CPU interrupt line 9,
+ * triggered eight times, checked for the enabled and cleared CPU interrupt
+ * masks and the expected ISR count, then unmapped.
  *
- * @return BIST_ESP_OK if every software source maps, fires, and unmaps correctly
- * @return BIST_ESP_INTERRUPT_TEST_ERR if enable-mask or ISR-count checks fail
+ * In RECIPROCAL mode on ESP32-P4, performs the same walk with
+ * ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_2`` on both HP cores.
+ * ``CPU_INTR_FROM_CPU_3`` remains reserved for the
+ * ``bist_multicore_call()`` Core-1 wake interrupt. Each core publishes a
+ * fixed-layout evidence frame containing completion, per-source counts, and
+ * active and cleared enable masks. Both frames are validated locally and by
+ * the other core.
+ *
+ * @return BIST_ESP_OK if the selected mode completes and all count,
+ *         enable-mask, completion, and reciprocal validations pass
+ * @return BIST_ESP_INTERRUPT_TEST_ERR on any walk, dispatch, mapping, count,
+ *         enable-mask, completion, or evidence-verification failure
  */
 bist_esp_err_t bist_interrupt_source_map_test(void);
 
 /**
- * @brief Test concurrent hardware interrupt delivery via dual timer groups
+ * @brief Test hardware interrupt delivery via dual timer groups
  *
- * Starts GPTimer alarms on TIMG0 (500 us) and TIMG1 (1000 us), routes them
- * to free CPU interrupt lines, and checks that ISR counts follow a 2:1 period
- * ratio with a tolerance of one count for synchronization skew. Requires two
- * Timer Groups (``TIMG_LL_INST_NUM >= 2``).
+ * Uses a TIMG0 alarm at 500 us and a TIMG1 alarm at 1000 us and checks the
+ * expected 2:1 ISR count relationship. The test requires two Timer Groups
+ * (``TIMG_LL_INST_NUM >= 2``).
  *
- * @return BIST_ESP_OK if both timers deliver interrupts at the expected ratio
- * @return BIST_ESP_INTERRUPT_TEST_ERR if setup fails or the period ratio check fails
+ * In STATIC mode, both timer interrupts run concurrently on the executing
+ * core. In RECIPROCAL mode on ESP32-P4, the shared timers run sequentially
+ * on both HP cores and publish fixed-layout count evidence. Each core's
+ * result is validated locally and cross-validated by the other core.
+ *
+ * @return BIST_ESP_OK if the selected mode completes and all timer-count,
+ *         ratio, and reciprocal validations pass
+ * @return BIST_ESP_INTERRUPT_TEST_ERR on any timer setup, walk, dispatch,
+ *         ratio, or evidence-verification failure
  */
 bist_esp_err_t bist_hardware_interrupt_test(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#if defined(CONFIG_ESP_BIST_INTERRUPT_TEST_RECIPROCAL)
+#include "bist_interrupt_reciprocal.h"
+#endif

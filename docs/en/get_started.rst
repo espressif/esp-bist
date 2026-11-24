@@ -5,6 +5,7 @@ ESP-BIST is a library with routines designed to verify the integrity and proper 
 
 - CPU Register Test
 - Configuration and Status Registers (CSR) Test
+- CPU Instruction Equivalence Test
 - Interrupt Handling and Execution Test
 - Volatile Memory Test (RAM)
 - Non-Volatile Memory Test (Flash)
@@ -124,7 +125,7 @@ The BIST library is supported on the following SoCs:
      - Yes
      - 35
      - - Has hardware FPU: tests 32 single-precision FPU registers (f0–f31) and 3 FPU CSRs
-       - Lacks ADC peripheral in hardware
+       - No ADC reference test
        - Lacks XT WDT hardware
    * - ESP32-P4
      - Dual-core RISC-V + LP RISC-V
@@ -376,6 +377,8 @@ To run tests directly on target hardware, execute inside the test directory:
 .. code-block:: bash
 
    pytest pytest_device_* --executable=<app_name> --target={IDF_TARGET_PATH_NAME} --junitxml=build/tests/report.xml
+
+FAIL cases in the same files use OpenOCD (USB-JTAG) and GDB. They are skipped by default. Add ``--injection`` to run them too.
 
 Host Unit Testing
 ^^^^^^^^^^^^^^^^^

@@ -12,7 +12,6 @@
 extern "C" {
 #endif
 
-#if SOC_ADC_CALIBRATION_V1_SUPPORTED
 /**
  * @brief Run ADC hardware calibration (BIST bare-metal override).
  *
@@ -20,7 +19,6 @@ extern "C" {
  * callers can invoke it when needed (e.g. from adc_oneshot_new_unit()).
  */
 void adc_hw_calibration(void);
-#endif
 
 #ifdef __cplusplus
 }

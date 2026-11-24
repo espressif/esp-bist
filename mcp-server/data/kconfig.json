@@ -12,27 +12,167 @@
   {
     "name": "ESP_BIST_CPU_REG_TEST",
     "type": "bool",
-    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
-    "depends_on": "",
-    "help": "Enable tests for CPU registers.",
+    "default": "ESP_BIST_CPU_REG_TEST_STATIC",
+    "depends_on": "ESP_BIST_CPU_REG_TEST",
+    "help": "Select which CPU Register test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "CPU Register Test"
   },
   {
+    "name": "ESP_BIST_CPU_REG_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static memory test for CPU registers.\nMatches IEC60730 Table H.1 component 1.1 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_CPU_REG_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Use the reciprocal tests for CPU registers.\nMatches IEC60730 Table H.1 component 1.1 for Class C,\nbut requires dual-core support (currently only ESP32-P4) and standalone build.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal Tests"
+  },
+  {
     "name": "ESP_BIST_CPU_CSR_REG_TEST",
     "type": "bool",
-    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
-    "depends_on": "",
-    "help": "Enable tests for CPU Control and Status Registers (CSRs).",
+    "default": "ESP_BIST_CPU_CSR_REG_TEST_STATIC",
+    "depends_on": "ESP_BIST_CPU_CSR_REG_TEST",
+    "help": "Select which CPU CSR Register test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "CPU CSR Register Test"
   },
   {
+    "name": "ESP_BIST_CPU_CSR_REG_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static memory test for CPU CSR registers.\nMatches IEC60730 Table H.1 component 1.1 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_CPU_CSR_REG_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "n",
+    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
+    "help": "IEC 60730 Annex H component 1.2 periodic self-test using an\nequivalence-class instruction test (H.2.18.5). Enable individual\ninstruction groups in the submenu.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "CPU Instruction Equivalence Test"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_INTEGER",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32I integer ALU instructions: ADD/ADDI, SUB, AND/ANDI,\nOR/ORI, XOR/XORI, SLT/SLTI, SLTU/SLTIU.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Integer ALU instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_SHIFT",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32I shifts: SLL/SLLI, SRL/SRLI, SRA/SRAI. Covers counts\n0, 1, and 31, plus register-shift masking of amounts above 31.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Shift instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_UPPERIMM",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test LUI and AUIPC, including upper-immediate bounds.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "LUI and AUIPC instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_CTRL",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test BEQ/BNE/BLT/BGE/BLTU/BGEU taken and not-taken, forward and\nbackward, plus JAL/JALR targets and link values.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Control-flow instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_LDST",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test SB/SH/SW and LB/LBU/LH/LHU/LW with positive and negative\noffsets. Misaligned accesses are not exercised.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Load and store instruction group"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_MUL",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32M MUL/MULH/MULHSU/MULHU and DIV/DIVU/REM/REMU, including\ndivide-by-zero and signed overflow (INT_MIN / -1).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Multiply and divide instruction group (RV32M)"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_CSR",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test Zicsr CSRRW/CSRRS/CSRRC and immediate forms on mscratch,\nplus RV32I FENCE and Zifencei FENCE.I. Distinct from the CSR\nregister integrity test.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "CSR and fence instruction group (Zicsr / Zifencei)"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_AMO",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32A AMOs + LR/SC (Zaamo and Zalrsc word ops). Not used\non ESP32-C3.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Atomic instruction group (RV32A)"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_FP",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test RV32F single-precision arithmetic, fused multiply-add, sign\ninjection, min/max, compares, conversions, moves and classify,\nplus static rounding modes and fflags. Built only on FPU targets\n(ESP32-H4, ESP32-P4).",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Floating-point instruction group (RV32F)"
+  },
+  {
+    "name": "ESP_BIST_CPU_INSTRUCTION_COMP",
+    "type": "bool",
+    "default": "y",
+    "depends_on": "",
+    "help": "Test the RV32C 16-bit encodings: scrambled immediate fields, the\nx8-x15 register field, sp-relative loads and stores, and compressed\ncontrol flow. Every target supports C, so this group is always\nbuilt. c.ebreak is excluded because it traps.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Compressed instruction group (RV32C)"
+  },
+  {
     "name": "ESP_BIST_MEMORY_RAM_TEST",
     "type": "bool",
-    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "default": "n",
     "depends_on": "",
     "help": "Enable tests for the RAM memory integrity (March A, March X, and\nAbraham).",
     "menu": "ESP-BIST Tests",
@@ -52,7 +192,7 @@
   {
     "name": "ESP_BIST_STACK_TEST",
     "type": "bool",
-    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "default": "n",
     "depends_on": "",
     "help": "Enable tests for the stack integrity.",
     "menu": "ESP-BIST Tests",
@@ -62,17 +202,37 @@
   {
     "name": "ESP_BIST_PROGRAM_COUNTER_TEST",
     "type": "bool",
-    "default": "y",
-    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
-    "help": "Enable tests for the program counter.",
+    "default": "ESP_BIST_PROGRAM_COUNTER_TEST_STATIC",
+    "depends_on": "ESP_BIST_PROGRAM_COUNTER_TEST",
+    "help": "Select which Program Counter test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "Program Counter Test"
   },
   {
+    "name": "ESP_BIST_PROGRAM_COUNTER_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static memory test for Program Counter.\nMatches IEC60730 Table H.1 component 1.3 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Use the reciprocal tests for Program Counter.\nMatches IEC60730 Table H.1 component 1.3 for Class C,\nbut requires dual-core support (currently only ESP32-P4) and standalone build.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal Tests"
+  },
+  {
     "name": "ESP_BIST_MEMORY_FLASH_TEST",
     "type": "bool",
-    "default": "y if !ZEPHYR_ESP_BIST_MODULE",
+    "default": "n",
     "depends_on": "",
     "help": "Enable tests for the Flash memory integrity.",
     "menu": "ESP-BIST Tests",
@@ -82,7 +242,7 @@
   {
     "name": "ESP_BIST_CLOCK_TEST",
     "type": "bool",
-    "default": "y",
+    "default": "n",
     "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
     "help": "Enable tests for the main crystal clock.",
     "menu": "ESP-BIST Tests",
@@ -92,7 +252,7 @@
   {
     "name": "ESP_BIST_GPIO_TEST",
     "type": "bool",
-    "default": "y",
+    "default": "n",
     "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
     "help": "Enable tests for the GPIO pins.",
     "menu": "ESP-BIST Tests",
@@ -102,7 +262,7 @@
   {
     "name": "ESP_BIST_ADC_TEST",
     "type": "bool",
-    "default": "y",
+    "default": "n",
     "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
     "help": "Enable tests for the ADC pins.",
     "menu": "ESP-BIST Tests",
@@ -112,7 +272,7 @@
   {
     "name": "ESP_BIST_WATCHDOG_TEST",
     "type": "bool",
-    "default": "y",
+    "default": "n",
     "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
     "help": "Enable tests for the HP main watchdog timer (MWDT).",
     "menu": "ESP-BIST Tests",
@@ -122,32 +282,112 @@
   {
     "name": "ESP_BIST_INTERRUPT_TEST",
     "type": "bool",
-    "default": "y",
-    "depends_on": "!IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
-    "help": "Enable tests for software and hardware interrupts.",
+    "default": "ESP_BIST_INTERRUPT_TEST_STATIC",
+    "depends_on": "ESP_BIST_INTERRUPT_TEST",
+    "help": "Select which Interrupt test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "Interrupt Test"
   },
   {
+    "name": "ESP_BIST_INTERRUPT_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static interrupt test for software source mapping and\nhardware timer delivery.\nMatches IEC60730 Table H.1 component 2 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_INTERRUPT_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Use the reciprocal interrupt tests.\nMatches IEC60730 Table H.1 component 2 for Class C,\nbut requires dual-core support (currently only ESP32-P4) and standalone build.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal Tests"
+  },
+  {
     "name": "ESP_BIST_WDT_TIMEOUT_US",
     "type": "int",
-    "default": "50000",
-    "depends_on": "ESP_BIST",
-    "help": "Maximum time between watchdog feeds in microseconds.\n\nOn the LP core (ESP-IDF ULP integration), this configures the LP WDT\ntimeout via lp_wdt_init(). On HP core / standalone builds, this configures\nthe main watchdog timer (MWDT).",
+    "default": "ESP_BIST_LOG_LEVEL_INFO",
+    "depends_on": "ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Compile-time ceiling for BIST ESP_LOGx calls. Messages above this\nlevel are removed from the binary on the HP core, the LP core under\nZephyr, and the LP core under ESP-IDF.\n\n0 = no output, 1 = error, 2 = warning, 3 = info, 4 = debug, 5 = verbose.",
     "menu": "",
     "range": "",
     "prompt": "WDT Timeout (us)"
   },
   {
-    "name": "ESP_BIST_LP_DEBUG_LOG",
+    "name": "ESP_BIST_LOG_LEVEL_NONE",
     "type": "bool",
     "default": "",
-    "depends_on": "ESP_BIST && (IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE)",
-    "help": "Compile in ESP_LOGD output on the LP core. Disabled by default to keep\nLP firmware small (~16 KiB SRAM).",
+    "depends_on": "",
+    "help": "",
     "menu": "",
     "range": "",
-    "prompt": "Enable LP-core debug logging (ESP_LOGD)"
+    "prompt": "No output"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_ERROR",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Error"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_WARN",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Warning"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_INFO",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Info"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_DEBUG",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Debug"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL_VERBOSE",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": "Verbose"
+  },
+  {
+    "name": "ESP_BIST_LOG_LEVEL",
+    "type": "",
+    "default": "5 if ESP_BIST_LOG_LEVEL_VERBOSE",
+    "depends_on": "ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "",
+    "menu": "",
+    "range": "",
+    "prompt": ""
   },
   {
     "name": "BIST_FLASH_TEST_CHUNK_SIZE",
@@ -214,7 +454,7 @@
     "type": "bool",
     "default": "n",
     "depends_on": "ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
-    "help": "Bring up HP core 1 during startup and enable bist_multicore_call() so\ntests can be dispatched to it. Only available on dual-core standalone\nbare-metal targets (ESP32-P4).",
+    "help": "Bring up HP core 1 during startup and enable bist_multicore_call() so\ntests can be dispatched to it. Only available on dual-core standalone\nbare-metal targets (ESP32-P4, ESP32-H4).",
     "menu": "",
     "range": "",
     "prompt": "Multi-core function dispatch (HP core 1)"
@@ -224,7 +464,7 @@
     "type": "hex",
     "default": "0x2000",
     "depends_on": "ESP_BIST_MULTICORE",
-    "help": "Size in bytes of the dedicated HP core 1 stack on dual-core standalone\ntargets (ESP32-P4). Reserved at the top of HP SRAM so RAM march tests\non core 0 cannot overwrite core 1's live stack. Unused on single-core SoCs.",
+    "help": "Size in bytes of the dedicated HP core 1 stack on dual-core standalone\ntargets (ESP32-P4, ESP32-H4). Reserved at the top of HP SRAM so RAM march tests\non core 0 cannot overwrite core 1's live stack. Unused on single-core SoCs.",
     "menu": "",
     "range": "",
     "prompt": "HP Core 1 Stack Size"
@@ -242,7 +482,7 @@
   {
     "name": "ESP_BIST_METRICS",
     "type": "bool",
-    "default": "y",
+    "default": "n",
     "depends_on": "ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE",
     "help": "Enable the collection of performance metrics during BIST operations, such as\nexecution time, CPU cycles, and instruction counts.\n\ndepends on IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE",
     "menu": "",
@@ -340,6 +580,16 @@
     "prompt": "Host RAM March partition size (words)"
   },
   {
+    "name": "ESP_BIST_HD_SAFE_DMA_POOL_SIZE",
+    "type": "int",
+    "default": "16384",
+    "depends_on": "ESP_BIST_HD_AUDIT_RAM && IDF_ESP_BIST_COMPONENT",
+    "help": "Size in bytes of the dedicated MALLOC_CAP_DMA internal SRAM heap\nplaced in .dram0.safe_ram (below _data_start). At startup,\nMALLOC_CAP_DMA is removed from the general internal heap and\nassigned exclusively to this pool so Wi-Fi MAC, BLE baseband, and\nGDMA descriptors/buffers stay outside the live March-A span\n[_bist_hp_ram_start, _bist_hp_ram_end). Set to 0 to disable.",
+    "menu": "Host Diagnostics Audits",
+    "range": "0 131072",
+    "prompt": "Dedicated safe-RAM DMA heap pool size (bytes)"
+  },
+  {
     "name": "ESP_BIST_HD_CHALLENGE_WINDOW_US",
     "type": "int",
     "default": "10000",
@@ -388,6 +638,16 @@
     "menu": "Host Diagnostics Audits",
     "range": "1000 60000000",
     "prompt": "Agent ready timeout (us)"
+  },
+  {
+    "name": "ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US",
+    "type": "int",
+    "default": "10000",
+    "depends_on": "ESP_BIST_HOST_DIAGNOSTICS",
+    "help": "Maximum time in microseconds the LP companion waits for the HP host to\nacknowledge or drain an outgoing mailbox transmission before failing\nclosed. Keep below ESP_BIST_WDT_TIMEOUT_US so an unacknowledged TX\nreaches bist_hd_safe_state() before the LP watchdog expires.",
+    "menu": "Host Diagnostics Audits",
+    "range": "100 10000000",
+    "prompt": "Companion mailbox TX timeout (us)"
   },
   {
     "name": "ESP_BIST_HD_AGENT_TASK_STACK",

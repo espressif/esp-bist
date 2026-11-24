@@ -79,11 +79,7 @@ int main(void)
              CONFIG_ESP_BIST_RAM_PARTITION_SIZE);
     ESP_LOGI(TAG, "METRICS_PINS gpio_out=%d gpio_in=%d gpio_in_level=%d",
              GPIO_OUTPUT_PIN, GPIO_INPUT_PIN, GPIO_INPUT_LEVEL);
-#if !defined(SOC_TARGET_ESP32H4)
     ESP_LOGI(TAG, "METRICS_PINS adc_unit=%d adc_channel=%d", (int)ADC_UNIT, (int)ADC_CHANNEL);
-#else
-    ESP_LOGI(TAG, "METRICS_PINS adc=not_in_image");
-#endif
     ESP_LOGI(TAG, "WDT_PROCEDURE bist_wdt_test timeout_us=10000 wait_us=50000 two_boot=1 not_measured=1");
 
     MEASURE("bist_cpu_regs_test", (void)0, bist_cpu_regs_test());
@@ -108,13 +104,14 @@ int main(void)
     MEASURE("bist_gpio_output_test", (void)0, bist_gpio_output_test(GPIO_OUTPUT_PIN));
     MEASURE("bist_gpio_input_test", (void)0, bist_gpio_input_test(GPIO_INPUT_PIN, GPIO_INPUT_LEVEL));
 
-#if !defined(SOC_TARGET_ESP32H4)
     adc_hw_calibration();
     MEASURE("bist_adc_low_level_test", (void)0, bist_adc_low_level_test(ADC_UNIT, ADC_CHANNEL));
     MEASURE("bist_adc_high_level_test", (void)0, bist_adc_high_level_test(ADC_UNIT, ADC_CHANNEL));
-#endif
 #if defined(SOC_TARGET_ESP32C3)
     MEASURE("bist_adc_reference_test", (void)0, bist_adc_reference_test(ADC_UNIT, ADC_CHANNEL));
+#endif
+#if defined(SOC_TARGET_ESP32P4)
+    MEASURE("bist_cpu_instruction_test", (void)0, bist_cpu_instruction_test());
 #endif
 
     MEASURE("wdt_init_windowed", wdt_windowed_deinit(),

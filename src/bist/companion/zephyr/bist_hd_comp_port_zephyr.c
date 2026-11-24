@@ -40,6 +40,12 @@
 /** Poll step while the peer has not yet drained the single-slot mbox. */
 #define HD_MBOX_RETRY_US 20u
 
+#ifdef CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US
+#define MAILBOX_SEND_TIMEOUT_US ((uint32_t)CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US)
+#else
+#define MAILBOX_SEND_TIMEOUT_US 10000u
+#endif
+
 static const struct mbox_dt_spec s_tx = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), tx);
 static const struct mbox_dt_spec s_rx = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), rx);
 
@@ -139,6 +145,8 @@ int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
 	uint32_t words[BIST_HD_WIRE_WORDS_MAX];
 	size_t nwords = 0;
 	struct mbox_msg out;
+	uint32_t start;
+	int ret;
 
 	if (!s_inited || msg == NULL) {
 		return -1;
@@ -149,12 +157,22 @@ int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
 
 	out.data = words;
 	out.size = nwords * sizeof(uint32_t);
+	start = bist_hd_comp_port_tick();
 
 	/* Single-slot mbox: spin until the host agent has drained the previous frame. */
-	while (mbox_send_dt(&s_tx, &out) == -EBUSY) {
+	for (;;) {
+		ret = mbox_send_dt(&s_tx, &out);
+		if (ret == 0) {
+			return 0;
+		}
+		if (ret != -EBUSY) {
+			return -1;
+		}
+		if (bist_hd_comp_port_elapsed_us(start) >= MAILBOX_SEND_TIMEOUT_US) {
+			return -1;
+		}
 		bist_hd_comp_port_delay_us(HD_MBOX_RETRY_US);
 	}
-	return 0;
 }
 
 int bist_hd_comp_port_recv(bist_hd_msg_t *msg, int32_t timeout_us)

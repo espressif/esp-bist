@@ -16,14 +16,19 @@ CPU Tests
 ---------
 
 .. include-build-file:: inc/bist_cpu_regs.inc
+.. include-build-file:: inc/bist_cpu_regs_reciprocal.inc
 .. include-build-file:: inc/bist_cpu_csr_regs.inc
+.. include-build-file:: inc/bist_cpu_csr_regs_reciprocal.inc
+.. include-build-file:: inc/bist_cpu_instructions.inc
 .. include-build-file:: inc/bist_cpu_stack.inc
 .. include-build-file:: inc/bist_pc.inc
+.. include-build-file:: inc/bist_pc_reciprocal.inc
 
 Interrupt Tests
 ---------------
 
 .. include-build-file:: inc/bist_interrupt.inc
+.. include-build-file:: inc/bist_interrupt_reciprocal.inc
 
 Memory Tests
 ------------
@@ -55,6 +60,11 @@ Utilities & Metrics
 -------------------
 
 .. include-build-file:: inc/bist_metrics.inc
+
+Multi-Core Dispatch
+-------------------
+
+.. include-build-file:: inc/bist_multicore.inc
 
 Driver Interfaces
 -----------------

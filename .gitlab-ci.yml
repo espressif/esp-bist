@@ -16,13 +16,17 @@ spec:
       type: boolean
       default: true
       description: "Run on-device tests"
+    run_injection_test:
+      type: boolean
+      default: true
+      description: "Run on-device injection tests"
     run_qemu_upstream_test:
       type: boolean
       default: true
       description: "Run upstream QEMU tests"
     run_qemu_remote_test:
       type: boolean
-      default: true
+      default: false
       description: "Run remote QEMU tests"
     run_idf_test:
       type: boolean
@@ -40,6 +44,10 @@ spec:
       type: boolean
       default: false
       description: "Build and deploy the documentation from cached test reports"
+    test_apps:
+      type: string
+      default: "all"
+      description: "Space-separated BIST test apps to run, or all"
 
 ---
 
@@ -56,7 +64,7 @@ variables:
   QEMU_CACHE_KEY: ${CI_COMMIT_REF_SLUG}-qemu-remote-riscv32
   QEMU_CACHE_KEY_SHARED: ${CI_DEFAULT_BRANCH}-qemu-remote-riscv32
   MCUBOOT_TARGETS: "esp32c3 esp32c5 esp32c6 esp32c61 esp32h2 esp32p4 esp32h4"
-  TEST_APPS: "cpu_reg_test cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test multicore_test metrics"
+  TEST_APPS: "cpu_reg_test cpu_reg_test_reciprocal cpu_stack_test ram_test flash_test pc_test wdt_test digital_io_test analog_io_test windowed_wdt_test interrupt_test interrupt_test_reciprocal multicore_test cpu_instruction_test pc_test_reciprocal metrics"
 
 stages:
   - Lint
@@ -89,17 +97,58 @@ stages:
 
 .qemu_upstream_socs: &qemu_upstream_socs
   - esp32c3
+  - esp32c6
+  - esp32h2
+  - esp32c5
+  - esp32c61
+  - esp32h4
+  - esp32p4
 
 .qemu_remote_socs: &qemu_remote_socs
-  - esp32c5
-  - esp32c6
-  - esp32c61
-  - esp32h2
+  - esp32c3
+
+.reciprocal_suite_socs: &reciprocal_suite_socs
   - esp32p4
-  - esp32h4
+
+.main_suite_parts: &main_suite_parts
+  - "main_suite-1/2"
+  - "main_suite-2/2"
+
+.reciprocal_suite_parts: &reciprocal_suite_parts
+  - "reciprocal_suite"
+
+.resolve_test_apps: &resolve_test_apps |
+  _full="${TEST_APPS}"
+  case "${TEST_SUITE}" in
+    main_suite-1/2)
+      TEST_APPS="cpu_reg_test"
+      ;;
+    main_suite-2/2)
+      TEST_APPS=""
+      for app in ${_full}; do
+        [ "$app" = "cpu_reg_test" ] && continue
+        case "$app" in *reciprocal*) continue ;; esac
+        TEST_APPS="${TEST_APPS:+$TEST_APPS }${app}"
+      done
+      ;;
+    reciprocal_suite)
+      TEST_APPS=""
+      for app in ${_full}; do
+        case "$app" in *reciprocal*)
+          TEST_APPS="${TEST_APPS:+$TEST_APPS }${app}"
+          ;;
+        esac
+      done
+      ;;
+    *)
+      echo "Unknown TEST_SUITE=${TEST_SUITE}"
+      exit 1
+      ;;
+  esac
+  export TEST_APPS
 
 default:
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script:
     - . $IDF_PATH/export.sh
     - mkdir -p $MCUBOOT_PATH/boot/espressif/build
@@ -113,8 +162,9 @@ default:
 
 mcp_data_drift:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
-  before_script: []
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
   tags: [build]
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
@@ -154,8 +204,9 @@ mcp_data_drift:
 
 pre_commit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
-  before_script: []
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
   variables:
     SKIP: "mcp-server-refresh"
   tags: [build]
@@ -169,7 +220,6 @@ pre_commit:
         GIT_FETCH_EXTRA_FLAGS: --prune --quiet --no-tags $CI_MERGE_REQUEST_DIFF_BASE_SHA
     - when: always
   script:
-    - pip install --quiet pre-commit
     - |
       if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
         echo "Running pre-commit on files changed in the merge request"
@@ -185,7 +235,7 @@ pre_commit:
 # Host-native Host Diagnostics protocol / challenge unit tests (no DUT / IDF).
 test_hd_protocol_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -201,7 +251,7 @@ test_hd_protocol_unit:
 # private counter starts at 1, steps by 1, and consumes IDs on send failures.
 test_hd_agent_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -218,7 +268,7 @@ test_hd_agent_unit:
 # frame, silence, late answer) against the real companion code.
 test_hd_companion_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -232,7 +282,7 @@ test_hd_companion_unit:
 
 test_clock_math_unit:
   stage: Lint
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   rules:
@@ -244,22 +294,44 @@ test_clock_math_unit:
     - cmake --build build/clock_math_test
     - ctest --test-dir build/clock_math_test --output-on-failure
 
+pack_idf_component:
+  stage: Lint
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
+  tags: [build]
+  rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
+    - when: always
+  script:
+    - compote component pack --name esp-bist
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - dist/
+
 build_docker_image:
   before_script: []
-  image: espressif/dind:1
+  image: ${CI_DOCKER_REGISTRY}/docker-buildx:1
   stage: Build
   timeout: 4h
   variables:
     DOCKER_TLS_CERTDIR: ""
-    IMAGE_NAME: espressif/esp-bist/build-env-2
+    DOCKER_BUILDKIT: "1"
     DOCKERFILE: .devcontainer/Dockerfile
+    IMAGE_NAME: espressif/esp-bist/build-env-3
   script:
-    - mkdir -p config
-    - echo ${DOCKER_AUTH_CONFIG} > config/config.json
-    - docker --config=./config pull ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} || true
-    - docker --config=./config build --pull -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} -f ${DOCKERFILE} .
-    - docker run --rm -t ${CI_DOCKER_REGISTRY}/${IMAGE_NAME} /bin/bash -c "echo Hello Docker; exit 0"
-    - docker --config=./config push ${CI_DOCKER_REGISTRY}/${IMAGE_NAME}
+    - mkdir -p "$HOME/.docker"
+    - echo "${DOCKER_AUTH_CONFIG}" > "$HOME/.docker/config.json"
+    - docker buildx create --name bist_builder1
+    - docker buildx use bist_builder1
+    - docker buildx inspect --bootstrap
+    - docker pull "${CI_DOCKER_REGISTRY}/${IMAGE_NAME}" || true
+    - docker buildx build --push --platform linux/amd64,linux/arm64 -t "${CI_DOCKER_REGISTRY}/${IMAGE_NAME}" -f "${DOCKERFILE}" .
+    - docker buildx imagetools inspect "${CI_DOCKER_REGISTRY}/${IMAGE_NAME}"
+    - docker run --rm -t "${CI_DOCKER_REGISTRY}/${IMAGE_NAME}" /bin/bash -c "echo Hello Docker; uname -m; exit 0"
   allow_failure: true
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
@@ -281,7 +353,7 @@ build_mcuboot:
       for SOC_TARGET in $MCUBOOT_TARGETS; do
         echo "Building MCUboot for $SOC_TARGET"
         rm -rf build
-        cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=$IDF_PATH -B build -GNinja
+        cmake -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-${SOC_TARGET}.cmake -DMCUBOOT_TARGET=${SOC_TARGET} -DESP_HAL_PATH=${MCUBOOT_IDF_PATH:-$IDF_PATH} -B build -GNinja
         ninja -C build
         cp build/mcuboot_${SOC_TARGET}.bin $CI_PROJECT_DIR/mcuboot_build/
       done
@@ -302,7 +374,7 @@ build_qemu_remote:
   stage: Build
   timeout: 2h
   variables:
-    QEMU_BRANCH: 'feature/esp32h4'
+    QEMU_BRANCH: 'esp-develop'
   before_script:
     - . $IDF_PATH/export.sh
   script:
@@ -479,7 +551,6 @@ build_zephyr_twister:
   before_script:
     - . $IDF_PATH/export.sh
   script:
-    - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch
     - cd $CI_PROJECT_DIR/samples/idf
     - idf.py -B build_${IDF_TARGET} set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET} build
@@ -490,6 +561,8 @@ build_zephyr_twister:
     - idf.py -B build_${IDF_TARGET}_hd_starved_agent build
     - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_skip_checkpoint" set-target $IDF_TARGET
     - idf.py -B build_${IDF_TARGET}_hd_skip_checkpoint build
+    - idf.py -B build_${IDF_TARGET}_hd_host_sw_reset -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.hd_host_sw_reset" set-target $IDF_TARGET
+    - idf.py -B build_${IDF_TARGET}_hd_host_sw_reset build
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
@@ -502,6 +575,7 @@ build_zephyr_twister:
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_key_mismatch/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_starved_agent/
       - tests/integration/hd_idf/build_${IDF_TARGET}_hd_skip_checkpoint/
+      - tests/integration/hd_idf/build_${IDF_TARGET}_hd_host_sw_reset/
   tags: [build]
 
 build_idf_samples:
@@ -512,7 +586,6 @@ build_idf_samples:
   stage: Test Device
   before_script:
     - . $IDF_PATH/export.sh
-    - cd $IDF_PATH && git apply $CI_PROJECT_DIR/samples/idf/patches/idf_ulp_linker.patch || true
   script:
     - cd $CI_PROJECT_DIR/samples/idf
     - pytest pytest_device* --target=$IDF_TARGET --junitxml=build_${IDF_TARGET}/idf_sample_${IDF_TARGET}_device_report.xml --reruns 2
@@ -522,7 +595,7 @@ build_idf_samples:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_idf_test ]]" == "true"'
-  tags: [generic, $IDF_TARGET]
+  tags: [$IDF_TARGET, "arm"]
   artifacts:
     when: always
     expire_in: 1 week
@@ -550,12 +623,14 @@ test_idf_device:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
+    - *resolve_test_apps
   script:
     - |
       if [ ! -d "tests/${SOC_TARGET}" ]; then
         echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
         exit 1
       fi
+      echo "TEST_APPS=${TEST_APPS}"
       for TEST_APP in $TEST_APPS; do
         if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
           rm -rf "tests/$TEST_APP/build"
@@ -578,10 +653,12 @@ test_idf_device:
 
 .test_qemu_template_remote:
   stage: Test Qemu
+  timeout: 2h
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
     - . $IDF_PATH/export.sh
+    - *resolve_test_apps
     - |
       if [ ! -x "$CI_PROJECT_DIR/qemu_build/qemu-system-riscv32" ]; then
         echo "QEMU binary missing under qemu_build/."
@@ -594,6 +671,7 @@ test_idf_device:
         echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
         exit 1
       fi
+      echo "TEST_APPS=${TEST_APPS}"
       for TEST_APP in $TEST_APPS; do
         if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
           rm -rf "tests/$TEST_APP/build"
@@ -637,6 +715,9 @@ test_idf_device:
   parallel:
     matrix:
       - SOC_TARGET: *qemu_upstream_socs
+        TEST_SUITE: *main_suite_parts
+      - SOC_TARGET: *reciprocal_suite_socs
+        TEST_SUITE: *reciprocal_suite_parts
 
 test_qemu_upstream:
   extends:
@@ -653,6 +734,9 @@ test_qemu_upstream:
   parallel:
     matrix:
       - SOC_TARGET: *qemu_remote_socs
+        TEST_SUITE: *main_suite_parts
+      - SOC_TARGET: *reciprocal_suite_socs
+        TEST_SUITE: *reciprocal_suite_parts
 
 test_qemu_remote:
   extends:
@@ -661,26 +745,39 @@ test_qemu_remote:
 
 .test_device_template:
   stage: Test Device
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
+    RUN_INJECTION_TEST: $[[ inputs.run_injection_test ]]
+  before_script:
+    - . $IDF_PATH/export.sh
+    - mkdir -p $MCUBOOT_PATH/boot/espressif/build
+    - cp mcuboot_build/mcuboot_${SOC_TARGET}.bin $MCUBOOT_PATH/boot/espressif/build/
+    - *resolve_test_apps
   script:
     - |
       if [ ! -d "tests/${SOC_TARGET}" ]; then
         echo "Missing build_tests artifacts under tests/${SOC_TARGET}/"
         exit 1
       fi
+      echo "TEST_APPS=${TEST_APPS}"
       for TEST_APP in $TEST_APPS; do
         if [ -d "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" ]; then
           rm -rf "tests/$TEST_APP/build"
           mv "tests/${SOC_TARGET}/${TEST_APP}_${SOC_TARGET}" "tests/$TEST_APP/build"
         fi
       done
-    - python3 scripts/run_device_tests.py --target $SOC_TARGET
+      if [ "$RUN_INJECTION_TEST" = "true" ]; then
+        INJECTION_ARGS="--injection"
+      else
+        INJECTION_ARGS=""
+      fi
+      ESPPORT=/dev/serial_ports/ttyUSB-esp32 python3 scripts/run_device_tests.py --target $SOC_TARGET $INJECTION_ARGS
   rules:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
-  tags: [generic, $SOC_TARGET]
+  tags: [$SOC_TARGET, "arm"]
   needs:
     - job: build_mcuboot
       artifacts: true
@@ -705,6 +802,57 @@ test_qemu_remote:
 test_device:
   extends:
     - .test_device_template
+  parallel:
+    matrix:
+      - SOC_TARGET: *socs
+        TEST_SUITE: *main_suite_parts
+      - SOC_TARGET: *reciprocal_suite_socs
+        TEST_SUITE: *reciprocal_suite_parts
+
+.test_samples_template:
+  stage: Test Device
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  variables:
+    REPORT_PATH: 'build/tests/${SOC_TARGET}_device_report.xml'
+  script:
+    - |
+      src="samples/standalone/standalone_${SOC_TARGET}"
+      if [ ! -d "$src" ]; then
+        echo "Missing standalone build artifact ${src}"
+        exit 1
+      fi
+      rm -rf samples/standalone/build
+      mv "$src" samples/standalone/build
+    - |
+      cd samples/standalone
+      cmake -DSOC_TARGET=$SOC_TARGET -B build -GNinja
+      ninja -C build flash_boot
+      ESPPORT=/dev/serial_ports/ttyUSB-esp32 python3 -m pytest pytest_device_standalone.py --executable standalone_critical_${SOC_TARGET} --target $SOC_TARGET --junitxml "$REPORT_PATH" --reruns 2
+  rules:
+    - if: '"$[[ inputs.run_build_docs ]]" == "true"'
+      when: never
+    - if: '"$[[ inputs.run_build_standalone ]]" == "true"'
+  tags: [arm, $SOC_TARGET]
+  needs:
+    - job: build_mcuboot
+      artifacts: true
+    - job: build_samples
+      artifacts: true
+      parallel:
+        matrix:
+          - SOC_TARGET: ['$[[ matrix.SOC_TARGET ]]']
+            TEST_APP_NAME: ["standalone"]
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - samples/standalone/${REPORT_PATH}
+    reports:
+      junit: samples/standalone/${REPORT_PATH}
+
+test_samples:
+  extends:
+    - .test_samples_template
   <<: *test_device_matrix
 
 .test_metrics_template:
@@ -730,7 +878,7 @@ test_device:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_device_test ]]" == "true"'
-  tags: [generic, $SOC_TARGET]
+  tags: [$SOC_TARGET, "arm"]
   needs:
     - job: build_mcuboot
       artifacts: true
@@ -758,7 +906,7 @@ test_metrics:
 # merged snapshot after every report job has finished.
 cache_docs_reports:
   stage: Test Device
-  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-2
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
   before_script: []
   tags: [build]
   allow_failure: true
@@ -768,16 +916,26 @@ cache_docs_reports:
       parallel:
         matrix:
           - SOC_TARGET: *qemu_upstream_socs
+            TEST_SUITE: *main_suite_parts
+          - SOC_TARGET: *reciprocal_suite_socs
+            TEST_SUITE: *reciprocal_suite_parts
     - job: test_qemu_remote
+      optional: true
       artifacts: true
       parallel:
         matrix:
           - SOC_TARGET: *qemu_remote_socs
+            TEST_SUITE: *main_suite_parts
+          - SOC_TARGET: *reciprocal_suite_socs
+            TEST_SUITE: *reciprocal_suite_parts
     - job: test_device
       artifacts: true
       parallel:
         matrix:
           - SOC_TARGET: *socs
+            TEST_SUITE: *main_suite_parts
+          - SOC_TARGET: *reciprocal_suite_socs
+            TEST_SUITE: *reciprocal_suite_parts
     - job: test_metrics
       artifacts: true
       parallel:
@@ -809,6 +967,8 @@ cache_docs_reports:
     - if: '"$[[ inputs.run_device_test ]]" == "true" &&
            "$[[ inputs.run_qemu_upstream_test ]]" == "true" &&
            "$[[ inputs.run_qemu_remote_test ]]" == "true"'
+    - if: '"$[[ inputs.run_device_test ]]" == "true" &&
+           "$[[ inputs.run_qemu_upstream_test ]]" == "true"'
 
 .test_zephyr_device_template:
   stage: Test Device
@@ -835,7 +995,7 @@ cache_docs_reports:
     - if: '"$[[ inputs.run_build_docs ]]" == "true"'
       when: never
     - if: '"$[[ inputs.run_zephyr_test ]]" == "true"'
-  tags: [generic, $SOC_TAG]
+  tags: [$SOC_TAG, "arm"]
   needs:
     - job: build_zephyr_twister
       artifacts: true
@@ -895,6 +1055,9 @@ test_zephyr_device:
     - if: '"$[[ inputs.run_device_test ]]" == "true" &&
            "$[[ inputs.run_qemu_upstream_test ]]" == "true" &&
            "$[[ inputs.run_qemu_remote_test ]]" == "true" &&
+           "$[[ inputs.run_idf_test ]]" == "true"'
+    - if: '"$[[ inputs.run_device_test ]]" == "true" &&
+           "$[[ inputs.run_qemu_upstream_test ]]" == "true" &&
            "$[[ inputs.run_idf_test ]]" == "true"'
   cache:
     - key: $DOCS_REPORTS_CACHE_KEY
@@ -1002,3 +1165,16 @@ deploy_prod_docs:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_TAG
       when: always
+
+upload_idf_component:
+  stage: Deploy Docs
+  image: $CI_DOCKER_REGISTRY/espressif/esp-bist/build-env-3
+  before_script:
+    - . $IDF_PATH/export.sh
+  tags: [build]
+  needs:
+    - pack_idf_component
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - compote component upload --name esp-bist --namespace espressif

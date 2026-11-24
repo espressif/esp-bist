@@ -14,9 +14,11 @@ test hooks in `src/bist/`; the fault comes from this app.
 |--------|-------|
 | `sdkconfig.ci.hd_key_mismatch` | `main/CMakeLists.txt` compiles the HP-side library with `BIST_HD_CHALLENGE_KEY=0x5A5A5A5A`. The ULP sub-project keeps `CONFIG_ESP_BIST_HD_CHALLENGE_KEY`, so the production answer path computes a value the companion rejects on every round. |
 | `sdkconfig.ci.hd_starved_agent` | The agent is demoted to priority 23 (below the product default of 24) so that `app_main()`, which raises itself to `configMAX_PRIORITIES - 1` (24), strictly outranks it and busy-waits for 500 ms. The agent is never scheduled and no `ANSWER` reaches the companion before the window closes. The agent task is unpinned, so on a multi-core target every other HP core is held by an equally high-priority task for the same 500 ms. |
+| `sdkconfig.ci.hd_skip_checkpoint` | The host answers Q&A challenges correctly, but never calls `bist_hd_checkpoint_reached()`, forcing the companion's checkpoint deadline audit to trigger safe state. |
+| `sdkconfig.ci.hd_host_sw_reset` | After supervision is armed, `app_main()` illegally calls `esp_restart()` (`SW_CPU`). The LP companion recovers from `init_disable_rtc_wdt` by re-arming `LP_WDT` and escalating into a full system reset. |
 
-Both reach the same end state: the companion stops feeding the LP watchdog and
-the watchdog resets the chip. One of the two options must be selected — the
+All variants reach the same end state: the LP companion forces a full `LP_WDT`
+system reset. One fault option must be selected — the
 build fails with an `#error` otherwise, since an app that behaves correctly
 proves nothing here.
 
@@ -44,9 +46,10 @@ Expected UART sequence, ending in the reset:
 ```
 test_HD_agent_ready:PASS
 test_BIST_postboot:PASS
+test_HD_safe_dma_pool:PASS
 test_HD_fail_closed_armed:PASS
 ...
-Guru Meditation Error: Core 0 panic'ed (...)   # CPU has been reset by WDT
+rst:0x10 (LP_WDT_SYS),boot:...   # full HP + LP/RTC watchdog reset
 ```
 
 `test_HD_fail_closed_armed` matters: the companion reports one runtime

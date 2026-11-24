@@ -96,7 +96,6 @@ target_include_directories(bist_esp
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
-    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
@@ -108,12 +107,14 @@ target_include_directories(bist_esp
     ${IDF_PATH}/components/hal/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_wdt/include
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
     ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
-    ${IDF_PATH}/components/ulp/lp_core/lp_core/include
+    ${IDF_PATH}/components/ulp/subproject/components/lp_core/include
     ${IDF_PATH}/components/ulp/lp_core/shared/include
 )
 
@@ -142,7 +143,11 @@ set_target_properties(bist_esp PROPERTIES VERSION ${PROJECT_VERSION})
 # The function injects CRC32 checksums into the ELF:
 #   .text    -> .crc_section_text  (code integrity)
 #   .rodata  -> .crc_section_data  (read-only data integrity)
-set(BIST_CRC_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../../scripts/calculate_crc32.py" CACHE INTERNAL "")
+if(DEFINED BIST_ROOT_DIR)
+    set(BIST_CRC_SCRIPT "${BIST_ROOT_DIR}/scripts/calculate_crc32.py" CACHE INTERNAL "")
+else()
+    set(BIST_CRC_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../../scripts/calculate_crc32.py" CACHE INTERNAL "")
+endif()
 
 function(bist_add_crc_postbuild target)
     if(CONFIG_ESP_BIST_MEMORY_FLASH_TEST)

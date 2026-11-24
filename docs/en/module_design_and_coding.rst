@@ -8,9 +8,19 @@ For each BIST test, this chapter captures implementation structure, defensive te
 CPU Register Test
 -----------------
 
+The CPU Register Test verifies the integrity of CPU general-purpose registers (GPRs x1–x31) and, on FPU-supported devices (such as ESP32-P4 and ESP32-H4), floating-point registers (FPRs f0–f31). The test ensures registers can accurately store and retrieve both ``0xAAAAAAAA`` and ``0x55555555`` checkerboard bit patterns to detect stuck-at faults and data path corruption.
+
+Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Walk)**: Default implementation running entirely on the executing core.
+- **Reciprocal (Dual-Core Comparison)**: Available on dual-core targets (ESP32-P4) using cross-core dispatch, shared memory, and mutual verification.
+
+Static Single-Core Register Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
     :scale: 50%
-    :caption: CPU Register Test
+    :caption: CPU Register Test (Static)
     :align: center
 
     blockdiag {
@@ -38,14 +48,61 @@ CPU Register Test
         Success [label = "Return\nBIST_ESP_OK"];
     }
 
-This diagram shows the generic logic for all tested CPU registers: save original value if needed, write test patterns (``0xAAAAAAAA`` and ``0x55555555``), verify, restore, and return error on any mismatch. On FPU supported devices, the same flow applies to FPU registers.
+This diagram shows the generic logic for all tested CPU registers in static mode: save original value if needed, write test patterns (``0xAAAAAAAA`` and ``0x55555555``), verify, restore, and return error on any mismatch. On FPU supported devices, the same flow applies to FPU registers.
+
+Reciprocal Dual-Core Register Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: CPU Register Test (Reciprocal)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> "Core 0: Register Walk" -> "Core 0: Validate Core 0" -> "Core 1: Register Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: Register Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: Register Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: Register Walk" [label = "Core 0: Walk regs\nWrite to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0:\nValidate slot 0", shape = diamond];
+        "Core 1: Register Walk" [label = "Core 1: Walk regs\nWrite to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1:\nValidate slot 1 (IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1:\nValidate slot 0 (IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0:\nValidate slot 1", shape = diamond];
+        Error [label = "Return\nBIST_ESP_CPU_TEST_ERR"];
+        Success [label = "Return\nBIST_ESP_OK"];
+    }
+
+For dual-core reciprocal comparison (Annex H Table H.1 / H.2.18.15 reciprocal comparison), ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation:
+
+1. **Independent Execution (Core 0)**: Core 0 executes a full register walk (x1–x31 and f0–f31 on FPU-supported hardware) and writes the raw read-back values directly into shared memory slot 0 (``bist_cpu_regs_shared_results_cc[0]``).
+2. **Local Validation (Core 0 on Core 0)**: Core 0 verifies that its own recorded read-backs match the expected checkerboard patterns (``0xAAAAAAAA`` and ``0x55555555``).
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the register walk to HP Core 1 via ``bist_multicore_call()``. Core 1 executes the walk and writes its raw read-backs into shared memory slot 1 (``bist_cpu_regs_shared_results_cc[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of Core 1's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates its own register data.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of Core 0's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates Core 0's evidence.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates Core 1's recorded read-backs directly.
+
+Fixed-Layout Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal test exchanges evidence using a fixed-layout structure (``bist_cpu_regs_result_cc_t``) placed in statically allocated HP SRAM (``bist_cpu_regs_shared_results_cc``):
+
+- Exactly 520 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers, ensuring deterministic memory layout across cores and compiler configurations.
+- Verified at compile time via ``_Static_assert`` on total structure size, field offsets, and read-back entry sizes.
+- Contains ``feature_flags``, execution ``status``, 32 GPR read-back entries, and 32 FPR read-back entries (each entry storing the raw value after writing ``0xAAAAAAAA`` and ``0x55555555``).
 
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_cpu_regs_test
-
 
 
 Source Files
@@ -61,31 +118,44 @@ Source Files
    * - ``src/bist/core/cpu/bist_cpu_regs.c``
      - v1.1.0
      - 42ff66a500bca7c845c5c15dcb9bba56
+   * - ``src/bist/core/cpu/bist_cpu_regs_reciprocal.c``
+     - N/A
+     - 5378a61dffd9f5145feb7c96f23d2fcc
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Macros enforce identical pattern/write/read/restore for each register
+- Macros enforce identical pattern/write/read/restore for each register.
 - Explicit error handling: If a register value does not match the expected pattern, the test jumps to a labeled error handler.
-- No pointer dereferencing or dynamic memory is used, reducing risk of undefined behavior.
-- Single public API declared in ``bist_cpu_regs.h``
-- This test is self-contained and does not call other modules. It only depends on the BIST error code definitions and configuration macros.
-- All operations are performed on CPU registers directly.
-- The function is declared ``__attribute__((naked))`` and manages its own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path). This is necessary because the function body is pure inline assembly that manually issues ``ret``; without ``naked``, the compiler may or may not generate a prologue depending on the optimization level (e.g. ``-Os`` omits it), which would cause a mismatch with the hand-written epilogue and corrupt the caller's stack.
-- The main function has a single entry and, under normal conditions, a single exit. Error handling uses a label (``errorCPU``) for early exit on failure, which is documented and justified for low-level assembly.
+- No dynamic memory allocation is used, reducing risk of undefined behavior.
+- Single public API declared in ``bist_cpu_regs.h`` (Static) or ``bist_cpu_regs_reciprocal.h`` (Reciprocal).
+- In static mode, this test is self-contained and only depends on BIST error code definitions and configuration macros. All operations are performed on CPU registers directly with no pointer dereferencing.
+- In reciprocal mode, register results are recorded into statically allocated shared HP SRAM. No pointers are stored within the structure, and layout is verified with compile-time assertions.
+- The walk functions are declared ``__attribute__((naked))`` and manage their own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path). This is necessary because the function body is pure inline assembly with manual ``ret``.
+- In reciprocal mode, cross-core dispatch uses ``bist_multicore_call()`` with dedicated job callbacks (``verify_bist_cpu_regs_test_result_job`` and wrapper jobs). Only Core 0 initiates dispatch to Core 1.
+- The main function has a single entry and, under normal conditions, a single exit. Error handling uses dedicated assembly labels for early exit on failure.
 - Branching is limited to error detection and is implemented via macro-generated assembly. There is no deep nesting or complex logic.
-- No explicit C loops are used; the test iterates over registers via repeated macro invocations. All operations are statically bounded.
-- Only bitwise and equality operations are performed on integer registers. For FPU register tests on FPU supported devices, no floating-point arithmetic is executed in C.
-- No interrupts are used or manipulated by this test.
-- No pointers are used in this test. All operations are on CPU registers.
+- No explicit C loops are used during the register walk; iteration is performed via repeated macro invocations. All operations are statically bounded.
+- Only bitwise and equality operations are performed on integer registers. For FPU register tests on FPU supported devices, floating-point equality (``feq.s``) is performed in assembly.
+- In static mode, no interrupts are used. In reciprocal mode, Core 1 idle wake-up uses a dedicated cross-core software interrupt.
 - No recursion is used in this test.
 
 CPU CSR Register Test
 ---------------------
 
+The CPU Control and Status Register (CSR) Test verifies the integrity of critical machine-mode and floating-point CSRs by writing alternating bit patterns (``0xAAAAAAAA`` and ``0x55555555``) masked to each register's writable bits, verifying read-backs, and restoring original values.
+
+Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Test)**: Default implementation running entirely on the executing core.
+- **Reciprocal (Dual-Core Comparison)**: Available on dual-core targets (ESP32-P4) using cross-core dispatch, shared memory, and mutual verification.
+
+Static Single-Core CSR Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
     :scale: 50%
-    :caption: CPU CSR Register Test
+    :caption: CPU CSR Register Test (Static)
     :align: center
 
     blockdiag {
@@ -113,7 +183,7 @@ CPU CSR Register Test
         Success [label = "Return\nBIST_ESP_OK"];
     }
 
-This diagram shows the generic logic for all tested CSRs: save original value, write test patterns (``0xAAAAAAAA`` and ``0x55555555`` masked as needed), verify, and restore. Any mismatch returns an error.
+This diagram shows the generic logic for all tested CSRs in static mode: save original value, write test patterns (``0xAAAAAAAA`` and ``0x55555555`` masked as needed), verify, and restore. Any mismatch returns an error.
 
 The CSR groups tested vary by SoC capability:
 
@@ -127,12 +197,59 @@ PMA address entries 12–15 are skipped because the ROM bootloader may configure
 
 Total CSRs tested: 25 on ESP32-C3, 37 on ESP32-C6/H2/C61, 39 on ESP32-C5, 40 on ESP32-H4/P4 (adds 12 ``pma_addr`` + ``fflags``, ``frm``, ``fcsr`` on FPU-capable SoCs).
 
+Reciprocal Dual-Core CSR Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: CPU CSR Register Test (Reciprocal)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> "Core 0: CSR Walk" -> "Core 0: Validate Core 0" -> "Core 1: CSR Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: CSR Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: CSR Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: CSR Walk" [label = "Core 0: Walk CSRs\nWrite to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0:\nValidate slot 0", shape = diamond];
+        "Core 1: CSR Walk" [label = "Core 1: Walk CSRs\nWrite to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1:\nValidate slot 1 (IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1:\nValidate slot 0 (IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0:\nValidate slot 1", shape = diamond];
+        Error [label = "Return\nBIST_ESP_CPU_CSR_TEST_ERR"];
+        Success [label = "Return\nBIST_ESP_OK"];
+    }
+
+For dual-core reciprocal comparison, ESP32-P4 utilizes both high-performance (HP) cores to perform mutual cross-validation on 40 CSRs (5 trap + 16 PMP address + 4 PMP config + 12 PMA address + 3 FPU CSRs):
+
+1. **Independent Execution (Core 0)**: Core 0 executes the CSR walk and writes raw read-back values directly into shared memory slot 0 (``bist_cpu_csr_regs_shared_results_cc[0]``).
+2. **Local Validation (Core 0 on Core 0)**: Core 0 verifies that its own recorded read-backs match the expected masked patterns.
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the CSR walk to HP Core 1 via ``bist_multicore_call()``. Core 1 executes the walk and writes its raw read-backs into shared memory slot 1 (``bist_cpu_csr_regs_shared_results_cc[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of Core 1's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates its own CSR data.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of Core 0's results to Core 1 via ``bist_multicore_call()``, ensuring Core 1 independently validates Core 0's evidence.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates Core 1's recorded read-backs directly.
+
+Fixed-Layout CSR Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal CSR test exchanges evidence using a fixed-layout structure (``bist_cpu_csr_regs_result_cc_t``) placed in statically allocated HP SRAM (``bist_cpu_csr_regs_shared_results_cc``):
+
+- Exactly 324 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers, ensuring deterministic memory layout across cores and compiler configurations.
+- Verified at compile time via ``_Static_assert`` on total structure size, field offsets, and read-back entry sizes.
+- Contains execution ``status`` followed by an array of 40 CSR read-back entries (``bist_cpu_csr_reg_readback_cc_t``), each storing raw ``pattern_a`` and ``pattern_5`` values.
+
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_cpu_csr_regs_test
-
 
 
 Source Files
@@ -148,21 +265,264 @@ Source Files
    * - ``src/bist/core/cpu/bist_cpu_csr_regs.c``
      - v1.1.0
      - eef84263fbb91e68b8bbbd2ddd19afd6
+   * - ``src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c``
+     - N/A
+     - b3cdf9446c26d77cab9cd3873ca4e90b
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
 - The CPU CSR test uses macros to ensure all test operations are performed in a controlled, repeatable way.
 - Error code ``BIST_ESP_CPU_CSR_TEST_ERR`` on mismatch
-- Single API in ``bist_cpu_csr_regs.h``
-- This test is self-contained and does not call other modules. It only depends on the BIST error code definitions and configuration macros.
-- No dynamic or static data structures are used. All operations are performed on CPU CSRs directly.
-- The function is declared ``__attribute__((naked))`` and manages its own 16-byte stack frame explicitly, for the same reason as ``bist_cpu_regs_test`` (see above): the function body is pure inline assembly with manual ``ret``, so the compiler must not generate a prologue or epilogue.
-- The main function has a single entry and, under normal conditions, a single exit. Error handling uses a label (``errorCSR``) for early exit on failure, which is documented and justified for low-level assembly.
-- No explicit C loops are used; the test iterates over CSRs via repeated macro invocations. All operations are statically bounded.
+- Single API in ``bist_cpu_csr_regs.h`` (Static) or ``bist_cpu_csr_regs_reciprocal.h`` (Reciprocal).
+- In static mode, this test is self-contained and only depends on BIST error code definitions and configuration macros. All operations are performed on CPU CSRs directly.
+- In reciprocal mode, CSR results are recorded into statically allocated shared HP SRAM. No pointers are stored within the structure, and layout is verified with compile-time assertions.
+- The walk functions are declared ``__attribute__((naked))`` and manage their own 16-byte stack frame explicitly (``addi sp, sp, -16`` at entry, ``addi sp, sp, 16`` at every return path) because the function body is pure inline assembly with manual ``ret``.
+- In reciprocal mode, cross-core dispatch uses ``bist_multicore_call()`` with dedicated job callbacks. Only Core 0 initiates dispatch to Core 1.
+- The main function has a single entry and, under normal conditions, a single exit. Error handling uses dedicated assembly labels for early exit on failure.
+- No explicit C loops are used during the walk; the test iterates over CSRs via repeated macro invocations. All operations are statically bounded.
 - Only bitwise and equality operations are performed on integer CSRs. FPU CSR tests use ``csrr``/``csrw`` only; no floating-point arithmetic is executed in C.
-- No interrupts are used or manipulated by this test.
+- In static mode, no interrupts are used. In reciprocal mode, Core 1 idle wake-up uses a dedicated cross-core software interrupt.
 - No recursion is used in this test.
+
+.. _cpu-instruction-test:
+
+CPU Instruction Equivalence Test
+--------------------------------
+
+The CPU instruction self-test verifies that the processor correctly decodes and executes instructions (IEC 60730-1 Annex H, component 1.2, measure H.2.18.5). It runs assembly test vectors covering representative instruction groups and operand corner cases (such as zero, boundary values, sign extension, and bit patterns) to ensure the CPU hardware behaves as expected.
+
+Execution Flow
+^^^^^^^^^^^^^^
+
+The C dispatcher (``bist_cpu_instruction_test``) executes enabled instruction groups sequentially with a fail-fast strategy: upon the first mismatch or error in any group, the test halts immediately, records the failing group and per-group vector ID, and returns ``BIST_ESP_CPU_INSTRUCTION_TEST_ERR``.
+
+.. blockdiag::
+    :scale: 60%
+    :caption: CPU Instruction Equivalence Test Execution Flow
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        Start -> IntALU -> Shift -> UpperImm -> Ctrl -> LdSt -> Mul -> CSR -> AMO -> FP -> Comp -> Pass;
+        IntALU -> Fail [label = "Mismatch"];
+        Shift -> Fail [label = "Mismatch"];
+        UpperImm -> Fail [label = "Mismatch"];
+        Ctrl -> Fail [label = "Mismatch"];
+        LdSt -> Fail [label = "Mismatch"];
+        Mul -> Fail [label = "Mismatch"];
+        CSR -> Fail [label = "Mismatch"];
+        AMO -> Fail [label = "Mismatch"];
+        FP -> Fail [label = "Mismatch"];
+        Comp -> Fail [label = "Mismatch"];
+        Fail -> ReportError;
+
+        Start [label = "bist_cpu_instruction_test()", shape = roundedbox];
+        IntALU [label = "Integer ALU (80)\nRV32I"];
+        Shift [label = "Shifts (36)\nRV32I"];
+        UpperImm [label = "Upper Imm (11)\nLUI / AUIPC"];
+        Ctrl [label = "Control Flow (28)\nBranches / Jumps"];
+        LdSt [label = "Load/Store (15)\nRV32I"];
+        Mul [label = "Multiply/Divide (48)\nRV32M"];
+        CSR [label = "CSR/Fence (15)\nZicsr/Zifencei"];
+        AMO [label = "Atomics (13)\nRV32A (Non-C3)"];
+        FP [label = "Floating Point (60)\nRV32F (H4/P4)"];
+        Comp [label = "Compressed (75)\nRV32C"];
+        Pass [label = "Return BIST_ESP_OK\nID=0, Group=NONE", shape = roundedbox];
+        Fail [label = "Fail-Fast Halt\nSave Vector ID & Group", shape = box];
+        ReportError [label = "Return\nBIST_ESP_CPU_INSTRUCTION_TEST_ERR", shape = roundedbox];
+    }
+
+Instruction Test Groups (381 Vectors Total)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The suite comprises 10 specialized assembly test groups covering a total of 381 test vectors:
+
+1. **Integer ALU (RV32I, 80 vectors, IDs 1–80)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_integer.S`` (enum: ``bist_insn_integer_id_t`` in ``bist_cpu_instructions_integer.h``)
+
+   - **Coverage**: Register-register and register-immediate arithmetic (``ADD``, ``ADDI``, ``SUB``), bitwise logic (``AND``, ``ANDI``, ``OR``, ``ORI``, ``XOR``, ``XORI``), and comparisons (``SLT``, ``SLTI``, ``SLTU``, ``SLTIU``).
+
+   - **Equivalence Classes**: Zero operands, smallest non-zero (``1``), all-ones (``-1``), signed maximum (``0x7FFFFFFF`` / ``INT32_MAX``), signed minimum (``0x80000000`` / ``INT32_MIN``), alternating bit patterns (``0xAAAAAAAA``, ``0x55555555``), 12-bit immediate boundary values (``-2048``, ``-1``, ``0``, ``1``, ``2047``), immediate sign-extension, and signed versus unsigned comparison truth tables.
+
+2. **Shifts (RV32I, 36 vectors, IDs 1–36)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_shift.S`` (enum: ``bist_insn_shift_id_t`` in ``bist_cpu_instructions_shift.h``)
+
+   - **Coverage**: Logical left (``SLL``, ``SLLI``), logical right (``SRL``, ``SRLI``), and arithmetic right (``SRA``, ``SRAI``) shift operations in both register-register and register-immediate forms.
+
+   - **Equivalence Classes**: Shift counts of 0 (no-op pass-through), 1 (single-bit shift), and 31 (maximum standard RV32 shift amount); shift counts :math:`\ge 32` (verifying low 5-bit masking of ``rs2[4:0]`` / ``shamt[4:0]``); sign-extension preservation for arithmetic right shifts on negative operands; alternating bit patterns.
+
+3. **Upper Immediate (RV32I, 11 vectors, IDs 1–11)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_upperimm.S`` (enum: ``bist_insn_upperimm_id_t`` in ``bist_cpu_instructions_upperimm.h``)
+
+   - **Coverage**: U-type instructions ``LUI`` (Load Upper Immediate) and ``AUIPC`` (Add Upper Immediate to PC).
+
+   - **Equivalence Classes**: ``LUI`` 20-bit immediate boundary classes: zero, smallest non-zero (``1``), max positive (``0x7FFFF``), sign bit set (``0x80000``), all-ones (``0xFFFFF``), and alternating pattern (``0xAAAAA``). ``AUIPC`` PC-relative calculations: zero addend (``rd == pc``), positive addend (``+0x1000``), negative addend (``-4096``), max positive (``0x7FFFF``), and most negative addend (``0x80000``), verified against independently recovered PC values via ``jal``.
+
+4. **Control Flow (RV32I, 28 vectors, IDs 1–28)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_ctrl.S`` (enum: ``bist_insn_ctrl_id_t`` in ``bist_cpu_instructions_ctrl.h``)
+
+   - **Coverage**: Conditional branch instructions (``BEQ``, ``BNE``, ``BLT``, ``BGE``, ``BLTU``, ``BGEU``) and unconditional jumps (``JAL``, ``JALR``).
+
+   - **Equivalence Classes**: Every branch condition evaluated for both taken and not-taken outcomes in both forward and backward jump directions; equality boundary cases for signed/unsigned inequalities; ``JAL`` and ``JALR`` forward/backward target calculations and return-address link register (``ra``) writeback verification.
+
+5. **Loads and Stores (RV32I, 15 vectors, IDs 1–15)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_ldst.S`` (enum: ``bist_insn_ldst_id_t`` in ``bist_cpu_instructions_ldst.h``)
+
+   - **Coverage**: Store instructions (``SB``, ``SH``, ``SW``) and load instructions (``LB``, ``LBU``, ``LH``, ``LHU``, ``LW``).
+
+   - **Equivalence Classes**: Word, half-word, and byte access to aligned stack scratchpad storage; positive and negative base displacement offsets; signed sign-extension (``LB``, ``LH``) versus unsigned zero-extension (``LBU``, ``LHU``); writing zero patterns and byte/half-word isolation within 32-bit words. (Aligned access only; unaligned accesses are excluded to avoid hardware trap exceptions).
+
+6. **Multiply and Divide (RV32M, 48 vectors, IDs 1–48)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_mul.S`` (enum: ``bist_insn_mul_id_t`` in ``bist_cpu_instructions_mul.h``)
+
+   - **Coverage**: Hardware multiplier (``MUL``, ``MULH``, ``MULHSU``, ``MULHU``) and hardware divider (``DIV``, ``DIVU``, ``REM``, ``REMU``).
+
+   - **Equivalence Classes**: Low 32-bit products; high 32-bit signed/signed (``MULH``), signed/unsigned (``MULHSU``), and unsigned/unsigned (``MULHU``) products; signed/unsigned quotients and remainders with varied sign combinations; ISA-mandated corner cases: division by zero (``DIV`` yields ``-1``, ``DIVU`` yields ``0xFFFFFFFF``, ``REM``/``REMU`` yield dividend) and signed overflow (``INT32_MIN / -1`` yielding ``INT32_MIN`` for ``DIV`` and ``0`` for ``REM``).
+
+7. **CSR and Fence (Zicsr / Zifencei / RV32I, 15 vectors, IDs 1–15)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_csr.S`` (enum: ``bist_insn_csr_id_t`` in ``bist_cpu_instructions_csr.h``)
+
+   - **Coverage**: Atomic CSR register/immediate read, write, set, and clear instructions (``CSRRW``, ``CSRRS``, ``CSRRC``, ``CSRRWI``, ``CSRRSI``, ``CSRRCI``, plus ``x0``/``rd0`` forms), alongside ``FENCE`` (RV32I) and ``FENCE.I`` (Zifencei).
+
+   - **Equivalence Classes**: Exercises all CSR access modes exclusively on ``mscratch``, which is saved on entry and restored on both pass and fail paths (ensuring zero persistent side-effects on processor state). Tests 5-bit unsigned immediate extremes (0, 31) and bitmask patterns (``0xAAAA``, ``0x5555``). ``FENCE`` and ``FENCE.I`` validate instruction fetch, decoding, and pipeline execution.
+
+8. **Atomics (RV32A, 13 vectors, IDs 1–13)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_amo.S`` (enum: ``bist_insn_amo_id_t`` in ``bist_cpu_instructions_amo.h``)
+
+   - **Coverage**: Zaamo atomic memory operations (``AMOADD.W``, ``AMOSWAP.W``, ``AMOAND.W``, ``AMOOR.W``, ``AMOXOR.W``, ``AMOMIN.W``, ``AMOMAX.W``, ``AMOMINU.W``, ``AMOMAXU.W``, ``AMOSWAP.W.AQRL``) and Zalrsc load-reserved/store-conditional (``LR.W``, ``SC.W``).
+
+   - **Equivalence Classes**: Atomic word arithmetic, bitwise logic, and signed/unsigned min/max on memory words; successful reservation sequence (``LR.W`` followed by ``SC.W`` returning 0); attempted reservation break sequence. Excluded on ESP32-C3 (which lacks the A extension).
+
+9. **Floating Point (RV32F, 60 vectors, IDs 1–60)**
+
+   - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_fp.S`` (enum: ``bist_insn_fp_id_t`` in ``bist_cpu_instructions_fp.h``)
+
+   - **Coverage**: Single-precision IEEE-754 binary32 arithmetic (``FADD.S``, ``FSUB.S``, ``FMUL.S``, ``FDIV.S``, ``FSQRT.S``), fused multiply-add (``FMADD.S``, ``FMSUB.S``, ``FNMSUB.S``, ``FNMADD.S``), sign injection (``FSGNJ.S``, ``FSGNJN.S``, ``FSGNJX.S``), min/max (``FMIN.S``, ``FMAX.S``), comparisons (``FEQ.S``, ``FLT.S``, ``FLE.S``), conversions (``FCVT.W.S``, ``FCVT.WU.S``, ``FCVT.S.W``, ``FCVT.S.WU``), register transfers (``FMV.X.W``, ``FMV.W.X``), classification (``FCLASS.S``), static rounding modes (``RNE``, ``RTZ``), and sticky exception flags accrual in ``fflags`` (DZ, NV, NX). Gated on ``ESP_BIST_USE_FPU`` (ESP32-H4, ESP32-P4).
+
+   - **Equivalence Classes**: Exact bit-pattern verification via ``fmv.x.w`` against IEEE-754 bit representations (no floating-point tolerance); canonical quiet NaN (``0x7FC00000``) generation; subnormal, infinity, and signed zero handling; NaN payload preservation across raw moves; saturation on integer conversions. Caller-saved float registers (``ft0``–``ft3``) used; ``fcsr`` saved and restored.
+
+10. **Compressed Instructions (RV32C, 75 vectors, IDs 1–75)**
+
+    - **Source**: ``src/bist/core/cpu/bist_cpu_instructions_comp.S`` (enum: ``bist_insn_comp_id_t`` in ``bist_cpu_instructions_comp.h``)
+
+    - **Coverage**: 16-bit compressed instruction formats: CR (register), CI (immediate), CI-sp (stack-pointer immediate), CSS (stack-pointer store), CIW (wide immediate), CL (load), CS (store), CA (arithmetic), CB (branch), CJ (jump).
+
+    - **Equivalence Classes**: Non-contiguous immediate bit unscrambling (e.g. ``c.addi16sp`` ``nzimm[9|4|6|8:7|5]``, ``c.addi4spn`` ``nzuimm[5:4|9:6|2|3]``), 3-bit restricted register field (``x8``–``x15`` mapped to ``a2``–``a5`` and ``s0``/``s1``), opcode discrimination across overlapping formats (e.g. ``c.lui`` vs ``c.addi16sp``), stack-pointer movement discipline, and link-resolved size witnesses for relaxable jump/branch instructions (``c.j``, ``c.jal``, ``c.beqz``, ``c.bnez``).
+
+Module API
+^^^^^^^^^^
+
+.. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
+   :functions: bist_cpu_instruction_test
+
+.. note::
+
+   Measured from the ESP32-P4 ``cpu_instruction_test`` ELF: code size and
+   instruction count cover ``bist_cpu_instruction_test`` plus all linked group
+   routines. Cycles were not sampled from the performance-monitor CSRs;
+   execution time is instruction count / 400 MHz (``CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ``).
+
+Source Files
+^^^^^^^^^^^^
+
+.. list-table:: Source Files
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Source File
+     - Version
+     - MD5
+   * - ``src/bist/core/cpu/bist_cpu_instructions.c``
+     - N/A
+     - f5416dc0cbabc32f4842e0d76cd8ded1
+   * - ``src/bist/core/cpu/bist_cpu_instructions_integer.S``
+     - N/A
+     - fae2bd5fb5b03945c89024a3538f400c
+   * - ``src/bist/core/cpu/bist_cpu_instructions_shift.S``
+     - N/A
+     - 32703a588a7769dc4b8a14f1f24b642b
+   * - ``src/bist/core/cpu/bist_cpu_instructions_upperimm.S``
+     - N/A
+     - ca28026075bdacc3eb2a12a0a0498784
+   * - ``src/bist/core/cpu/bist_cpu_instructions_ctrl.S``
+     - N/A
+     - b7ab45e0dd439d8859013a620bc29b2d
+   * - ``src/bist/core/cpu/bist_cpu_instructions_ldst.S``
+     - N/A
+     - 64518224f56bb36bb1e49ec9713e986b
+   * - ``src/bist/core/cpu/bist_cpu_instructions_mul.S``
+     - N/A
+     - 0a4c69eb0d2a386af1db47c2e64cc0ea
+   * - ``src/bist/core/cpu/bist_cpu_instructions_csr.S``
+     - N/A
+     - e26412dcd527ebad0ebf24c4a9526db5
+   * - ``src/bist/core/cpu/bist_cpu_instructions_amo.S``
+     - N/A
+     - 92a1c6104843e4e51eacd00a4ce502c1
+   * - ``src/bist/core/cpu/bist_cpu_instructions_fp.S``
+     - N/A
+     - 3ca0354b0ed9da520929d43a26c12f36
+   * - ``src/bist/core/cpu/bist_cpu_instructions_comp.S``
+     - N/A
+     - c2c08051fbff030d448a3a42595a1604
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions.h``
+     - N/A
+     - 954eb045c5a2839f9298246848d9d464
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_integer.h``
+     - N/A
+     - de3aadbbba246fbfdccd073f2c047677
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_shift.h``
+     - N/A
+     - bc12b43789eaf46959fd8d253a07eed8
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_upperimm.h``
+     - N/A
+     - e088da74621a9b609251cce85a27ed13
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_ctrl.h``
+     - N/A
+     - dd3c8aba9d10b96bef58b32de54ceb98
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_ldst.h``
+     - N/A
+     - 48625db0fc1d9be539e3f634fa2e0ba2
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_mul.h``
+     - N/A
+     - 2c45681599e53c2d6b01878ddc22dbf2
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_csr.h``
+     - N/A
+     - 4c7a3ecb74ef28b83ee2013039d0d643
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_amo.h``
+     - N/A
+     - e59a857d2e9f41f1ff6ef42e86a555a5
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_fp.h``
+     - N/A
+     - de9d47b7a6f18a2e8e24f0fed0b20eb4
+   * - ``src/bist/core/cpu/include/bist_cpu_instructions_comp.h``
+     - N/A
+     - 2a18de01ca714a50e4e8e9dc7c26e474
+
+Coding and Interfaces
+^^^^^^^^^^^^^^^^^^^^^
+
+- **Assembly Implementation**: Hand-written in pure assembly for full control over generated instructions. No dynamic memory allocation or recursion is used.
+- **Deterministic Execution**: Statically bounded execution time and minimal stack usage suitable for periodic runtime testing.
+- **Register Preservation**:
+  - Callee-saved registers (``s0``, ``s1``) and return address (``ra``) are saved at entry and restored on all exit paths.
+  - Floating-point control/status register (``fcsr``) and machine scratch register (``mscratch``) are saved and restored by their respective test groups.
+- **Instruction Encodings**:
+  - 32-bit test groups use ``.option norvc`` to prevent the assembler from emitting 16-bit compressed instructions.
+  - The compressed test group uses ``.option rvc`` and verifies that instructions encode into 16 bits.
+- **Architecture Gating**:
+  - Atomic instructions (RV32A) and floating-point instructions (RV32F) are enabled only on supported targets and gated in their respective assembly files.
+- **Deliberate Exclusions**:
+  - Trap instructions (such as ``c.ebreak`` and ``c.unimp``) and unaligned memory accesses are excluded to prevent hardware exceptions and ensure deterministic execution.
 
 
 Stack Overflow Test
@@ -536,7 +896,7 @@ Source Files
      - MD5
    * - ``src/bist/core/memory/bist_ram.c``
      - v1.1.0
-     - 4bfcb2a2c082412aaadea00e5b55559e
+     - 114ee28b46bbfa0cb241bfa61d61f9b9
 
 Stack-Pointer Relocation (Safe Stack)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -566,9 +926,14 @@ To eliminate this class of failure the public entry points ``bist_ram_test_march
 ``bist_ram_test_march_x()``, and ``bist_ram_test_abraham()`` relocate the stack pointer
 into a 256-byte buffer (``ram_test_stack``) placed in ``.dram0.safe_ram`` — the same
 linker section that holds ``backup_chunk``.  Because ``.dram0.safe_ram`` sits **below**
-``_bist_ram_test_start``,
-the march algorithm never writes to the relocated stack, and the full linker-defined
-region — including the normal stack — is tested.
+``_bist_ram_test_start``, the march algorithm never writes to the relocated stack, and the full
+linker-defined region — including the normal stack — is tested.
+
+Before ``run_on_safe_stack()`` switches SP to ``ram_test_stack``, each public entry point
+destructively tests ``backup_chunk`` and ``ram_test_stack`` in place using the steps of the
+requested algorithm (March A, March X, or Abraham). Because neither buffer holds live state
+prior to stack relocation, this pre-march check verifies that ``.dram0.safe_ram`` itself has
+no stuck-at or coupling faults before live RAM is backed up into it.
 
 The relocation is performed by ``run_on_safe_stack()``, a thin wrapper that:
 
@@ -590,7 +955,7 @@ Coding and Interfaces
 - This test uses linker-defined symbols for the region boundaries
   (``_bist_ram_test_start`` / ``_bist_ram_test_end``) and computes the size from
   their difference at run time.
-- Uses a statically allocated backup buffer (``backup_chunk``) and a 256-byte safe stack (``ram_test_stack``), both placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region.
+- Uses a statically allocated backup buffer (``backup_chunk``) and a 256-byte safe stack (``ram_test_stack``), both placed in a dedicated ``.dram0.safe_ram`` section that is excluded from the RAM test region and destructively self-tested on each call before live data is backed up.
 - The stack pointer is temporarily relocated to ``ram_test_stack`` via inline assembly before calling the march implementation, ensuring the march algorithm can test the entire linker-defined region — including the normal stack — without corrupting its own frame. See *Stack-Pointer Relocation* above.
 - No dynamic memory is used.
 - The main function has a single entry and, under normal conditions, a single exit. The use of ``goto`` for cleanup is documented and justified for resource safety.
@@ -775,9 +1140,24 @@ This mechanism ensures that the flash integrity check in ESP-BIST validates the 
 Program Counter Test
 --------------------
 
+The Program Counter Test calls functions placed in different memory regions and checks that each function returns its own address. Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Walk)**: Default implementation running entirely on the executing core (``bist_pc.c``).
+- **Reciprocal (Dual-Core Comparison)**: Available on ESP32-P4 (``bist_pc_reciprocal.c``). Both HP cores run the same walk and cross-validate each other's evidence.
+
+Both implementations use functions placed in distinct memory regions via linker sections:
+
+- ``pc_test_0``: IRAM (``.iram0.text``).
+- ``pc_test_1`` and ``pc_test_2``: Flash (``.flash.text``), placed with an offset between them to exercise lower PC bits.
+- ``pc_test_3``: RTC / LP SRAM.
+- ``pc_test_4``: TCM / HP SPM (ESP32-P4 only).
+
+Static Single-Core PC Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
-    :scale: 60%
-    :caption: Program Counter Test
+    :scale: 50%
+    :caption: Program Counter Test (Static)
     :align: center
 
     blockdiag {
@@ -808,15 +1188,100 @@ Program Counter Test
         End [label = "End", shape = roundedbox];
     }
 
-This diagram shows the concrete implementation of the program counter integrity test. Each function is placed in a specific memory region by the linker script to exercise different PC register bits: ``pc_test_0`` in IRAM, ``pc_test_1`` and ``pc_test_2`` in Flash (exercising bits [3:15] across a 64 KB gap without consuming SRAM), ``pc_test_3`` in RTC memory (bit 28), and ``pc_test_4`` in TCM (bits [2:7], ESP32-P4 only). The test iterates through the function pointer array, verifying that each function returns its own entry address to detect stuck-at faults in the PC register.
+This diagram shows the implementation of the static program counter integrity test. Functions are placed in distinct memory regions by the linker script (IRAM, Flash, RTC memory, and TCM on ESP32-P4) to exercise different PC register bits. The test verifies that each function returns its own address, detecting stuck-at faults in the PC register.
+
+Reciprocal Dual-Core PC Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: Program Counter Walk Job (Per-Core Execution & Evidence Logging)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 35;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> ClearSlot -> RegionLoop;
+        RegionLoop -> CallFunc [label = "Next"];
+        CallFunc -> CheckMatch;
+        CheckMatch -> Fail [label = "Mismatch"];
+        CheckMatch -> RecordEvidence [label = "Match"];
+        RecordEvidence -> RegionLoop;
+        RegionLoop -> Pass [label = "Done"];
+
+        Start [label = "bist_pc_walk_job(slot)", shape = roundedbox];
+        ClearSlot [label = "Clear result slot buffer\nSet status = TEST_ERR"];
+        RegionLoop [label = "For each region\nregions 0..4", shape = diamond];
+        CallFunc [label = "Call region function\nret = (*func)()"];
+        CheckMatch [label = "ret == expected\nfunction address?", shape = diamond];
+        RecordEvidence [label = "Record returned address\nand set completion bit"];
+        Fail [label = "Leave status = TEST_ERR\nReturn", shape = roundedbox];
+        Pass [label = "Set slot status = BIST_ESP_OK\nReturn", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 50%
+    :caption: Program Counter Test (Reciprocal Cross-Validation Protocol)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: PC Walk" -> "Core 0: Validate Core 0" -> "Core 1: PC Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: PC Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: PC Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: PC Walk" [label = "Core 0: Call 5 regions\nWrite results to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0\n(Local check)", shape = diamond];
+        "Core 1: PC Walk" [label = "Core 1: Call 5 regions\nWrite results to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1\n(Remote check via IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0\n(Cross-check via IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1\n(Cross-check local)", shape = diamond];
+        Error [label = "Return\nBIST_ESP_PC_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+For dual-core reciprocal comparison, the ESP32-P4 PC test utilizes both HP cores to perform mutual cross-validation:
+
+1. **Independent Execution (Core 0)**: Core 0 clears shared slot 0 (``bist_pc_shared_results[0]``), calls the five region functions, and records returned addresses, completion mask, and status.
+2. **Local Validation (Core 0 on Core 0)**: Core 0 validates slot 0 against the canonical linked addresses.
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the same walk to HP Core 1 via ``bist_cpu_call()``. Core 1 executes the five region functions and writes slot 1 (``bist_pc_shared_results[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of slot 1 to Core 1.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of slot 0 to Core 1.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates slot 1 directly.
+
+Each validator requires ``status == BIST_ESP_OK`` and a complete ``completion_mask``, then compares every recorded address against the canonical linked address of the corresponding region function. Any walk, dispatch, or validation failure returns ``BIST_ESP_PC_TEST_ERR``.
+
+Fixed-Layout Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal PC test exchanges evidence using a fixed-layout structure (``bist_pc_result_t``) placed in statically allocated HP SRAM (``bist_pc_shared_results``):
+
+- Exactly 28 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers; returned addresses are stored as ``uint32_t`` values.
+- Verified at compile time via ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status``, a ``completion_mask`` with one bit per region, and five ``returned_address`` entries.
+
+Fault-injection labels are provided at the walk loop (``bist_pc_walk``) and before each cross-validation (``bist_pc_verify_core0_on_core1``, ``bist_pc_verify_core1_on_core0``).
 
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_pc_test
-
-
 
 Source Files
 ^^^^^^^^^^^^
@@ -831,6 +1296,9 @@ Source Files
    * - ``src/bist/core/cpu/bist_pc.c``
      - v1.1.0
      - 78569f53cddc8fcb74f7e0daaf0cd973
+   * - ``src/bist/core/cpu/bist_pc_reciprocal.c``
+     - N/A
+     - 85f00cd01fb951201c90b2f572eb05d1
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
@@ -838,16 +1306,19 @@ Coding and Interfaces
 - The PC test uses explicit function placement in different memory regions to exercise specific PC bits. Error handling is explicit: if the return address does not match the expected function pointer, the function returns an explicit error code.
 - This test uses linker-defined sections for function placement.
 - Uses an array of function pointers to the test functions.
-- No dynamic memory is used.
+- The public function remains ``bist_pc_test()``; Static mode declares it in ``bist_pc.h`` and Reciprocal mode in ``bist_pc_reciprocal.h``. ``src/bist/cmake/sources_stl.cmake`` selects ``bist_pc.c`` or ``bist_pc_reciprocal.c`` based on ``CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST_STATIC`` or ``CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL``.
+- The reciprocal implementation additionally depends on the bare-metal ``bist_cpu_call()`` dispatcher and shared HP SRAM. Only Core 0 initiates dispatch to Core 1, and Core 1 idle wake-up uses a dedicated cross-core software interrupt.
+- In reciprocal mode, the walk's call table is ``volatile`` so each call and each immediate comparison reads the stack copy, and the walk job is ``noinline, noclone`` so its fault-injection label is emitted once.
+- No dynamic memory is used. Reciprocal mode uses two fixed-size static result slots with no embedded pointers.
 - The main function has a single entry and, under normal conditions, a single exit. Early returns are used for error handling.
 - Branching is limited to error detection and function pointer checks. No deep nesting or complex logic.
 - Loops are bounded by the number of test functions. All loops are finite and predictable.
 - Only pointer comparisons and assignments are used. No floating-point or complex arithmetic.
-- No interrupts are used or manipulated by this test.
-- Pointers are used for function pointers only. All pointer usage is explicit and safe.
+- In static mode, no interrupts are used or manipulated by this test.
+- Pointers are used for function pointers and, in reciprocal mode, for the shared result slot passed to each job. All pointer usage is explicit and safe.
 - No recursion is used in this test.
 - No goto or label-based jumps are used.
-- Type conversions are only used for function pointer casting, which is standard and explicit.
+- Type conversions are only used for function pointer casting, which is standard and explicit. Reciprocal mode additionally converts returned addresses to ``uint32_t`` through ``uintptr_t`` for pointer-free storage.
 - No division operations are present in this test.
 
 .. _interrupt-test:
@@ -855,12 +1326,20 @@ Coding and Interfaces
 Interrupt Handling and Execution Test
 -------------------------------------
 
+The Interrupt Handling and Execution Test verifies interrupt-matrix routing and ISR delivery for software IRQ sources, and concurrent hardware interrupt delivery via dual timer-group alarms. Two implementations are available based on the safety requirements:
+
+- **Static (Single-Core Walk)**: Default implementation running entirely on the executing core (``bist_interrupt_sw.c``, ``bist_interrupt.c``).
+- **Reciprocal (Dual-Core Comparison)**: Available on ESP32-P4 (``bist_interrupt_sw_reciprocal.c``, ``bist_interrupt_reciprocal.c``). Both HP cores run the same walks and cross-validate each other's fixed-layout evidence.
+
 Software Interrupt Source Map Test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Static Single-Core Software Interrupt Test
+""""""""""""""""""""""""""""""""""""""""""
+
 .. blockdiag::
     :scale: 60%
-    :caption: Software Interrupt Source Map Test
+    :caption: Software Interrupt Source Map Test (Static)
     :align: center
 
     blockdiag {
@@ -916,14 +1395,107 @@ Software Interrupt Source Map Test
         IrqRet [label = "Return from ISR", shape = roundedbox];
     }
 
-``bist_interrupt_source_map_test()`` exercises interrupt-matrix routing and ISR delivery using the four SoC software interrupt sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_3``. These are dedicated software-triggered interrupt sources (not peripheral IRQs): software raises each by writing its ``CPU_INTR_FROM_CPU_n`` register, which asserts that interrupt source into the interrupt matrix. Each source is routed to free CPU interrupt line 9, triggered eight times, then unmapped. The test fails if the enable mask is wrong or the ISR count is not exactly eight. The IRQ callback runs asynchronously when hardware asserts the source; it clears the interrupt request and increments the ISR count used by the test.
+``bist_interrupt_source_map_test()`` (Static) exercises interrupt-matrix routing and ISR delivery using the four SoC software interrupt sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_3``. These are dedicated software-triggered interrupt sources (not peripheral IRQs): software raises each by writing its ``CPU_INTR_FROM_CPU_n`` register, which asserts that interrupt source into the interrupt matrix. Each source is routed to free CPU interrupt line 9, triggered eight times, then unmapped. The test fails if the enable mask is wrong or the ISR count is not exactly eight. The IRQ callback runs asynchronously when hardware asserts the source; it clears the interrupt request and increments the ISR count used by the test.
+
+Reciprocal Dual-Core Software Interrupt Test (ESP32-P4)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+For dual-core reciprocal comparison, ESP32-P4 utilizes both HP cores to perform mutual cross-validation:
+
+- Sources ``CPU_INTR_FROM_CPU_0`` through ``CPU_INTR_FROM_CPU_2`` are exercised; ``CPU_INTR_FROM_CPU_3`` is reserved for cross-core IPC wake-up.
+- Each core records execution evidence (ISR counts, active enable masks, cleared enable masks, and completion status) into fixed-layout shared memory slots (``bist_interrupt_sw_shared_results[0]`` for Core 0 and ``bist_interrupt_sw_shared_results[1]`` for Core 1).
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Software Interrupt Walk Job (Per-Core Execution & Evidence Logging)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 35;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> ClearSlot -> SrcLoop;
+        SrcLoop -> Route [label = "Next"];
+        Route -> Enable -> Trigger -> RecordActive -> Disable -> RecordCleared -> SetBit -> SrcLoop;
+        SrcLoop -> Done [label = "Done"];
+
+        Start [label = "bist_interrupt_sw_walk_job(slot)", shape = roundedbox];
+        ClearSlot [label = "Clear result slot buffer\nSet status = TEST_ERR"];
+        SrcLoop [label = "For each SW source\nsources 0..2", shape = diamond];
+        Route [label = "Route source to\nCPU intr 9"];
+        Enable [label = "Set handler and\nenable CPU intr 9"];
+        Trigger [label = "Trigger source 8 times\n(ISR increments count)"];
+        RecordActive [label = "Record enabled_mask_active\nand interrupt_count in slot"];
+        Disable [label = "Disable and unmap\nCPU intr 9"];
+        RecordCleared [label = "Record enabled_mask_cleared\nin slot"];
+        SetBit [label = "Set completion_mask bit\nfor this source"];
+        Done [label = "Set slot status = BIST_ESP_OK\nReturn", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Software Interrupt Source Map Test (Reciprocal Cross-Validation Protocol)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: SW Walk" -> "Core 0: Validate Core 0" -> "Core 1: SW Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: SW Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: SW Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: SW Walk" [label = "Core 0: Map/trigger 3 sources\nWrite results to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0\n(Local check)", shape = diamond];
+        "Core 1: SW Walk" [label = "Core 1: Map/trigger 3 sources\nWrite results to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1\n(Remote check via IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0\n(Cross-check via IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1\n(Cross-check local)", shape = diamond];
+        Error [label = "Return\nBIST_ESP_INTERRUPT_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+1. **Independent Execution (Core 0)**: Core 0 clears shared slot 0 (``bist_interrupt_sw_shared_results[0]``), maps, triggers, and unmaps software sources ``CPU_INTR_FROM_CPU_0..2``, and records counts and enable masks.
+2. **Local Validation (Core 0 on Core 0)**: Core 0 validates slot 0 against expected counts and enable masks.
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches the walk to HP Core 1 via ``bist_multicore_call()``. Core 1 writes slot 1 (``bist_interrupt_sw_shared_results[1]``).
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of slot 1 to Core 1.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of slot 0 to Core 1.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates slot 1 directly.
+
+Each validator requires ``status == BIST_ESP_OK`` and a complete ``completion_mask``, then checks that every ``interrupt_count`` equals eight and that CPU interrupt line 9 is set in ``enabled_mask_active`` and clear in ``enabled_mask_cleared``. Any walk, dispatch, or validation failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
+
+Fixed-Layout Result Buffer (Software)
+"""""""""""""""""""""""""""""""""""""
+
+The reciprocal software interrupt test exchanges evidence using ``bist_interrupt_sw_result_t`` in statically allocated HP SRAM (``bist_interrupt_sw_shared_results``):
+
+- Exactly 44 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers; counts and masks are stored as ``uint32_t`` values.
+- Verified at compile time via ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status``, a ``completion_mask``, three ``interrupt_count`` entries, and per-source enable masks.
+
+Fault-injection labels are provided at the walk (``bist_interrupt_sw_walk``), after each source trigger loop (``bist_interrupt_source_map_count``), and before each cross-validation (``bist_interrupt_sw_verify_core0_on_core1``, ``bist_interrupt_sw_verify_core1_on_core0``).
 
 Hardware Interrupt Test
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+Static Single-Core Hardware Interrupt Test
+""""""""""""""""""""""""""""""""""""""""""
+
 .. blockdiag::
     :scale: 60%
-    :caption: Hardware Interrupt Test
+    :caption: Hardware Interrupt Test (Static)
     :align: center
 
     blockdiag {
@@ -960,9 +1532,99 @@ Hardware Interrupt Test
         End [label = "End", shape = roundedbox];
     }
 
-``bist_hardware_interrupt_test()`` configures GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10) with the counters left stopped. After both timers are routed and any debug logging from setup has completed, both counters are armed together and the ISR counts are cleared. Starting the timers only after configuration avoids init latency (in particular slow UART debug prints between consecutive ``timer_ll_enable_counter`` calls) from giving TIMG0 a multi-millisecond head start that would break the expected 2:1 ISR ratio under debug log levels.
+``bist_hardware_interrupt_test()`` (Static) starts GPTimer alarms on TIMG0 (500 µs → CPU interrupt 9) and TIMG1 (1000 µs → CPU interrupt 10). While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for possible synchronization skew between the two independent timer interrupts. Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
 
-While both ISR counts are below 1000, the ISR path periodically checks that ``|count1 - 2*count2| ≤ 1``. The allowed difference of one count is a tolerance for residual synchronization skew between the two independent timer interrupts (for example, sampling the counters while one ISR has run and the other has not yet). Timers and matrix routes are torn down before returning ``BIST_ESP_OK`` or ``BIST_ESP_INTERRUPT_TEST_ERR``. Requires two timer groups (``TIMG_LL_INST_NUM >= 2``).
+Reciprocal Dual-Core Hardware Interrupt Test (ESP32-P4)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+For dual-core reciprocal comparison, ESP32-P4 runs the hardware timer walk sequentially on each HP core (as TIMG0 and TIMG1 are shared peripherals) and cross-validates evidence:
+
+- Each core independently runs the dual-timer walk, checks that ``|count_1 - 2*count_2| <= 1`` during execution until 1000 interrupts are received, and records final counts into its shared slot.
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Hardware Interrupt Walk Job (Per-Core Execution & Evidence Logging)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 35;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> ClearSlot -> InitTimers -> Arm -> Poll -> CheckDone;
+        CheckDone -> Poll [label = "No"];
+        CheckDone -> RecordCounts [label = "Yes"];
+        RecordCounts -> Deinit;
+        Deinit -> CheckStatus;
+        CheckStatus -> Pass [label = "Yes"];
+        CheckStatus -> Fail [label = "No"];
+
+        Start [label = "bist_interrupt_hw_walk_job(slot)", shape = roundedbox];
+        ClearSlot [label = "Clear result slot buffer\nSet status = TEST_ERR"];
+        InitTimers [label = "Route TIMG0/TIMG1 to\nCPU intr 9 and 10"];
+        Arm [label = "Arm 500 us / 1000 us timers\nClear ISR counts"];
+        Poll [label = "Delay 10 us\n(ISR checks 2:1 ratio)"];
+        CheckDone [label = "Ratio failed or\ncount >= 1000?", shape = diamond];
+        RecordCounts [label = "Record count_1 and count_2\nin shared slot"];
+        Deinit [label = "Stop timers and\nunmap interrupts"];
+        CheckStatus [label = "Ratio check passed\nthroughout run?", shape = diamond];
+        Pass [label = "Set slot status = BIST_ESP_OK\nReturn", shape = roundedbox];
+        Fail [label = "Leave status = TEST_ERR\nReturn", shape = roundedbox];
+    }
+
+.. blockdiag::
+    :scale: 60%
+    :caption: Hardware Interrupt Test (Reciprocal Cross-Validation Protocol)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: HW Walk" -> "Core 0: Validate Core 0" -> "Core 1: HW Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: HW Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: HW Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: HW Walk" [label = "Core 0: TIMG0/TIMG1 walk\nWrite results to slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0\n(Local check)", shape = diamond];
+        "Core 1: HW Walk" [label = "Core 1: TIMG0/TIMG1 walk\nWrite results to slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1\n(Remote check via IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0\n(Cross-check via IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1\n(Cross-check local)", shape = diamond];
+        Error [label = "Return\nBIST_ESP_INTERRUPT_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+1. **Independent Execution (Core 0)**: Core 0 executes ``bist_interrupt_hw_walk_job()`` on TIMG0/TIMG1, records ISR counts and status into ``bist_interrupt_hw_shared_results[0]``, and deinitializes the timers.
+2. **Local Validation (Core 0 on Core 0)**: Core 0 validates slot 0 against expected ratio bounds (``status == BIST_ESP_OK`` and ``|count_1 - 2*count_2| <= 2``).
+3. **Remote Execution (Core 1)**: Core 0 synchronously dispatches ``bist_interrupt_hw_walk_job()`` to HP Core 1 via ``bist_multicore_call()``. Core 1 runs the timer walk, records results into ``bist_interrupt_hw_shared_results[1]``, and deinitializes the timers.
+4. **Remote Validation (Core 1 on Core 1)**: Core 0 dispatches validation of slot 1 to Core 1.
+5. **Cross-Validation (Core 1 on Core 0)**: Core 0 dispatches validation of slot 0 to Core 1.
+6. **Cross-Validation (Core 0 on Core 1)**: Core 0 validates slot 1 directly.
+
+Any walk, dispatch, or validation failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``. Exact count values are not compared across cores.
+
+Fixed-Layout Result Buffer (Hardware)
+"""""""""""""""""""""""""""""""""""""
+
+The reciprocal hardware interrupt test exchanges evidence using ``bist_interrupt_hw_result_t`` placed in statically allocated HP SRAM (``bist_interrupt_hw_shared_results``):
+
+- Exactly 12 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers; counts and status are stored as ``uint32_t`` values.
+- Verified at compile time via ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status``, ``count_1``, and ``count_2``.
+
+Fault-injection labels are provided at the walk (``bist_interrupt_hw_walk``) and before each cross-validation (``bist_interrupt_hw_verify_core0_on_core1``, ``bist_interrupt_hw_verify_core1_on_core0``).
 
 Module API
 ^^^^^^^^^^
@@ -970,13 +1632,10 @@ Module API
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_interrupt_source_map_test, bist_hardware_interrupt_test
 
-
-
 .. note::
 
-   The v1.0.0 manual published one unlabelled interrupt timing set. Those
-   figures are not in this table. ``bist_hardware_interrupt_test()`` waits
-   for 1000 interrupts, so its cycle count is dominated by that wait.
+   Static interrupt test measurements were taken on ESP32-C3 at 160 MHz.
+   The hardware interrupt test execution time is dominated by waiting for 1000 timer interrupts.
 
 Source Files
 ^^^^^^^^^^^^
@@ -994,19 +1653,26 @@ Source Files
    * - ``src/bist/core/interrupt/bist_interrupt.c``
      - v1.1.0
      - cfb8f700c25bd21f8e1420feff585cdd
+   * - ``src/bist/core/interrupt/bist_interrupt_sw_reciprocal.c``
+     - N/A
+     - a07d0e51bed3633d734936c8ddbf47e1
+   * - ``src/bist/core/interrupt/bist_interrupt_reciprocal.c``
+     - N/A
+     - dd2f4b1cb00e82da89642460e1262c59
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Explicit error handling: any enable-mask, ISR-count, or period-ratio failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
+- Explicit error handling: any enable-mask, ISR-count, period-ratio, dispatch, or cross-validation failure returns ``BIST_ESP_INTERRUPT_TEST_ERR``.
 - Uses ``esp_cpu_intr_*`` and ``esp_rom_route_intr_matrix`` for CPU interrupt control and interrupt-matrix routing; hardware path also uses TIMG HAL/LL (``timer_hal``, ``timer_ll``, ``timg_ll``).
-- Hardware path configures both TIMG instances with counters stopped, then arms them together and clears ISR counts so setup latency cannot skew the 2:1 period ratio.
-- Static volatile state holds ISR counters and failure flag; timer contexts are static with no dynamic memory allocation.
+- The public functions remain ``bist_interrupt_source_map_test()`` and ``bist_hardware_interrupt_test()`` (declared in ``bist_interrupt.h``), while ``bist_interrupt_reciprocal.h`` defines the fixed-layout result structures and shared buffers. ``src/bist/cmake/sources_stl.cmake`` selects the static or reciprocal translation units based on ``CONFIG_ESP_BIST_INTERRUPT_TEST_STATIC`` or ``CONFIG_ESP_BIST_INTERRUPT_TEST_RECIPROCAL``.
+- The reciprocal implementation depends on ``bist_multicore_call()`` and shared HP SRAM. Only Core 0 initiates dispatch to Core 1. Walks are sequential so shared TIMG peripherals are not owned by both cores at once.
+- Static state holds ISR counters and timer contexts; Reciprocal mode additionally uses two fixed-size static result slots with no embedded pointers. No dynamic memory allocation.
 - Public APIs have a single entry; early returns are used for error paths. Hardware path always deinitializes timers before exit.
 - Branching is limited to setup checks, enable-mask checks, count checks, and the period-ratio check. No deep nesting.
 - Only integer comparisons and assignments are used for pass/fail decisions.
 - Interrupts are intentionally installed, enabled, and torn down by this test; CPU lines 9 and 10 are used as free test lines.
-- Pointers are used for ISR arguments (source register or timer context). Usage is explicit and bounded to the test lifetime.
+- Pointers are used for ISR arguments (source register or timer context) and for shared result slots passed to jobs. Usage is explicit and bounded to the test lifetime.
 - No recursion is used.
 - No goto or label-based jumps are used.
 - No division operations are present in the pass/fail logic (ratio check uses multiply-by-two and absolute difference).
@@ -1043,7 +1709,7 @@ External 32kHz Crystal
         Success [label = "Return BIST_ESP_OK"];
     }
 
-**External 32kHz Crystal Test:** On SoCs with ``SOC_XT_WDT_SUPPORTED``, uses XT WDT with 200-cycle timeout to detect 32kHz oscillator failure. Waits 2 ms and checks if the callback was triggered (indicating clock failure). If the callback fires during this wait period, it indicates the crystal has failed and the test returns an error. On SoCs without XT WDT hardware, this test is skipped and returns ``BIST_ESP_OK``.
+**External 32kHz Crystal Test:** On SoCs with ``SOC_XT_WDT_SUPPORTED``, uses XT WDT with 200-cycle timeout to detect 32kHz oscillator failure. Waits 2 ms and checks if the callback was triggered (indicating clock failure). If the callback fires during this wait period, it indicates the crystal has failed and the test returns an error. The watchdog is disabled before the function returns, so a later trip cannot interrupt the caller. On SoCs without XT WDT hardware, this test is skipped and returns ``BIST_ESP_OK``.
 
 Main Crystal
 ^^^^^^^^^^^^
@@ -1566,7 +2232,7 @@ ADC Low Level
         PullDown -> Delay -> Read;
         Read -> Error [label = "Fail"];
         Read -> Check;
-        Check -> Error [label = "raw > tolerance"];
+        Check -> Error [label = "out of range"];
         Check -> Cleanup [label = "OK"];
         Cleanup -> Success;
 
@@ -1576,7 +2242,7 @@ ADC Low Level
         PullDown [label = "gpio_set_pull_mode PULLDOWN_ONLY"];
         Delay [label = "ets_delay_us 10000"];
         Read [label = "adc_oneshot_read"];
-        Check [label = "raw <= tolerance?", shape = diamond];
+        Check [label = "raw in low range?", shape = diamond];
         Cleanup [label = "gpio_reset_pin\nadc_oneshot_del_unit"];
         Error [label = "Return BIST_ESP_ADC_TEST_ERR"];
         Success [label = "Return BIST_ESP_OK"];
@@ -1589,7 +2255,7 @@ ADC Low Level
 - Maps ADC channel to GPIO and enables internal pull-down with ``gpio_set_pull_mode``
 - Waits 10 ms for the pin to settle
 - Reads raw ADC value with ``adc_oneshot_read``
-- Verifies raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` (derived tolerance threshold) of zero
+- Verifies raw value is within tolerance of the SoC-specific low reference (``BIST_ADC_LOW_VAL``)
 - Resets GPIO and deletes ADC unit on completion or error
 
 ADC High Level
@@ -1687,10 +2353,6 @@ Module API
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
    :functions: bist_adc_low_level_test, bist_adc_high_level_test, bist_adc_reference_test
-
-.. only:: esp32h4
-
-   ADC tests are not linked. ``core/io/bist_adc.c`` is omitted from the ESP32-H4 image.
 
 
 

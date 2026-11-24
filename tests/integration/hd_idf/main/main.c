@@ -18,9 +18,14 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include "esp_attr.h"
 #include "esp_err.h"
+#include "esp_heap_caps.h"
 #include "esp_rom_sys.h"
 #include "esp_sleep.h"
+#include "esp_system.h"
 #include "sdkconfig.h"
 #include "ulp_lp_core.h"
 #include "lp_core_uart.h"
@@ -32,11 +37,73 @@
 
 #if !defined(CONFIG_BIST_HD_TEST_KEY_MISMATCH) && \
     !defined(CONFIG_BIST_HD_TEST_STARVE_AGENT) && \
-    !defined(CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT)
-#error "Select a fault: CONFIG_BIST_HD_TEST_KEY_MISMATCH, CONFIG_BIST_HD_TEST_STARVE_AGENT or CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT"
+    !defined(CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT) && \
+    !defined(CONFIG_BIST_HD_TEST_HOST_SW_RESET)
+#error "Select a fault: CONFIG_BIST_HD_TEST_KEY_MISMATCH, CONFIG_BIST_HD_TEST_STARVE_AGENT, CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT or CONFIG_BIST_HD_TEST_HOST_SW_RESET"
 #endif
 
-#define MAILBOX_TIMEOUT_MS 10000
+#define MAILBOX_TIMEOUT_MS   10000
+#define RAM_CANARY_WORDS     16U
+#define RAM_DATA_CANARY_SEED 0xA5C35A3CU
+#define RAM_BSS_CANARY_SEED  0x5A3CA5C3U
+#define RAM_DMA_CANARY_SEED  0xC3A53C5AU
+
+extern uint32_t _safe_ram_start;
+extern uint32_t _safe_ram_end;
+extern uint32_t _bist_hp_ram_start;
+extern uint32_t _bist_hp_ram_end;
+
+/*
+ * Static .dram0.data and .dram0.bss canaries verify that BIST_HD_AUDIT_RAM
+ * marches and restores static DRAM inside [_bist_hp_ram_start, _bist_hp_ram_end),
+ * while MALLOC_CAP_DMA allocations come from the dedicated .dram0.safe_ram pool
+ * below _bist_hp_ram_start.
+ */
+static DRAM_ATTR volatile uint32_t s_data_canary[RAM_CANARY_WORDS] = {
+    RAM_DATA_CANARY_SEED ^ 0U,  RAM_DATA_CANARY_SEED ^ 1U,
+    RAM_DATA_CANARY_SEED ^ 2U,  RAM_DATA_CANARY_SEED ^ 3U,
+    RAM_DATA_CANARY_SEED ^ 4U,  RAM_DATA_CANARY_SEED ^ 5U,
+    RAM_DATA_CANARY_SEED ^ 6U,  RAM_DATA_CANARY_SEED ^ 7U,
+    RAM_DATA_CANARY_SEED ^ 8U,  RAM_DATA_CANARY_SEED ^ 9U,
+    RAM_DATA_CANARY_SEED ^ 10U, RAM_DATA_CANARY_SEED ^ 11U,
+    RAM_DATA_CANARY_SEED ^ 12U, RAM_DATA_CANARY_SEED ^ 13U,
+    RAM_DATA_CANARY_SEED ^ 14U, RAM_DATA_CANARY_SEED ^ 15U,
+};
+static volatile uint32_t s_bss_canary[RAM_CANARY_WORDS];
+
+static bool verify_ram_canaries(const volatile uint32_t *dma_canary)
+{
+    uintptr_t safe_lo = (uintptr_t)&_safe_ram_start;
+    uintptr_t safe_hi = (uintptr_t)&_safe_ram_end;
+    uintptr_t span_lo = (uintptr_t)&_bist_hp_ram_start;
+    uintptr_t span_hi = (uintptr_t)&_bist_hp_ram_end;
+    uintptr_t dma_addr = (uintptr_t)dma_canary;
+    uintptr_t data_addr = (uintptr_t)s_data_canary;
+    uintptr_t bss_addr = (uintptr_t)s_bss_canary;
+
+    if (dma_canary == NULL) {
+        return false;
+    }
+    if (dma_addr < safe_lo || dma_addr >= safe_hi || dma_addr >= span_lo) {
+        return false;
+    }
+    if (data_addr < span_lo || data_addr >= span_hi ||
+            bss_addr < span_lo || bss_addr >= span_hi) {
+        return false;
+    }
+    for (uint32_t i = 0; i < RAM_CANARY_WORDS; i++) {
+        if (s_data_canary[i] != (RAM_DATA_CANARY_SEED ^ i)) {
+            return false;
+        }
+        if (s_bss_canary[i] != (RAM_BSS_CANARY_SEED ^ i)) {
+            return false;
+        }
+        if (dma_canary[i] != (RAM_DMA_CANARY_SEED ^ i)) {
+            return false;
+        }
+    }
+    return true;
+}
 
 extern const uint8_t ulp_hd_idf_test_bin_start[] asm("_binary_ulp_hd_idf_test_bin_start");
 extern const uint8_t ulp_hd_idf_test_bin_end[]   asm("_binary_ulp_hd_idf_test_bin_end");
@@ -97,7 +164,19 @@ static void lp_core_init(void)
 void app_main(void)
 {
     uint32_t status;
+    uint32_t *dma_canary = NULL;
     int err;
+
+    for (uint32_t i = 0; i < RAM_CANARY_WORDS; i++) {
+        s_bss_canary[i] = RAM_BSS_CANARY_SEED ^ i;
+    }
+    dma_canary = (uint32_t *)heap_caps_malloc(RAM_CANARY_WORDS * sizeof(uint32_t),
+                                              MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    if (dma_canary != NULL) {
+        for (uint32_t i = 0; i < RAM_CANARY_WORDS; i++) {
+            dma_canary[i] = RAM_DMA_CANARY_SEED ^ i;
+        }
+    }
 
     vTaskDelay(pdMS_TO_TICKS(1000));
 
@@ -125,13 +204,21 @@ void app_main(void)
      * marker confirms the supervision loop is live before the fault lands.
      */
     err = bist_hd_agent_wait_lp_status(&status, BIST_HD_BIT_RUNTIME, MAILBOX_TIMEOUT_MS);
+    printf("test_HD_safe_dma_pool:%s\n", verify_ram_canaries(dma_canary) ? "PASS" : "FAIL");
     printf("test_HD_fail_closed_armed:%s\n", (err == 0) ? "PASS" : "FAIL");
+    heap_caps_free(dma_canary);
 #ifndef CONFIG_BIST_HD_TEST_SKIP_CHECKPOINT
     bist_hd_checkpoint_reached();
 #endif
 
 #ifdef CONFIG_BIST_HD_TEST_STARVE_AGENT
     starve_agent();
+#endif
+
+#ifdef CONFIG_BIST_HD_TEST_HOST_SW_RESET
+    fflush(stdout);
+    esp_rom_delay_us(2000);
+    esp_restart();
 #endif
 
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());

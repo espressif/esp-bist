@@ -1,0 +1,251 @@
+import pytest
+
+from tests.idf_targets import pytestmark  # noqa: F401
+import time
+import queue
+
+COMMON_CSRS = [
+    "mtvec",
+    "mscratch",
+    "mepc",
+    "mcause",
+    "mtval",
+    "pmpaddr0",
+    "pmpaddr1",
+    "pmpaddr2",
+    "pmpaddr3",
+    "pmpaddr4",
+    "pmpaddr5",
+    "pmpaddr6",
+    "pmpaddr7",
+    "pmpaddr8",
+    "pmpaddr9",
+    "pmpaddr10",
+    "pmpaddr11",
+    "pmpaddr12",
+    "pmpaddr13",
+    "pmpaddr14",
+    "pmpaddr15",
+    "pmpcfg0",
+    "pmpcfg1",
+    "pmpcfg2",
+    "pmpcfg3",
+]
+
+PMA_ADDR_CSRS = [
+    "pmaaddr0",
+    "pmaaddr1",
+    "pmaaddr2",
+    "pmaaddr3",
+    "pmaaddr4",
+    "pmaaddr5",
+    "pmaaddr6",
+    "pmaaddr7",
+    "pmaaddr8",
+    "pmaaddr9",
+    "pmaaddr10",
+    "pmaaddr11",
+]
+
+
+def test_cpu_reg_success(qemu_instance, target):
+    if target != "esp32p4":
+        pytest.skip("CPU register test is ESP32-P4 only")
+
+    qemu, qemu_process, output_queue = qemu_instance
+    tests_names = ["test_BIST_Cpu_Regs", "test_BIST_Cpu_Csr_Regs"]
+    expected_outputs = [f"{test}:PASS" for test in tests_names]
+    output_lines = []
+    found_outputs = []
+    try:
+        # Attempt to read all current output from QEMU
+        while True:
+            line = output_queue.get(timeout=10)  # Use a timeout to wait for output
+            output_lines.append(line)
+            # Check if the line contains any of the expected outputs
+            for expected_output in expected_outputs:
+                if expected_output in line and expected_output not in found_outputs:
+                    found_outputs.append(expected_output)
+                    # If all expected outputs have been found, we can break the loop
+                    if len(found_outputs) == len(expected_outputs):
+                        break
+    except queue.Empty:
+        print("No more output from QEMU.")
+
+    # Assert that each expected output was found in the output_lines
+    for expected_output in expected_outputs:
+        assert expected_output in found_outputs, (
+            f"Expected output '{expected_output}' not found in QEMU output"
+        )
+
+
+def cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name, script=None):
+    qemu, qemu_process, output_queue = qemu_debug_instance
+    gdb = gdb_instance
+    expected_output = "FAIL"
+    output_lines = []
+    if script is None:
+        script = """
+    #connect to remote server
+    target remote :1234
+
+    # Set a breakpoint at the specific address
+    tb bist_cc_test_gpr_a_{}
+    commands
+        set ${}=0x55555555
+        continue
+    end
+    continue
+    """.format(reg_name, reg_name)
+    gdb_process = gdb_instance.attach(script)
+    time.sleep(5)  # Wait for GDB to attach and run the script
+    try:
+        # Attempt to read all current output from QEMU
+        while True:
+            line = output_queue.get(timeout=10)  # Use a timeout to wait for output
+            output_lines.append(line)
+            if expected_output in line:
+                break
+    except queue.Empty:
+        print("No more output from QEMU.")
+
+    gdb.stop(gdb_process)
+    assert any(expected_output in line for line in output_lines), (
+        "Expected output not found in QEMU output"
+    )
+
+
+@pytest.mark.parametrize(
+    "reg_name",
+    [
+        "ra",
+        "sp",
+        "gp",
+        "tp",
+        "t0",
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6",
+        "s0",
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9",
+        "s10",
+        "s11",
+        "a0",
+        "a1",
+        "a2",
+        "a3",
+        "a4",
+        "a5",
+        "a6",
+        "a7",
+    ],
+)
+def test_reg_error(qemu_debug_instance, gdb_instance, reg_name, target):
+    if target != "esp32p4":
+        pytest.skip("CPU register test is ESP32-P4 only")
+
+    cpu_reg_error_test(qemu_debug_instance, gdb_instance, reg_name)
+
+
+@pytest.mark.parametrize(
+    "freg_name",
+    [
+        "ft0",
+        "ft1",
+        "ft2",
+        "ft3",
+        "ft4",
+        "ft5",
+        "ft6",
+        "ft7",
+        "ft8",
+        "ft9",
+        "ft10",
+        "ft11",
+        "fs0",
+        "fs1",
+        "fs2",
+        "fs3",
+        "fs4",
+        "fs5",
+        "fs6",
+        "fs7",
+        "fs8",
+        "fs9",
+        "fs10",
+        "fs11",
+        "fa0",
+        "fa1",
+        "fa2",
+        "fa3",
+        "fa4",
+        "fa5",
+        "fa6",
+        "fa7",
+    ],
+)
+def test_freg_error(qemu_debug_instance, gdb_instance, freg_name, target):
+    if target != "esp32p4":
+        pytest.skip("CPU register test is ESP32-P4 only")
+    script = """
+#connect to remote server
+target remote :1234
+
+# Set a breakpoint at the specific address
+tb bist_cc_test_fpr_a_{}
+commands
+    set ${}=0x555555555
+    continue
+end
+continue
+""".format(freg_name, freg_name)
+    cpu_reg_error_test(qemu_debug_instance, gdb_instance, freg_name, script)
+
+
+@pytest.mark.parametrize("csr_name", COMMON_CSRS + PMA_ADDR_CSRS)
+def test_reg_csr_error(qemu_debug_instance, gdb_instance, csr_name, target):
+    if target != "esp32p4":
+        pytest.skip("CPU register test is ESP32-P4 only")
+    script = """
+#connect to remote server
+target remote :1234
+
+# Set a breakpoint at the specific address
+tb bist_cc_test_csr_a_{}
+commands
+    set $t0=0x55555555
+    continue
+end
+continue
+""".format(csr_name)
+    cpu_reg_error_test(qemu_debug_instance, gdb_instance, csr_name, script)
+
+
+@pytest.mark.parametrize("fcsr_name", ["fflags", "frm", "fcsr"])
+def test_freg_csr_error(qemu_debug_instance, gdb_instance, fcsr_name, target):
+    if target != "esp32p4":
+        pytest.skip("CPU register test is ESP32-P4 only")
+    script = """
+#connect to remote server
+target remote :1234
+
+# Set a breakpoint at the specific address
+tb bist_cc_test_csr_a_{}
+commands
+    set $t0=0x55555555
+    continue
+end
+continue
+""".format(fcsr_name)
+    cpu_reg_error_test(qemu_debug_instance, gdb_instance, fcsr_name, script)

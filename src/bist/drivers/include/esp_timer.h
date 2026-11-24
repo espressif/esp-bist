@@ -121,6 +121,19 @@ esp_err_t esp_timer_init(void);
 esp_err_t esp_timer_deinit(void);
 
 /**
+ * @brief Check whether esp_timer_init has completed
+ *
+ * Read-only query with no side effects. Use it to verify a precondition before
+ * calling esp_timer_get_time(), which dereferences a conversion pointer that
+ * esp_timer_init() installs.
+ *
+ * @return
+ *      - ESP_OK if esp_timer_init() has run
+ *      - ESP_ERR_INVALID_STATE if not yet initialized
+ */
+esp_err_t esp_timer_is_initialized(void);
+
+/**
  * @brief Create an esp_timer instance
  *
  * @note When done using the timer, delete it with esp_timer_delete function.

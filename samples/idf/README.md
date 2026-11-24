@@ -10,20 +10,33 @@ This is deliberately the happy path only, so it works as a starting point for yo
 
 - ESP32-C5
 - ESP32-C6
+- ESP32-P4
 
 ## Prerequisites
 
-- ESP-IDF v6.0
-- Apply the ULP custom linker patch to your IDF installation:
+- ESP-IDF v6.2 (`release/v6.2`)
+
+The ULP sub-project uses ESP-IDF v6.2's native `LINKER_LAYOUT` parameter in `ulp_add_project()` (`${ESP_BIST_LP_LINKER_LAYOUT}`, resolved by `project_include.cmake` to `src/soc/<target>/ld/idf.ld`) to place the BIST safe-stack and mailbox state below `_bist_ram_test_start`. No patch to ESP-IDF is required.
+
+## Using from the ESP Component Registry
+
+To create a standalone project from this example via the ESP Component Registry:
 
 ```sh
-cd $IDF_PATH
-git apply /path/to/esp-bist/samples/idf/patches/idf_ulp_linker.patch
+. $IDF_PATH/export.sh
+idf.py create-project-from-example "espressif/esp-bist==2.0.0-rc.1:idf"
+cd idf
+idf.py set-target <target_soc>
+idf.py build
 ```
 
-This patch adds `ulp_apply_custom_linker_script()` which allows the ULP sub-project to use a custom linker script instead of the stock `lp_core_riscv.ld`.
+Or to add `espressif/esp-bist` to an existing ESP-IDF project:
 
-## Build
+```sh
+idf.py add-dependency "espressif/esp-bist==2.0.0-rc.1"
+```
+
+## Build (In-Tree)
 
 ```sh
 . $IDF_PATH/export.sh

@@ -185,7 +185,7 @@ Available test applications (each in `tests/<name>/`):
 | Application         | Description |
 |---------------------|-------------|
 | `cpu_reg_test`      | CPU register integrity |
-| `multicore_test`    | Dual-HP-core function dispatch (ESP32-P4) |
+| `multicore_test`    | Dual-HP-core function dispatch (ESP32-P4, ESP32-H4) |
 | `cpu_stack_test`    | CPU stack overflow detection |
 | `ram_test`          | Volatile memory (March A / March X / Abraham) |
 | `clock_test`        | Clock sources (32 kHz and 40 MHz oscillators) |
@@ -213,17 +213,18 @@ The test will output a report in the `build/tests` directory.
 To run the tests on the device, execute the following command:
 
 ```sh
-pytest pytest_device_* --junitxml=build/tests/report.xml
+pytest pytest_device_* --executable=<app_name> --target=<SOC_TARGET> --junitxml=build/tests/report.xml
 ```
+
+FAIL cases in the same files use OpenOCD (USB-JTAG) and GDB. They are skipped by default. Add `--injection` to run them too.
 
 ### Kconfig Test Configuration
 
-Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable or disable individual tests:
+Each test directory contains a `bist.conf` file that controls which BIST modules are compiled. This file uses Kconfig syntax to enable individual tests:
 
 ```
 CONFIG_ESP_BIST_CPU_REG_TEST=y
 CONFIG_ESP_BIST_CPU_CSR_REG_TEST=y
-CONFIG_ESP_BIST_MEMORY_RAM_TEST=n
 ...
 ```
 

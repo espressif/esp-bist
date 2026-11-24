@@ -18,7 +18,9 @@ add_executable(hd_agent_test
     test_bist_hd_agent.c
     "${BIST_ROOT}/src/bist/bist_hd_protocol.c"
     "${BIST_ROOT}/src/bist/bist_hd_crc.c"
+    "${BIST_ROOT}/src/bist/bist_hd_challenge.c"
     "${BIST_ROOT}/src/bist/host/bist_hd_agent.c"
+    "${BIST_ROOT}/src/bist/host/bist_hd_audits.c"
 )
 
 # stubs/ comes first so bist_conf.h, sdkconfig.h and bist_log.h resolve to the
@@ -27,6 +29,8 @@ target_include_directories(hd_agent_test PRIVATE
     stubs
     "${BIST_ROOT}/src/bist/include"
     "${BIST_ROOT}/src/bist/host/include"
+    "${BIST_ROOT}/src/bist/core/cpu/include"
+    "${BIST_ROOT}/src/bist/core/memory/include"
 )
 
 target_compile_options(hd_agent_test PRIVATE -Wall -Wextra -Werror)
@@ -43,6 +47,7 @@ set(HD_AGENT_SCENARIOS
     checkpoint_step_is_one
     checkpoint_send_failure_consumes_id
     diag_req_handled
+    diag_ram_audit
     audit_ctx
 )
 

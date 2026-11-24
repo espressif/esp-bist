@@ -1,19 +1,25 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Exclude documentation files from /usr/share/doc/ to reduce the Docker image size
 RUN echo 'path-exclude=/usr/share/doc/*' >> /etc/dpkg/dpkg.cfg.d/00_exclude-docs
 
+# Allow pip install in system Python (PEP 668 on Ubuntu 24.04) for CI runner pre_build_script
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# TARGETARCH is set by BuildKit/buildx (--platform).
+ARG TARGETARCH
+
 # Install build dependencies
 RUN : \
+    && ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && apt-get update \
     && apt-get install -y -q --fix-missing --no-install-recommends \
         build-essential \
         ca-certificates \
         cmake \
         gcc \
-        gcc-multilib \
         clang \
         clang-tidy \
         clang-format \
@@ -36,24 +42,35 @@ RUN : \
         python3 \
         python3-dev \
         python3-pip \
+        python3-serial \
         python3-venv \
         tar \
         wget \
         xz-utils \
+    && if [ "${ARCH}" = "amd64" ]; then \
+         apt-get install -y -q --no-install-recommends gcc-multilib; \
+       fi \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && :
 
 # Install QEMU for RISC-V
-ARG QEMU_VER_SUFFIX=develop-8.2.0-20240122
+ARG QEMU_VER_SUFFIX=develop-9.2.2-20261109
 ARG QEMU_VER=esp-${QEMU_VER_SUFFIX}
-ARG QEMU_DIST_SUFFIX=x86_64-linux-gnu.tar.xz
 
 ARG QEMU_RISCV32_PREFIX=qemu-riscv32-softmmu
-ARG QEMU_RISCV32_DIST=${QEMU_RISCV32_PREFIX}-esp_develop_8.2.0_20240122-x86_64-linux-gnu.tar.xz
-ARG QEMU_RISCV32_SHA256=95ac86d7b53bf98b5ff19c33aa926189b849f5a0daf8f41e160bc86c5e31abd4
 RUN : \
+    && ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+    && case "${ARCH}" in \
+         amd64)  QEMU_HOST=x86_64-linux-gnu; \
+                 QEMU_RISCV32_SHA256=afa59465495295b8aa4f804768983fa30b0bbf33d0f68a047f9caa436b9164c0 ;; \
+         arm64)  QEMU_HOST=aarch64-linux-gnu; \
+                 QEMU_RISCV32_SHA256=4038e03d6e312b2372106516855a2c72eda02b49f6480917c55e56e04d958781 ;; \
+         *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;; \
+       esac \
+    && QEMU_DIST_TAG="$(printf '%s' "${QEMU_VER_SUFFIX}" | tr '-' '_')" \
+    && QEMU_RISCV32_DIST=${QEMU_RISCV32_PREFIX}-esp_${QEMU_DIST_TAG}-${QEMU_HOST}.tar.xz \
     && wget --no-verbose https://github.com/espressif/qemu/releases/download/${QEMU_VER}/${QEMU_RISCV32_DIST} \
     && echo "${QEMU_RISCV32_SHA256} ${QEMU_RISCV32_DIST}" | sha256sum --check --strict - \
     && mkdir -p /opt/${QEMU_RISCV32_PREFIX} \
@@ -67,9 +84,16 @@ ARG IDF_URL_PATH="https://github.com/espressif/esp-idf.git"
 
 ENV IDF_PATH=/opt/esp/idf
 ENV IDF_TOOLS_PATH=/opt/esp
-ENV IDF_VERSION=v6.0
+# Commit of release/v6.2 (v6.2-dev-3470-g1a73d7217fe) on GitHub mirror
+ENV IDF_VERSION=1a73d7217fe527323b456665987da4ac618373b3
 
-RUN git clone -b $IDF_VERSION --recursive --shallow-submodules $IDF_URL_PATH $IDF_PATH
+RUN git clone --recursive --shallow-submodules $IDF_URL_PATH $IDF_PATH \
+    && git -C $IDF_PATH checkout $IDF_VERSION \
+    && git -C $IDF_PATH submodule update --init --recursive --depth 1
+
+# Shallow-clone ESP-IDF v6.0 for MCUboot HAL compatibility until MCUboot supports IDF v6.2
+ENV MCUBOOT_IDF_PATH=/opt/esp/idf-mcuboot
+RUN git clone -b v6.0 --depth 1 --recursive --shallow-submodules $IDF_URL_PATH $MCUBOOT_IDF_PATH
 
 # Install IDF.
 # Note: --enable-test-specific replaces the pre-v6 --enable-pytest flag
@@ -79,6 +103,7 @@ RUN : \
     && $IDF_PATH/install.sh --enable-test-specific --enable-ci \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install required --targets=all \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install cmake \
+    && $IDF_PATH/tools/idf_tools.py --non-interactive install openocd-esp32 \
     && $IDF_PATH/tools/idf_tools.py --non-interactive install-python-env \
     && $IDF_PATH/tools/idf_tools.py --non-interactive export --prefer-system \
     && rm -rf $IDF_TOOLS_PATH/dist \
@@ -95,8 +120,9 @@ ENV PIP_PACKAGES="\
     kconfiglib \
     imgtool==2.3.0 \
     pre-commit \
+    pexpect \
 "
-RUN . /opt/esp/python_env/idf6.0_py3.10_env/bin/activate \
+RUN . /opt/esp/python_env/idf6.2_py3.12_env/bin/activate \
     && python3 -m pip install $PIP_PACKAGES
 
 RUN echo '. $IDF_PATH/export.sh' >> /root/.profile

@@ -30,11 +30,58 @@ function(bist_collect_sources out_var)
     set(_srcs "")
 
     if(CONFIG_ESP_BIST_CPU_REG_TEST)
-        list(APPEND _srcs "core/cpu/bist_cpu_regs.c")
+        if(CONFIG_ESP_BIST_CPU_REG_TEST_STATIC)
+            list(APPEND _srcs "core/cpu/bist_cpu_regs.c")
+        else()
+            list(APPEND _srcs "core/cpu/bist_cpu_regs_reciprocal.c")
+        endif()
     endif()
+
     if(CONFIG_ESP_BIST_CPU_CSR_REG_TEST)
-        list(APPEND _srcs "core/cpu/bist_cpu_csr_regs.c")
+        if(CONFIG_ESP_BIST_CPU_CSR_REG_TEST_STATIC)
+            list(APPEND _srcs "core/cpu/bist_cpu_csr_regs.c")
+        else()
+            list(APPEND _srcs "core/cpu/bist_cpu_csr_regs_reciprocal.c")
+        endif()
     endif()
+
+    if(CONFIG_ESP_BIST_CPU_INSTRUCTION_TEST)
+        list(APPEND _srcs "core/cpu/bist_cpu_instructions.c")
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_INTEGER)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_integer.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_SHIFT)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_shift.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_UPPERIMM)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_upperimm.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_CTRL)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_ctrl.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_LDST)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_ldst.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_MUL)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_mul.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_CSR)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_csr.S")
+        endif()
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_AMO AND NOT "${SOC_TARGET}" STREQUAL "esp32c3")
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_amo.S")
+        endif()
+        # ESP_BIST_USE_FPU is set by cmake/project.cmake for esp32h4/esp32p4 and
+        # is the same switch that gates the FPU CSRs in bist_cpu_csr_regs.c.
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_FP AND DEFINED ESP_BIST_USE_FPU)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_fp.S")
+        endif()
+        # C is in every supported target's -march, so this group is unconditional.
+        if(CONFIG_ESP_BIST_CPU_INSTRUCTION_COMP)
+            list(APPEND _srcs "core/cpu/bist_cpu_instructions_comp.S")
+        endif()
+    endif()
+
     if(CONFIG_ESP_BIST_STACK_TEST)
         list(APPEND _srcs "core/cpu/bist_cpu_stack.c")
     endif()
@@ -56,18 +103,30 @@ function(bist_collect_sources out_var)
     if(CONFIG_ESP_BIST_ADC_TEST)
         list(APPEND _srcs "core/io/bist_adc.c")
     endif()
+
     if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST)
-        list(APPEND _srcs "core/cpu/bist_pc.c")
+        if(CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST_STATIC)
+            list(APPEND _srcs "core/cpu/bist_pc.c")
+        else()
+            list(APPEND _srcs "core/cpu/bist_pc_reciprocal.c")
+        endif()
     endif()
+
     if(CONFIG_ESP_BIST_WATCHDOG_TEST)
         list(APPEND _srcs "core/wdt/bist_wdt.c")
     endif()
     if(CONFIG_ESP_BIST_INTERRUPT_TEST)
-    list(APPEND
-         _srcs
-         core/interrupt/bist_interrupt.c
-         core/interrupt/bist_interrupt_sw.c
-         )
+        if(CONFIG_ESP_BIST_INTERRUPT_TEST_STATIC)
+            list(APPEND _srcs
+                "core/interrupt/bist_interrupt.c"
+                "core/interrupt/bist_interrupt_sw.c"
+            )
+        else()
+            list(APPEND _srcs
+                "core/interrupt/bist_interrupt_reciprocal.c"
+                "core/interrupt/bist_interrupt_sw_reciprocal.c"
+            )
+        endif()
     endif()
     set(${out_var} "${_srcs}" PARENT_SCOPE)
 endfunction()

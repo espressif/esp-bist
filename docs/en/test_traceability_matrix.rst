@@ -23,14 +23,25 @@ Detailed Test Traceability
 CPU Register Test (IEC 60730 ID: 1.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Verify integrity of CPU general-purpose registers (X1–X31) and single-precision FPU registers (f0–f31 on FPU targets).
+**Requirement**: Verify integrity of CPU general-purpose registers (X1–X31) and single-precision FPU registers (f0–f31 on FPU targets). For Class C, perform dual-core reciprocal comparison (H.2.18.15).
 
-**Design**: ``src/bist/core/cpu/bist_cpu_regs.c`` (``bist_cpu_regs_test()``; :ref:`cpu-register-test`)
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_cpu_regs.c`` (Static), ``src/bist/core/cpu/bist_cpu_regs_reciprocal.c`` (Reciprocal)
+- Function: ``bist_cpu_regs_test()``
+- Design Doc: :ref:`cpu-register-test`
 
 **Test Implementation**:
 
-- QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (pattern pass test and GDB fault injection per register)
-- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT)
+- Static:
+
+  - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (pattern pass test and GDB fault injection per register)
+  - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per register)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py`` (dual-core reciprocal walk and cross-validation pass; GDB fault injection)
+  - Hardware: ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py`` (dual-core reciprocal register test validated on real ESP32-P4 hardware; GDB fault injection per register across Core 0 and Core 1)
 
 **Test Results**:
 
@@ -42,14 +53,25 @@ CPU Register Test (IEC 60730 ID: 1.1)
 CPU CSR Test (IEC 60730 ID: 1.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Verify integrity of CPU Control and Status Registers, including FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU targets.
+**Requirement**: Verify integrity of CPU Control and Status Registers, including FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU targets. For Class C, perform dual-core reciprocal comparison (H.2.18.15).
 
-**Design**: ``src/bist/core/cpu/bist_cpu_csr_regs.c`` (``bist_cpu_csr_regs_test()``; :doc:`module_design_and_coding`)
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_cpu_csr_regs.c`` (Static), ``src/bist/core/cpu/bist_cpu_csr_regs_reciprocal.c`` (Reciprocal)
+- Function: ``bist_cpu_csr_regs_test()``
+- Design Doc: :doc:`module_design_and_coding` (CPU CSR Register Test section)
 
 **Test Implementation**:
 
-- QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (CSR pattern pass and GDB fault injection per CSR)
-- Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT)
+- Static:
+
+  - QEMU: ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py`` (CSR pattern pass and GDB fault injection per CSR)
+  - Hardware: ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py`` (hardware execution on target DUT and GDB fault injection per CSR)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py`` (dual-core reciprocal CSR walk and cross-validation pass; GDB fault injection)
+  - Hardware: ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py`` (dual-core reciprocal CSR test validated on real ESP32-P4 hardware; GDB fault injection per CSR across Core 0 and Core 1)
 
 **Test Results**:
 
@@ -58,43 +80,103 @@ CPU CSR Test (IEC 60730 ID: 1.1)
 
 **Coverage**: 25 to 40 CSRs tested per SoC (2 test cases each: pass and GDB fault injection).
 
-Program Counter Test (IEC 60730 ID: 1.3)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+CPU Instruction Equivalence Test (IEC 60730 ID: 1.2)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Exercise PC bits across execution regions and detect unexpected jumps or stuck PC.
+**Requirement**: Validate instruction decoding and execution integrity via equivalence-class self-tests (IEC 60730-1 Annex H, Table H.1 component 1.2, measure H.2.18.5)
 
-**Design**: ``src/bist/core/cpu/bist_pc.c`` (``bist_pc_test()``; :ref:`program-counter-test`)
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_cpu_instructions.c`` and assembly modules:
+
+  - ``src/bist/core/cpu/bist_cpu_instructions_integer.S`` (RV32I Integer ALU, 80 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_shift.S`` (RV32I Shifts, 36 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_upperimm.S`` (RV32I Upper Immediate LUI/AUIPC, 11 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_ctrl.S`` (RV32I Control Flow Branches/Jumps, 28 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_ldst.S`` (RV32I Load/Store, 15 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_mul.S`` (RV32M Multiply/Divide, 48 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_csr.S`` (Zicsr/Zifencei CSR and Fence, 15 vectors)
+  - ``src/bist/core/cpu/bist_cpu_instructions_amo.S`` (RV32A Atomics, 13 vectors; excluded on ESP32-C3)
+  - ``src/bist/core/cpu/bist_cpu_instructions_fp.S`` (RV32F Floating Point, 60 vectors; on ESP32-H4 and ESP32-P4)
+  - ``src/bist/core/cpu/bist_cpu_instructions_comp.S`` (RV32C Compressed, 75 vectors)
+- Functions: ``bist_cpu_instruction_test()``, ``bist_cpu_instruction_last_failure_id()``, ``bist_cpu_instruction_last_failure_group()``
+- Design Doc: :doc:`module_design_and_coding` (CPU Instruction Equivalence Test section)
 
 **Test Implementation**:
 
-- QEMU: ``tests/pc_test/pytest_qemu_pc_test.py`` (multi-region pass, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
-- Hardware: ``tests/pc_test/pytest_device_pc_test.py`` (multi-region execution on target DUT)
+- QEMU / On-target: ``tests/cpu_instruction_test/main.c``, ``tests/cpu_instruction_test/pytest_device_cpu_instruction_test.py``
+  - Success test: All Kconfig-enabled instruction equivalence groups execute sequentially and pass without error (returning ``BIST_ESP_OK``, failure ID 0, group ``BIST_INSN_GROUP_NONE``)
+  - Negative / fault injection tests: Validated via build-time operand mutation, expected value corruption, link-resolved size witness corruption, and stack restoration verification on error exits
+- Hardware: Clean execution on supported SoCs
 
 **Test Results**:
 
-- QEMU: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
-- Hardware: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- QEMU: ``tests/cpu_instruction_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Hardware: ``tests/cpu_instruction_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 QEMU test cases + 1 hardware test case; exercises 24 of 30 addressable PC bits (25 on ESP32-P4) across up to 5 execution regions.
+**Coverage**: 10 instruction groups comprising 381 hand-crafted equivalence-class test vectors total (80 Integer ALU + 36 Shifts + 11 Upper Imm + 28 Control Flow + 15 Load/Store + 48 Mul/Div + 15 CSR/Fence + 13 Atomics + 60 Floating Point + 75 Compressed)
+
+Program Counter Test (IEC 60730 ID: 1.3)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Requirement**: Exercise PC bits across execution regions and detect unexpected jumps or stuck PC. For reciprocal testing on ESP32-P4, execute the region walk on both HP cores and reciprocally cross-validate results (H.2.18.15).
+
+**Design**:
+
+- Module: ``src/bist/core/cpu/bist_pc.c`` (Static), ``src/bist/core/cpu/bist_pc_reciprocal.c`` (Reciprocal)
+- Function: ``bist_pc_test()``
+- Design Doc: :ref:`program-counter-test`
+
+**Test Implementation**:
+
+- Static:
+
+  - QEMU: ``tests/pc_test/pytest_qemu_pc_test.py`` (multi-region pass, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
+  - Hardware: ``tests/pc_test/pytest_device_pc_test.py`` (multi-region execution on target DUT, GDB bit-flip fault injection, and zero-pointer Watchdog reset)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/pc_test_reciprocal/pytest_qemu_pc_test_reciprocal.py`` (dual-core pass and returned-address fault injection for all five functions in both result slots)
+  - Hardware: ``tests/pc_test_reciprocal/pytest_device_pc_test_reciprocal.py`` (dual-core pass and returned-address fault injection for all five functions in both result slots)
+
+**Test Results**:
+
+- Static QEMU: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Static Hardware: ``tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Reciprocal QEMU/Hardware: ``tests/pc_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml`` and ``{IDF_TARGET_PATH_NAME}_device_report.xml``
+
+**Coverage**: Static: 4 functions (5 on ESP32-P4) exercised by 1 pass and 2 failure test cases. Reciprocal: 5 functions exercised across both cores by 1 pass and 10 fault-injection test cases.
 
 Interrupt Test (IEC 60730 ID: 2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Validate interrupt handling, matrix routing for software IRQ sources, and concurrent hardware interrupt delivery.
+**Requirement**: Validate interrupt handling and execution — interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery. For reciprocal testing on ESP32-P4, execute the walks on both HP cores and reciprocally cross-validate results (H.2.18.15).
 
-**Design**: ``src/bist/core/interrupt/bist_interrupt_sw.c``, ``src/bist/core/interrupt/bist_interrupt.c`` (``bist_interrupt_source_map_test()``, ``bist_hardware_interrupt_test()``; :ref:`interrupt-test`)
+**Design**:
+
+- Modules: ``src/bist/core/interrupt/bist_interrupt_sw.c`` / ``bist_interrupt.c`` (Static), ``bist_interrupt_sw_reciprocal.c`` / ``bist_interrupt_reciprocal.c`` (Reciprocal)
+- Functions: ``bist_interrupt_source_map_test()``, ``bist_hardware_interrupt_test()``
+- Design Doc: :doc:`module_design_and_coding` (Interrupt Handling and Execution Test section)
 
 **Test Implementation**:
 
-- QEMU: ``tests/interrupt_test/pytest_qemu_interrupt_test.py`` (software source map pass and GDB count corruption)
-- Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py`` (software source map and dual-timer 2:1 period ratio validation)
+- Static:
+
+  - QEMU: ``tests/interrupt_test/pytest_qemu_interrupt_test.py`` (software source map pass and GDB count corruption)
+  - Hardware: ``tests/interrupt_test/pytest_device_interrupt_test.py`` (software source map and dual-timer 2:1 period ratio validation and GDB count corruption)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/interrupt_test_reciprocal/pytest_qemu_interrupt_test_reciprocal.py`` (dual-core software source-map pass and fault injection on Core 0/1)
+  - Hardware: ``tests/interrupt_test_reciprocal/pytest_device_interrupt_test_reciprocal.py`` (dual-core software source map and sequential dual-timer hardware tests with fault injection)
 
 **Test Results**:
 
-- QEMU: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
-- Hardware: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Static QEMU: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Static Hardware: ``tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Reciprocal QEMU/Hardware: ``tests/interrupt_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml`` and ``{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: Software interrupt matrix routing covered in QEMU and hardware; dual-timer delivery validated on hardware.
+**Coverage**: Static: 2 functions (software source map and hardware dual-timer) with pass and fault-injection test cases. Reciprocal: 2 functions exercised across both HP cores (QEMU covers software path with 1 pass and 14 fault cases; hardware covers both paths with 1 pass and 5 fault cases).
 
 Clock Test (IEC 60730 ID: 3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -125,7 +207,7 @@ Flash CRC Test (IEC 60730 ID: 4.1)
 **Test Implementation**:
 
 - QEMU: ``tests/flash_test/pytest_qemu_flash_test.py`` (text and rodata CRC pass + GDB length corruption)
-- Hardware: ``tests/flash_test/pytest_device_flash_test.py`` (CRC validation on target DUT)
+- Hardware: ``tests/flash_test/pytest_device_flash_test.py`` (CRC validation on target DUT + GDB length corruption)
 
 **Test Results**:
 
@@ -144,7 +226,7 @@ RAM Test (IEC 60730 ID: 4.2)
 **Test Implementation**:
 
 - QEMU: ``tests/ram_test/pytest_qemu_ram_test.py`` (March A, March X, and Abraham pass + GDB memory corruption)
-- Hardware: ``tests/ram_test/pytest_device_ram_test.py`` (algorithm execution on target DUT)
+- Hardware: ``tests/ram_test/pytest_device_ram_test.py`` (algorithm execution on target DUT + GDB memory corruption)
 
 **Test Results**:
 
@@ -163,7 +245,7 @@ Stack Overflow Test (IEC 60730 ID: 4.2)
 **Test Implementation**:
 
 - QEMU: ``tests/cpu_stack_test/pytest_qemu_cpu_stack_test.py`` (bounds verification, overflow detection, and GDB recursion limit)
-- Hardware: ``tests/cpu_stack_test/pytest_device_cpu_stack_test.py`` (stack overflow detection on target DUT)
+- Hardware: ``tests/cpu_stack_test/pytest_device_cpu_stack_test.py`` (stack overflow detection on target DUT and GDB recursion limit)
 
 **Test Results**:
 
@@ -182,7 +264,7 @@ Watchdog Test (IEC 60730 ID: 6.3)
 **Test Implementation**:
 
 - QEMU: ``tests/wdt_test/pytest_qemu_wdt_test.py`` (two-boot reset verification and GDB timeout failure injection)
-- Hardware: ``tests/wdt_test/pytest_device_wdt_test.py`` (two-boot reset check and sub-tick timeout rejection)
+- Hardware: ``tests/wdt_test/pytest_device_wdt_test.py`` (two-boot reset check and sub-tick timeout rejection and GDB timeout failure injection)
 
 **Test Results**:
 
@@ -201,14 +283,14 @@ Windowed Watchdog Test & esp_timer Validation (IEC 60730 ID: 6.3)
 **Test Implementation**:
 
 - QEMU: ``tests/windowed_wdt_test/pytest_qemu_windowed_wdt_test.py`` (normal feed, underflow detection, consecutive cycles)
-- Hardware: ``tests/windowed_wdt_test/pytest_device_windowed_wdt_test.py`` (normal feed, underflow, consecutive cycles)
+- Hardware: ``tests/windowed_wdt_test/pytest_device_windowed_wdt_test.py`` (normal feed, underflow, consecutive cycles and GDB underflow corruption)
 
 **Test Results**:
 
 - QEMU: ``tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
 - Hardware: ``tests/windowed_wdt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases validating windowed WDT logic and in-situ ``esp_timer`` driver functionality.
+**Coverage**: 3 test cases (pass + fail) validating windowed WDT logic and in-situ ``esp_timer`` driver functionality.
 
 GPIO Test (IEC 60730 ID: 7.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -219,13 +301,13 @@ GPIO Test (IEC 60730 ID: 7.1)
 
 **Test Implementation**:
 
-- Hardware-only: ``tests/digital_io_test/pytest_device_digital_io_test.py`` (invalid pin rejection, GPIO2 output drive, configured input level)
+- Hardware-only: ``tests/digital_io_test/pytest_device_digital_io_test.py`` (invalid pin rejection, GPIO2 output drive, configured input level and GDB read value injection)
 
 **Test Results**:
 
 - Hardware: ``tests/digital_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases on target hardware.
+**Coverage**: 3 pass test and 2 fail cases on target hardware.
 
 ADC Test (IEC 60730 ID: 7.2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -236,19 +318,19 @@ ADC Test (IEC 60730 ID: 7.2)
 
 **Test Implementation**:
 
-- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py`` (invalid parameter rejection, pull-down, pull-up, and VREF on ESP32-C3; skipped on ESP32-H4)
+- Hardware-only: ``tests/analog_io_test/pytest_device_analog_io_test.py`` (invalid parameter rejection, pull-down, pull-up, and VREF on ESP32-C3; GDB raw read corruption)
 
 **Test Results**:
 
 - Hardware: ``tests/analog_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 test cases (4 on ESP32-C3); skipped on ESP32-H4.
+**Coverage**: 3 test cases (pass + fail) (4 on ESP32-C3).
 
 Traceability Summary
 --------------------
 
-- **Total IEC 60730 Components**: 9 (1.1, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
-- **Total Test Applications**: 10 standalone target test suites + 1 host unit test suite
+- **Total IEC 60730 Components**: 10 (1.1, 1.2, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
+- **Total Test Applications**: 11 standalone target test suites + 1 host unit test suite
 - **Test Environments**: QEMU (deterministic emulation & GDB fault injection), Hardware (real-world DUT), Host (algorithmic verification)
 - **Coverage & Evidence**: Complete requirement-to-test mapping and JUnit XML report locations are tabulated in :doc:`coverage_analysis`.
 

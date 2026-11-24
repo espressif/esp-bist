@@ -63,7 +63,7 @@ repos:
             scripts/misra_rules\.txt|
             mcp-server/data/.+
           )$
-        args: ['-w', '-L', 'hda']
+        args: ['-w', '--ignore-words', '.codespell-ignore']
 
   - repo: https://github.com/espressif/conventional-precommit-linter
     rev: v1.11.0

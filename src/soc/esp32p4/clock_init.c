@@ -19,6 +19,7 @@
 #include "esp_private/esp_clk.h"
 #include "esp_private/esp_pmu.h"
 #include "hal/clk_gate_ll.h"
+#include "hal/timg_ll.h"
 #include "hal/wdt_hal.h"
 #include "soc/clk_tree_defs.h"
 #include "soc/rtc.h"
@@ -50,6 +51,9 @@ void IRAM_ATTR esp_rtc_init(void)
 
 void esp_clk_init(void)
 {
+    _timg_ll_enable_bus_clock(0, true);
+    _timg_ll_reset_register(0);
+
     assert(rtc_clk_xtal_freq_get() == SOC_XTAL_FREQ_40M);
 
     rtc_clk_8m_enable(true);
@@ -148,4 +152,6 @@ void esp_perip_clk_init(void)
     periph_ll_clk_gate_config_t clk_gate_config = {0};
 
     periph_ll_clk_gate_set_default(rst_reason, &clk_gate_config);
+
+    _timg_ll_enable_bus_clock(0, true);
 }

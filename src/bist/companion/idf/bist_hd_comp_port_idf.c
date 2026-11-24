@@ -8,6 +8,7 @@
 
 #include "bist_hd_comp_port.h"
 
+#include "bist_conf.h"
 #include "ulp_lp_core_mailbox.h"
 #include "ulp_lp_core_utils.h"
 
@@ -16,7 +17,9 @@
 /* LP core runs at 40 MHz on the supported targets. */
 #define HD_LP_MHZ 40u
 
-#define MAILBOX_SEND_WAIT (-1)
+#ifndef CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US
+#define CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US 10000
+#endif
 
 static lp_mailbox_t s_mailbox;
 
@@ -24,6 +27,9 @@ static int32_t us_to_cycles(int32_t timeout_us)
 {
     if (timeout_us < 0) {
         return -1;
+    }
+    if ((uint32_t)timeout_us > (0x7FFFFFFFu / HD_LP_MHZ)) {
+        return 0x7FFFFFFF;
     }
     return (int32_t)((uint32_t)timeout_us * HD_LP_MHZ);
 }
@@ -36,6 +42,7 @@ int bist_hd_comp_port_init(void)
 int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
 {
     uint32_t words[BIST_HD_WIRE_WORDS_MAX];
+    int32_t timeout_cycles = us_to_cycles(CONFIG_ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US);
     size_t nwords = 0;
     size_t i;
 
@@ -43,7 +50,7 @@ int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
         return -1;
     }
     for (i = 0; i < nwords; i++) {
-        if (lp_core_mailbox_send(s_mailbox, (lp_message_t)words[i], MAILBOX_SEND_WAIT) != ESP_OK) {
+        if (lp_core_mailbox_send(s_mailbox, (lp_message_t)words[i], timeout_cycles) != ESP_OK) {
             return -1;
         }
     }

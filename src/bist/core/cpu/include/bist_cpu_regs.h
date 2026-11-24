@@ -15,13 +15,23 @@
 
 /**
  * @file bist_cpu_regs.h
- * @brief CPU general-purpose register integrity test
+ * @brief Stable API for the CPU register integrity test
  *
- * Tests all 32 RISC-V general-purpose registers (X1-X31) by writing
- * alternating bit patterns (0xAAAAAAAA and 0x55555555) to verify:
- * - No stuck-at-0 or stuck-at-1 faults
- * - All register bits functional
- * - Proper read/write operation
+ * The STATIC and RECIPROCAL implementations expose the same
+ * bist_cpu_regs_test() entry point. Both implementations exercise all
+ * writable RISC-V general-purpose registers, x1 through x31; x0 is
+ * architecturally fixed at zero and is not writable. Each tested register is
+ * written and read back with the complementary 0xAAAAAAAA and 0x55555555
+ * checkerboard patterns to exercise every bit as both 0 and 1. This checks
+ * for stuck-at-0 and stuck-at-1 faults, bit functionality, and correct
+ * read/write retention. When FPU register testing is enabled, all
+ * floating-point registers, f0 through f31, are exercised with the same
+ * patterns.
+ *
+ * STATIC performs a register walk on the calling core. RECIPROCAL performs a
+ * walk on each HP core, records fixed-layout raw read-back evidence in two
+ * shared slots, and has each core validate both its own and the other core's
+ * read-backs.
  */
 
 #pragma once
@@ -32,14 +42,28 @@
 #include "bist_conf.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Test CPU general-purpose register integrity
  *
- * Verifies all 32 RISC-V general-purpose registers can retain both
- * 0 and 1 values without corruption. Uses checkerboard patterns
- * (0xAAAAAAAA and 0x55555555) to detect stuck-at faults.
+ * In STATIC mode, performs one 0xAAAAAAAA/0x55555555 checkerboard walk over
+ * x1-x31 and, when enabled, f0-f31. In RECIPROCAL mode, performs those walks
+ * on both HP cores while preserving the raw pattern read-backs in the shared
+ * evidence slots declared by bist_cpu_regs_reciprocal.h; each core then
+ * validates the evidence produced by both cores.
  *
  * @return BIST_ESP_OK if all registers pass
  * @return BIST_ESP_CPU_TEST_ERR if any register fails
  */
 bist_esp_err_t bist_cpu_regs_test(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#if defined(CONFIG_ESP_BIST_CPU_REG_TEST_RECIPROCAL)
+#include "bist_cpu_regs_reciprocal.h"
+#endif

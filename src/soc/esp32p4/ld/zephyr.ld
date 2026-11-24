@@ -155,7 +155,7 @@ SECTIONS
     {
         . = ALIGN(4);
         _stack_overflow_protection_end = .;
-        . += 0x100;
+        . += 0x10;
         _stack_overflow_protection_start = .;
     } > ram
 

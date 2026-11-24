@@ -18,7 +18,7 @@ void map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr, uint32_t
 
 void map_rtc_segment(uint32_t app_rtc_start, uint32_t app_rtc_vaddr, uint32_t app_rtc_size);
 
-#if SOC_MEM_TCM_SUPPORTED
+#if SOC_MEM_SPM_SUPPORTED
 void map_tcm_segment(uint32_t app_tcm_start, uint32_t app_tcm_vaddr, uint32_t app_tcm_size);
 #endif
 

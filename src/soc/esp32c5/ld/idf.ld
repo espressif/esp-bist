@@ -1,92 +1,134 @@
 /*
- * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
- *
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * BIST custom LP-core linker layout for ESP32-C5.
+ * Replaces the default lp_core_riscv_default_layout.ld.in when passed via the
+ * LINKER_LAYOUT option to ulp_add_project(). The base part
+ * (lp_core_riscv_base.ld.in) provides the section-boundary macros, vector
+ * table, shared memory, and stack window.
  */
-#include "sdkconfig.h"
-#include "soc/soc.h"
-#include "ld.common"
 
-#if CONFIG_ESP_ROM_HAS_LP_ROM
-/* With LP-ROM memory layout is different due to LP ROM stack/data */
-#define ULP_MEM_START_ADDRESS SOC_RTC_DRAM_LOW + RESERVE_RTC_MEM
-#else
-#define ULP_MEM_START_ADDRESS (SOC_RTC_DRAM_LOW)
+#if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
+/*
+ * PC register stuck-at test: place functions at fixed addresses chosen so
+ * that bits 2-13 of the PC appear as both 0 and 1 across the set.
+ *
+ *   pc_test_1 @ USER_START + 0x2A28 -> absolute 0x50002AA8
+ *              bits 13:2 = 101010101010
+ *   pc_test_2 @ USER_START + 0x34D4 -> absolute 0x50003554
+ *              bits 13:2 = 110101010101
+ *
+ * Together with pc_test_0 (natural position in .text, bit 13 = 0), all 12
+ * testable PC bits within the 16KB LP RAM window are exercised.
+ */
+_pc_test_1_addr = LP_CORE_USER_MEMORY_REGION_START + 0x2A28;
+_pc_test_2_addr = LP_CORE_USER_MEMORY_REGION_START + 0x34D4;
 #endif
-
-#define ALIGN_DOWN(SIZE, AL)   (SIZE & ~(AL - 1))
-/* Ensure the end where the shared memory starts is aligned to 8 bytes
-   if updating this also update the same in ulp_lp_core_memory_shared.c
- */
-#define ALIGNED_COPROC_MEM ALIGN_DOWN(CONFIG_ULP_COPROC_RESERVE_MEM, 0x8)
-
-ENTRY(reset_vector)
 
 MEMORY
 {
-    /*first 128byte for exception/interrupt vectors*/
-    vector_table(RX) :   ORIGIN = ULP_MEM_START_ADDRESS, LENGTH = 0x80
-    ram(RWX) :           ORIGIN = ULP_MEM_START_ADDRESS + 0x80, LENGTH = ALIGNED_COPROC_MEM - 0x80 - CONFIG_ULP_SHARED_MEM
-    shared_mem_ram(RW) : ORIGIN = ULP_MEM_START_ADDRESS + ALIGNED_COPROC_MEM - CONFIG_ULP_SHARED_MEM, LENGTH = CONFIG_ULP_SHARED_MEM
+#if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
+    lp_text(RWX)     : ORIGIN = LP_CORE_USER_MEMORY_REGION_START, LENGTH = _pc_test_1_addr - LP_CORE_USER_MEMORY_REGION_START
+    pc_region_1(RX)  : ORIGIN = _pc_test_1_addr, LENGTH = 0x20
+    lp_text_mid(RWX) : ORIGIN = _pc_test_1_addr + 0x20, LENGTH = _pc_test_2_addr - (_pc_test_1_addr + 0x20)
+    pc_region_2(RX)  : ORIGIN = _pc_test_2_addr, LENGTH = 0x20
+    lp_data(RW)      : ORIGIN = _pc_test_2_addr + 0x20, LENGTH = LP_CORE_USER_MEMORY_REGION_END - (_pc_test_2_addr + 0x20)
+#else
+    lp_text(RWX)     : ORIGIN = LP_CORE_USER_MEMORY_REGION_START, LENGTH = LP_CORE_USER_MEMORY_REGION_END - LP_CORE_USER_MEMORY_REGION_START
+    lp_data(RW)      : ORIGIN = LP_CORE_USER_MEMORY_REGION_START, LENGTH = LP_CORE_USER_MEMORY_REGION_END - LP_CORE_USER_MEMORY_REGION_START
+#endif
 }
 
 SECTIONS
 {
-    .vector.text :
-    {
-        /*exception/interrupt vectors*/
-        __mtvec_base = .;
-        KEEP (*(.init.vector .init.vector.*))
-    } > vector_table
+    LP_CORE_TEXT_START(lp_text)
 
-    . = ORIGIN(ram);
-
-    .text ALIGN(4):
+    .text ALIGN(4) :
     {
         _flash_text_start = ABSOLUTE(.);
-        *(.text.vectors) /* Default reset vector must link to offset 0x80 */
         *(.text)
         *(.text.*)
-        _flash_text_end = ABSOLUTE(.);
-    } > ram
 
-    .rodata ALIGN(4):
+#if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
+        . = ALIGN(4);
+        _pc_test_0_start = ABSOLUTE(.);
+        KEEP(*(.pc_test_0 .pc_test_0.*))
+        _pc_test_0_end = ABSOLUTE(.);
+#endif
+        _flash_text_end = ABSOLUTE(.);
+    } > lp_text
+
+    .rodata ALIGN(4) :
     {
         _flash_rodata_start = ABSOLUTE(.);
         *(.rodata)
         *(.rodata*)
         _flash_rodata_end = ABSOLUTE(.);
-    } > ram
+    } > lp_text
 
-    .crc_section_text ALIGN(4):
+    LP_CORE_TEXT_END()
+
+#if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
+    . = ORIGIN(pc_region_1);
+    .pc_test_1 ALIGN(4) :
+    {
+        _pc_test_1_start = ABSOLUTE(.);
+        KEEP(*(.pc_test_1 .pc_test_1.*))
+        _pc_test_1_end = ABSOLUTE(.);
+    } > pc_region_1
+
+    . = ORIGIN(pc_region_2);
+    .pc_test_2 ALIGN(4) :
+    {
+        _pc_test_2_start = ABSOLUTE(.);
+        KEEP(*(.pc_test_2 .pc_test_2.*))
+        _pc_test_2_end = ABSOLUTE(.);
+    } > pc_region_2
+
+    .pc_test_3 ALIGN(4) :
+    {
+        _pc_test_3_start = ABSOLUTE(.);
+        KEEP(*(.pc_test_3 .pc_test_3.*))
+        _pc_test_3_end = ABSOLUTE(.);
+    } > pc_region_2
+#endif
+
+#if CONFIG_ESP_BIST_PROGRAM_COUNTER_TEST
+    . = ORIGIN(lp_data);
+#endif
+
+    .crc_section_text ALIGN(4) :
     {
         _crc_section_text_start = ABSOLUTE(.);
         LONG(0x00000000)
         KEEP(*(.crc_section_text))
         _crc_section_text_end = ABSOLUTE(.);
-    } > ram
+    } > lp_data
 
-    .crc_section_data ALIGN(4):
+    .crc_section_data ALIGN(4) :
     {
         _crc_section_data_start = ABSOLUTE(.);
         LONG(0x00000000)
         KEEP(*(.crc_section_data))
         _crc_section_data_end = ABSOLUTE(.);
-    } > ram
+    } > lp_data
+
+    LP_CORE_DATA_START()
 
     /*
      * Safe RAM sits below the marched region (matches bist_ram.c): backup
      * buffer + March stack, plus the software-mailbox context. The mailbox
      * must not be marched while the HP agent is online.
      */
-    .dram0.safe_ram (NOLOAD):
+    .dram0.safe_ram (NOLOAD) :
     {
         . = ALIGN(4);
         _safe_ram_start = ABSOLUTE(.);
         KEEP(*(.dram0.safe_ram));
         *lp_core_mailbox_impl_sw*(.bss .bss.* .sbss .sbss.*);
         _safe_ram_end = ABSOLUTE(.);
-    } > ram
+    } > lp_data
 
     /*
      * Under-test RAM: live .data/.bss and the unused stack gap up to the
@@ -94,20 +136,20 @@ SECTIONS
      */
     _bist_ram_test_start = ABSOLUTE(.);
 
-    .data ALIGN(4):
+    .data ALIGN(4) :
     {
         *(.data)
         *(.data*)
         *(.sdata)
         *(.sdata*)
-    } > ram
+    } > lp_data
 
     .bss ALIGN(4) :
     {
         *(EXCLUDE_FILE(*lp_core_mailbox_impl_sw*) .bss .bss.* .sbss .sbss.*)
         PROVIDE(end = .);
         . = ALIGN(4);
-    } > ram
+    } > lp_data
 
     /* define the stack overflow section */
     .dram0.overflow (NOLOAD) :
@@ -118,17 +160,9 @@ SECTIONS
         _stack_overflow_protection_start = .;
         . += 0x4; /* assuming 4 bytes for pattern check */
         _stack_overflow_protection_end = .;
-        __data_end = ABSOLUTE(.);
-    } > ram
+    } > lp_data
 
-    __stack_top = ORIGIN(ram) + LENGTH(ram);
-    __stack_size = __stack_top - __data_end;
+    LP_CORE_DATA_END()
 
     _bist_ram_test_end = __stack_top;
-
-    . = ORIGIN(shared_mem_ram);
-    .shared_mem (ALIGN(4)) :
-    {
-        KEEP(*(.shared_mem))
-    } > shared_mem_ram
 }

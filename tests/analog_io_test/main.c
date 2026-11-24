@@ -7,14 +7,7 @@
 #define BIST_TEST_ADC_UNIT                      ADC_UNIT_1
 #define BIST_TEST_ADC_CHANNEL                   ADC_CHANNEL_2
 
-#if defined(SOC_TARGET_ESP32H4)
-#warning "ADC is not supported for ESP32-H4!"
-
-int main()
-{
-    return 0;
-}
-#else
+#include "hal/adc_ll.h"
 
 void setUp(void)
 {
@@ -27,16 +20,16 @@ void test_BIST_ANALOG_IO_INVALID_ADC(void)
 {
     bist_esp_err_t ret = bist_adc_low_level_test(SOC_ADC_PERIPH_NUM, ADC_CHANNEL_0);
     TEST_ASSERT_EQUAL(BIST_ESP_ADC_TEST_ERR, ret);
-    ret = bist_adc_low_level_test(BIST_TEST_ADC_UNIT, SOC_ADC_CHANNEL_NUM(BIST_TEST_ADC_UNIT));
+    ret = bist_adc_low_level_test(BIST_TEST_ADC_UNIT, ADC_LL_CHANNEL_NUM(BIST_TEST_ADC_UNIT));
     TEST_ASSERT_EQUAL(BIST_ESP_ADC_TEST_ERR, ret);
     ret = bist_adc_high_level_test(SOC_ADC_PERIPH_NUM, ADC_CHANNEL_0);
     TEST_ASSERT_EQUAL(BIST_ESP_ADC_TEST_ERR, ret);
-    ret = bist_adc_high_level_test(BIST_TEST_ADC_UNIT, SOC_ADC_CHANNEL_NUM(BIST_TEST_ADC_UNIT));
+    ret = bist_adc_high_level_test(BIST_TEST_ADC_UNIT, ADC_LL_CHANNEL_NUM(BIST_TEST_ADC_UNIT));
     TEST_ASSERT_EQUAL(BIST_ESP_ADC_TEST_ERR, ret);
 #if defined(SOC_TARGET_ESP32C3)
     ret = bist_adc_reference_test(SOC_ADC_PERIPH_NUM, ADC_CHANNEL_0);
     TEST_ASSERT_EQUAL(BIST_ESP_ADC_TEST_ERR, ret);
-    ret = bist_adc_reference_test(BIST_TEST_ADC_UNIT, SOC_ADC_CHANNEL_NUM(BIST_TEST_ADC_UNIT));
+    ret = bist_adc_reference_test(BIST_TEST_ADC_UNIT, ADC_LL_CHANNEL_NUM(BIST_TEST_ADC_UNIT));
     TEST_ASSERT_EQUAL(BIST_ESP_ADC_TEST_ERR, ret);
 #endif
 }
@@ -72,4 +65,3 @@ int main()
 #endif
     return UNITY_END();
 }
-#endif

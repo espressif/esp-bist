@@ -7,9 +7,10 @@
  * using only RTOS-agnostic IDF components (soc, hal, esp_rom, esp_hw_support).
  *
  * Matches IDF esp_system/port/soc/esp32h4/clk.c: do not call rtc_clk_init()
- * here. Re-running CPU/AHB divider setup after the bootloader left XIP
- * configured breaks flash instruction fetch (CPU stalls on IROM with no
- * panic). Keep boot XTAL clock tree unless a real frequency change is needed.
+ * here. Default CPU frequency is 96 MHz from BBPLL, same as IDF. The
+ * bootloader is already on that PLL, so this switch only changes the
+ * divider and does not turn BBPLL off. USB-Serial-JTAG keeps its 48 MHz
+ * PHY clock.
  */
 
 #include <stdint.h>
@@ -27,9 +28,6 @@
 #include "soc/clk_tree_defs.h"
 #include "soc/rtc.h"
 #include "soc/soc.h"
-#include "soc/pcr_reg.h"
-#include "hal/cache_hal.h"
-#include "hal/cache_ll.h"
 
 #include "esp_sleep.h"
 #include "esp_err.h"
@@ -42,7 +40,6 @@ esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_
 
 #define SLOW_CLK_CAL_CYCLES  CONFIG_RTC_CLK_CAL_CYCLES
 #define MHZ                  (1000000)
-#define CACHE_LEVEL          CACHE_LL_LEVEL_EXT_MEM
 
 static const char *TAG = "clk";
 
@@ -51,6 +48,7 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src);
 void esp_clk_init(void)
 {
     pmu_init();
+    assert(rtc_clk_xtal_freq_get() == SOC_XTAL_FREQ_32M);
 
     rtc_clk_8m_enable(true);
     rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_RC_FAST);
@@ -71,7 +69,12 @@ void esp_clk_init(void)
     bool res = rtc_clk_cpu_freq_mhz_to_config(new_freq_mhz, &new_config);
     assert(res);
 
-    esp_rom_output_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    /* Wait for UART TX to finish, otherwise some UART output will be lost
+     * when switching APB frequency.
+     */
+    if (CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM != -1) {
+        esp_rom_output_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    }
 
     if (res) {
         rtc_clk_cpu_freq_set_config(&new_config);

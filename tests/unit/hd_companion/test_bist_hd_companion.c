@@ -77,6 +77,7 @@ static uint8_t g_diag_ids[DIAG_LOG_MAX];
 static uint32_t g_diag_payloads[DIAG_LOG_MAX];
 static int g_wdt_inits;
 static int g_wdt_feeds;
+static int g_send_fail;
 
 static int g_failures;
 
@@ -220,7 +221,7 @@ int bist_hd_comp_port_init(void)
 
 int bist_hd_comp_port_send(const bist_hd_msg_t *msg)
 {
-    if (msg == NULL) {
+    if (msg == NULL || g_send_fail) {
         return -1;
     }
 
@@ -340,7 +341,7 @@ static void scenario_no_ready(void)
     /* Nothing queued: AGENT_READY never arrives. */
     expect_eq_int(bist_hd_companion_init(), -1, "init fails without AGENT_READY");
     expect_eq_int(g_safe_state_notifies, 1, "missing AGENT_READY is safe state");
-    expect_eq_int(g_wdt_inits, 0, "watchdog not armed on a failed init");
+    expect_eq_int(g_wdt_inits, 1, "safe state arms LP watchdog on missing AGENT_READY");
     expect_eq_int(g_lp_status_sent, 0, "no status before the host is known ready");
 }
 
@@ -354,7 +355,7 @@ static void scenario_ready_wrong_type(void)
 
     expect_eq_int(bist_hd_companion_init(), -1, "init rejects a non-READY first frame");
     expect_eq_int(g_safe_state_notifies, 1, "wrong first frame is safe state");
-    expect_eq_int(g_wdt_inits, 0, "watchdog not armed");
+    expect_eq_int(g_wdt_inits, 1, "safe state arms LP watchdog on bad first frame");
 }
 
 static void scenario_postboot_fail(void)
@@ -366,7 +367,7 @@ static void scenario_postboot_fail(void)
     expect_eq_int(g_lp_status_sent, 1, "the failing status is still reported");
     expect_true((g_last_lp_status & BIST_HD_BIT_CPU_REG) == 0u, "CPU bit clear in the report");
     expect_eq_int(g_safe_state_notifies, 1, "post-boot failure is safe state");
-    expect_eq_int(g_wdt_inits, 0, "watchdog not armed after a failed self-BIST");
+    expect_eq_int(g_wdt_inits, 1, "safe state arms LP watchdog after failed self-BIST");
 }
 
 static void scenario_qa_pass(void)
@@ -424,6 +425,52 @@ static void scenario_safe_state_latched(void)
     expect_eq_int(g_lp_status_sent, status_at_failure, "no further status reported");
     expect_eq_int(g_challenges, 1, "no further challenges");
     expect_eq_int(g_safe_state_notifies, 1, "safe state announced once");
+}
+
+static void scenario_safe_state_wdt_rearm(void)
+{
+    int feeds_at_failure;
+    uint32_t tick_before_rearm;
+
+    g_mode = AGENT_WRONG_VALUE;
+    init_ok();
+    expect_eq_int(g_wdt_inits, 1, "LP watchdog armed once after init");
+
+    queue_checkpoint(1);
+    expect_eq_int(bist_hd_companion_loop(), -1, "first round enters safe state");
+    expect_eq_int(g_wdt_inits, 2, "safe_state entry immediately re-arms LP watchdog");
+    feeds_at_failure = g_wdt_feeds;
+
+    /* Below 2x WDT timeout: do not re-arm yet so an active countdown can expire. */
+    g_elapsed_us = (2u * (uint32_t)CONFIG_ESP_BIST_WDT_TIMEOUT_US) - 1u;
+    expect_eq_int(bist_hd_companion_loop(), 0, "safe-state loop before 2x timeout");
+    expect_eq_int(g_wdt_inits, 2, "not re-armed before 2x WDT timeout");
+
+    /* At/past 2x WDT timeout (e.g. HP SW_CPU reboot disarmed LP_WDT): re-arm. */
+    g_elapsed_us = 2u * (uint32_t)CONFIG_ESP_BIST_WDT_TIMEOUT_US;
+    tick_before_rearm = g_tick;
+    expect_eq_int(bist_hd_companion_loop(), 0, "safe-state loop at 2x timeout");
+    expect_eq_int(g_wdt_inits, 3, "LP watchdog re-armed after 2x WDT timeout");
+    expect_true(g_tick > tick_before_rearm, "safe-state timestamp refreshed on re-arm");
+    expect_eq_int(g_wdt_feeds, feeds_at_failure, "watchdog never fed via lp_wdt_feed");
+}
+
+static void scenario_send_timeout(void)
+{
+    g_mode = AGENT_CORRECT;
+    init_ok();
+    expect_eq_int(g_wdt_inits, 1, "LP watchdog armed after init");
+
+    /* Simulate unacknowledged mailbox TX timeout (HP hung or warm-reset). */
+    g_send_fail = 1;
+    expect_eq_int(bist_hd_companion_loop(), -1, "mailbox TX timeout fails the round");
+    expect_eq_int(g_wdt_inits, 2, "LP watchdog armed on safe-state entry despite TX failure");
+    expect_eq_int(g_challenges, 0, "companion aborts without hanging on TX timeout");
+
+    /* Even if TX recovers later (e.g. after illegal HP warm reboot), safe state stays latched. */
+    g_send_fail = 0;
+    expect_eq_int(bist_hd_companion_loop(), 0, "safe state remains latched after TX failure");
+    expect_eq_int(g_lp_status_sent, 1, "no further LP_STATUS emitted while latched");
 }
 
 static void scenario_runtime_fail(void)
@@ -709,6 +756,10 @@ int main(int argc, char **argv)
         scenario_bad_answer(AGENT_LATE, "answer after the window rejected");
     } else if (strcmp(scenario, "safe_state_latched") == 0) {
         scenario_safe_state_latched();
+    } else if (strcmp(scenario, "safe_state_wdt_rearm") == 0) {
+        scenario_safe_state_wdt_rearm();
+    } else if (strcmp(scenario, "send_timeout") == 0) {
+        scenario_send_timeout();
     } else if (strcmp(scenario, "runtime_fail") == 0) {
         scenario_runtime_fail();
     } else if (strcmp(scenario, "checkpoint_pass") == 0) {

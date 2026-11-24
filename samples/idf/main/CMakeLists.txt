@@ -7,4 +7,5 @@ idf_component_register(SRCS ${app_sources}
                        REQUIRES ulp esp-bist
                        WHOLE_ARCHIVE)
 
-ulp_add_project("ulp_idf_bist_sample" "${CMAKE_CURRENT_LIST_DIR}/ulp/")
+ulp_add_project("ulp_idf_bist_sample" "${CMAKE_CURRENT_LIST_DIR}/ulp/"
+                LINKER_LAYOUT "${ESP_BIST_LP_LINKER_LAYOUT}")

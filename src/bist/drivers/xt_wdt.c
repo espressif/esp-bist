@@ -41,10 +41,14 @@ static void *s_callback_arg;
 
 static IRAM_ATTR void rtc_xt_wdt_default_isr_handler(void *arg)
 {
-    ESP_LOGE(TAG, "XTAL32K watchdog timer got triggered");
-
     uint32_t status = REG_READ(RTC_CNTL_INT_ST_REG);
+
     REG_WRITE(RTC_CNTL_INT_CLR_REG, status);
+    if ((status & RTC_CNTL_XTAL32K_DEAD_INT_ST_M) == 0) {
+        return;
+    }
+
+    ESP_LOGE(TAG, "XTAL32K watchdog timer got triggered");
 
     if (s_callback_func) {
         (*s_callback_func)(s_callback_arg);
@@ -78,6 +82,25 @@ esp_err_t esp_xt_wdt_init(const esp_xt_wdt_config_t *cfg)
     xt_wdt_hal_enable(&s_hal_ctx, 1);
 
     return ESP_OK;
+}
+
+void esp_xt_wdt_disable(void)
+{
+    /*
+     * Record a trip the ISR has not handled yet, then mask the source.
+     * Leaving it armed lets a later trip print from the ISR into
+     * whatever the caller is writing to the console.
+     */
+    uint32_t pending = REG_READ(RTC_CNTL_INT_RAW_REG) & RTC_CNTL_XTAL32K_DEAD_INT_RAW_M;
+
+    xt_wdt_hal_enable(&s_hal_ctx, false);
+    REG_WRITE(RTC_CNTL_INT_CLR_REG, RTC_CNTL_XTAL32K_DEAD_INT_CLR_M);
+    esp_cpu_intr_disable(1 << ETS_RTC_CORE_INTR_SOURCE);
+    if ((pending != 0) && (s_callback_func != NULL)) {
+        s_callback_func(s_callback_arg);
+    }
+    s_callback_func = NULL;
+    s_callback_arg = NULL;
 }
 
 void esp_xt_wdt_restore_clk(void)

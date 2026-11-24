@@ -31,7 +31,8 @@
  *
  * On SoCs with XT WDT: monitors external
  * oscillator using XT WDT with 200-cycle timeout. Waits 2 ms for monitoring.
- * If crystal fails, watchdog callback fires.
+ * If crystal fails, watchdog callback fires. The watchdog is disabled
+ * before this function returns.
  *
  * On SoCs without XT WDT: this test is not available; the
  * function returns BIST_ESP_OK (test skipped). Use bist_main_crystal_test()

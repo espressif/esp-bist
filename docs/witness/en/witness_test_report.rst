@@ -1008,12 +1008,12 @@ Successful Run
 
 **Description:**
 
-The ADC test validates that ADC1 Channel 2 correctly reads low and high voltage levels within calibrated bounds. On the ESP32-C6-DevKitC-1, ADC1 Channel 2 maps to GPIO2. The standalone application executes a low-level check (GND applied, raw reading near 0) and a high-level check (VDD applied, raw reading approximately 3248). The internal reference test is exclusive to ESP32-C3 and is not applicable to ESP32-C6.
+The ADC test validates that ADC1 Channel 2 correctly reads low and high voltage levels within calibrated bounds. On the ESP32-C6-DevKitC-1, ADC1 Channel 2 maps to GPIO2. The standalone application executes a low-level check (GND applied, raw reading near the SoC-specific low reference) and a high-level check (VDD applied, raw reading approximately 3248). The internal reference test is exclusive to ESP32-C3 and is not applicable to ESP32-C6.
 
 **Execution Steps:**
 
 1. Application calls ADC validation functions for ADC1 Channel 2 (GPIO2)
-2. Sample ADC raw value with low input applied (GND); verify raw reading is within low threshold (0)
+2. Sample ADC raw value with low input applied (GND); verify raw reading is within the SoC-specific low reference
 3. Sample ADC raw value with high input applied (VDD); verify raw reading is within high threshold (~3248)
 4. Returns ``BIST_ESP_OK`` if both measurements satisfy configured limits
 
@@ -1052,14 +1052,14 @@ ADC sampling fault is injected by connecting the ADC input pin (GPIO2) to the wr
 
 **Injected Fault:**
 
-- Low-level test: GPIO2 connected to VDD (3.3 V) instead of GND, causing sampled raw reading (~2480) to exceed the low-level tolerance threshold (expected: 0).
+- Low-level test: GPIO2 connected to VDD (3.3 V) instead of GND, causing sampled raw reading (~2480) to fall outside the SoC-specific low reference.
 - High-level test: GPIO2 connected to GND instead of VDD, causing sampled raw reading (~720) to fall below the high-level minimum threshold (expected: 3350).
 
 **Execution Steps:**
 
 1. Connect GPIO2 to VDD (3.3 V)
 2. Application calls ``bist_adc_low_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``
-3. ADC samples GPIO2 and reads raw value ~2480 (violating the expected 0 threshold)
+3. ADC samples GPIO2 and reads raw value ~2480 (outside the SoC-specific low reference)
 4. Test evaluates reading against low-level limit, detects violation, and returns ``BIST_ESP_ADC_TEST_ERR``
 5. Connect GPIO2 to GND
 6. Application calls ``bist_adc_high_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``

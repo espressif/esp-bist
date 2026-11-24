@@ -39,36 +39,32 @@ message("Building Espressif's Built-In Self Test (BIST) Library for ${SOC_TARGET
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/sources_stl.cmake)
 
-# ESP-IDF leaves SOC_ADC_SUPPORTED unset for ESP32-H4 and ships no adc_ll.h for
-# it, so neither the oneshot driver nor the ADC plausibility tests can be built.
-if(SOC_TARGET STREQUAL "esp32h4")
-    set(BIST_SOC_ADC_SUPPORTED FALSE)
-else()
-    set(BIST_SOC_ADC_SUPPORTED TRUE)
-endif()
-
 set(bist_src
     drivers/wdt.c
     drivers/gpio.c
     drivers/esp_timer.c
+    drivers/adc_oneshot.c
     )
-if(BIST_SOC_ADC_SUPPORTED)
-    list(APPEND bist_src drivers/adc_oneshot.c)
-endif()
 if(SOC_TARGET STREQUAL "esp32c3")
     list(APPEND bist_src drivers/xt_wdt.c)
 endif()
 
 bist_collect_sources(_bist_srcs)
-if(NOT BIST_SOC_ADC_SUPPORTED)
-    list(REMOVE_ITEM _bist_srcs "core/io/bist_adc.c")
-endif()
+
 list(APPEND bist_src ${_bist_srcs})
+
+# STL may include .S sources (e.g. instruction equivalence); enable ASM after project().
+foreach(_bist_s IN LISTS _bist_srcs)
+    if(_bist_s MATCHES "\\.[sS]$")
+        enable_language(ASM)
+        break()
+    endif()
+endforeach()
 
 set(idf_srcs
     ${IDF_PATH}/components/log/src/log.c
     ${IDF_PATH}/components/soc/${SOC_TARGET}/gpio_periph.c
-    ${IDF_PATH}/components/hal/systimer_hal.c
+    ${IDF_PATH}/components/esp_hal_systimer/systimer_hal.c
     ${IDF_PATH}/components/esp_hal_timg/timer_hal.c
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/timer_periph.c
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/systimer.c
@@ -157,8 +153,6 @@ target_include_directories(
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_rom/include
-    ${IDF_PATH}/components/esp_rom/include/${SOC_TARGET}
-    ${IDF_PATH}/components/esp_rom/${SOC_TARGET}/include/${SOC_TARGET}
     ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/soc/include
     ${IDF_PATH}/components/soc/${SOC_TARGET}/include
@@ -167,6 +161,16 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hw_support/include
     ${IDF_PATH}/components/esp_hw_support/include/soc
     ${IDF_PATH}/components/hal/include
+    ${IDF_PATH}/components/esp_hal_cache/include
+    ${IDF_PATH}/components/esp_hal_cache/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_systimer/include
+    ${IDF_PATH}/components/esp_hal_systimer/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_regi2c/include
+    ${IDF_PATH}/components/esp_hal_regi2c/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_pmu/include
+    ${IDF_PATH}/components/esp_hal_pmu/${SOC_TARGET}/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/include
+    ${IDF_PATH}/components/esp_hal_debug_assist/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_wdt/include
     ${IDF_PATH}/components/esp_hal_wdt/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hal_gpio/include
@@ -181,7 +185,6 @@ target_include_directories(
     ${IDF_PATH}/components/esp_hal_timg/include
     ${IDF_PATH}/components/esp_hal_timg/${SOC_TARGET}/include
     ${IDF_PATH}/components/esp_hw_support/etm/include
-    ${IDF_PATH}/components/esp_hw_support/port/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/${SOC_TARGET}/include
     ${IDF_PATH}/components/hal/platform_port/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -190,12 +193,6 @@ target_include_directories(
 if(SOC_TARGET STREQUAL "esp32p4")
     target_include_directories(bist_esp PUBLIC
         ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver3
-    )
-elseif(SOC_TARGET STREQUAL "esp32h4")
-    target_include_directories(bist_esp PUBLIC
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/register/hw_ver_mp
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/include/hw_ver_mp
-        ${IDF_PATH}/components/soc/${SOC_TARGET}/register
     )
 else()
     target_include_directories(bist_esp PUBLIC

@@ -18,13 +18,14 @@
 #include "soc/lp_wdt_struct.h"
 
 /*
- * LP WDT for safety-critical systems (ESP32-C6):
+ * LP WDT for safety-critical systems:
  *
  * If the LP core fails to feed the watchdog within the configured timeout,
- * the LP WDT triggers a full system reset (WDT_STAGE_ACTION_RESET_SYSTEM).
- * This is the appropriate behavior for safety-critical applications — any
- * failure in the BIST execution path must bring the entire system to a
- * known-good state.
+ * the LP WDT triggers a full SoC reset (WDT_STAGE_ACTION_RESET_RTC, stage
+ * action 4 = LP_WDT_SYS / RTC_WDT_SYS) covering both the HP digital system
+ * and the LP/RTC domain (LP CPU, LP peripherals, and LP WDT). Note that
+ * WDT_STAGE_ACTION_RESET_SYSTEM (stage action 3 = LP_WDT_HPSYS) only resets
+ * the HP digital domain and leaves the LP core running.
  *
  * Uses the lpwdt_ll API which correctly handles the eFuse-based implicit
  * multiplier on stage 0 timeout configuration.
@@ -46,7 +47,7 @@ void lp_wdt_init(uint32_t timeout_us)
     lpwdt_ll_write_protect_disable(&LP_WDT);
     lpwdt_ll_disable(&LP_WDT);
 
-    lpwdt_ll_config_stage(&LP_WDT, WDT_STAGE0, timeout_ticks, WDT_STAGE_ACTION_RESET_SYSTEM);
+    lpwdt_ll_config_stage(&LP_WDT, WDT_STAGE0, timeout_ticks, WDT_STAGE_ACTION_RESET_RTC);
     lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE1);
     lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE2);
     lpwdt_ll_disable_stage(&LP_WDT, WDT_STAGE3);

@@ -1,0 +1,45 @@
+version: "2.0.0-rc.1"
+description: "Espressif's Built-In Self Test (BIST) Library for IEC 60730 Class B functional safety"
+url: "https://github.com/espressif/esp-bist"
+repository: "https://github.com/espressif/esp-bist.git"
+documentation: "https://docs.espressif.com/projects/esp-bist/en/latest/"
+issues: "https://github.com/espressif/esp-bist/issues"
+license: "LGPL-3.0-only"
+
+targets:
+  - esp32c5
+  - esp32c6
+  - esp32p4
+
+dependencies:
+  idf: "=6.2"
+
+examples:
+  - path: samples/idf
+
+files:
+  exclude:
+    - ".devcontainer/**/*"
+    - ".github/**/*"
+    - ".gitlab-ci.yml"
+    - ".pre-commit-config.yaml"
+    - "cmake/**/*"
+    - "components/**/*"
+    - "docs/**/*"
+    - "mcp-server/**/*"
+    - "samples/**/*"
+    - "tests/**/*"
+    - "scripts/**/*"
+    - "src/soc/**/*.svd"
+    - "src/soc/**/*.c"
+    - "src/soc/**/*.S"
+    - "src/soc/**/linker.ld"
+    - "src/soc/**/zephyr.ld"
+    - "src/bist/zephyr.cmake"
+    - "src/bist/companion/zephyr/**/*"
+    - "src/bist/host/zephyr/**/*"
+    - "src/bist/ld/hd_ram_zephyr.ld"
+    - "**/build*/**/*"
+    - "pytest.ini"
+  include:
+    - "scripts/calculate_crc32.py"

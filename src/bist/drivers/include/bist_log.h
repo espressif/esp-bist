@@ -23,9 +23,13 @@
  * - **HP core (standalone / IDF application):** maps to `ESP_EARLY_LOGx` so
  *   logging works before the full ESP-IDF log subsystem is initialized.
  * - **LP core / Zephyr:** maps to `printk()` with a `[level][tag]` prefix.
- *   Debug is compiled out unless `CONFIG_ESP_BIST_LP_DEBUG_LOG` is set.
  * - **LP core / IDF (ULP, `IS_ULP_COCPU`):** maps to `lp_core_printf()`
- *   with a `[level][tag]` prefix. Same debug gating as Zephyr.
+ *   with a `[level][tag]` prefix.
+ *
+ * `CONFIG_ESP_BIST_LOG_LEVEL` is the compile-time ceiling (0 none, 1 error, 2 warning,
+ * 3 info, 4 debug, 5 verbose). A call above that level is not connected to
+ * the printer, so its format string and arguments are left out of the binary.
+ * The default is info.
  *
  * Include this header instead of `esp_log.h` in BIST sources so the same
  * logging calls work on both cores and frameworks.
@@ -45,6 +49,17 @@
 #include "sdkconfig.h"
 #endif
 
+/* Standalone: generated bist_conf.h. IDF: ulp_include/bist_conf.h pulls sdkconfig.h.
+ * Zephyr injects CONFIG_* with -imacros, and its bist_conf.h include is empty. */
+#if !defined(__ZEPHYR__)
+#include "bist_conf.h"
+#endif
+
+#ifndef CONFIG_ESP_BIST_LOG_LEVEL
+/** @brief Compile-time BIST log ceiling: 0 none, 1 error, 2 warning, 3 info, 4 debug, 5 verbose. */
+#define CONFIG_ESP_BIST_LOG_LEVEL 3
+#endif
+
 #undef ESP_LOGE
 #undef ESP_LOGW
 #undef ESP_LOGI
@@ -61,64 +76,129 @@
 
 #if defined(__ZEPHYR__)
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 1
 /** @brief Log an error message on the LP core (Zephyr) */
 #define ESP_LOGE(tag, format, ...) printk("[E][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log an error message on the LP core (Zephyr) */
+#define ESP_LOGE(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 2
 /** @brief Log a warning message on the LP core (Zephyr) */
 #define ESP_LOGW(tag, format, ...) printk("[W][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log a warning message on the LP core (Zephyr) */
+#define ESP_LOGW(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 3
 /** @brief Log an info message on the LP core (Zephyr) */
 #define ESP_LOGI(tag, format, ...) printk("[I][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log an info message on the LP core (Zephyr) */
+#define ESP_LOGI(tag, format, ...)
+#endif
 
-#if defined(CONFIG_ESP_BIST_LP_DEBUG_LOG) && CONFIG_ESP_BIST_LP_DEBUG_LOG
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 4
 /** @brief Log a debug message on the LP core (Zephyr) */
 #define ESP_LOGD(tag, format, ...) printk("[D][%s] " format "\r\n", tag, ##__VA_ARGS__)
 #else
-/** @brief Debug logging disabled on LP core unless CONFIG_ESP_BIST_LP_DEBUG_LOG */
+/** @brief Log a debug message on the LP core (Zephyr) */
 #define ESP_LOGD(tag, format, ...)
 #endif
 
-/** @brief Verbose logging disabled on LP core */
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 5
+/** @brief Log a verbose message on the LP core (Zephyr) */
+#define ESP_LOGV(tag, format, ...) printk("[V][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log a verbose message on the LP core (Zephyr) */
 #define ESP_LOGV(tag, format, ...)
+#endif
 
 #elif defined(IS_ULP_COCPU)
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 1
 /** @brief Log an error message on the LP core */
 #define ESP_LOGE(tag, format, ...) lp_core_printf("[E][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log an error message on the LP core */
+#define ESP_LOGE(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 2
 /** @brief Log a warning message on the LP core */
 #define ESP_LOGW(tag, format, ...) lp_core_printf("[W][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log a warning message on the LP core */
+#define ESP_LOGW(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 3
 /** @brief Log an info message on the LP core */
 #define ESP_LOGI(tag, format, ...) lp_core_printf("[I][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log an info message on the LP core */
+#define ESP_LOGI(tag, format, ...)
+#endif
 
-#if defined(CONFIG_ESP_BIST_LP_DEBUG_LOG) && CONFIG_ESP_BIST_LP_DEBUG_LOG
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 4
 /** @brief Log a debug message on the LP core */
 #define ESP_LOGD(tag, format, ...) lp_core_printf("[D][%s] " format "\r\n", tag, ##__VA_ARGS__)
 #else
-/** @brief Debug logging disabled on LP core unless CONFIG_ESP_BIST_LP_DEBUG_LOG */
+/** @brief Log a debug message on the LP core */
 #define ESP_LOGD(tag, format, ...)
 #endif
 
-/** @brief Verbose logging disabled on LP core */
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 5
+/** @brief Log a verbose message on the LP core */
+#define ESP_LOGV(tag, format, ...) lp_core_printf("[V][%s] " format "\r\n", tag, ##__VA_ARGS__)
+#else
+/** @brief Log a verbose message on the LP core */
 #define ESP_LOGV(tag, format, ...)
+#endif
 
 #else
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 1
 /** @brief Log an error message using ESP-IDF early log */
 #define ESP_LOGE(tag, format, ...) ESP_EARLY_LOGE(tag, format, ##__VA_ARGS__)
+#else
+/** @brief Log an error message using ESP-IDF early log */
+#define ESP_LOGE(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 2
 /** @brief Log a warning message using ESP-IDF early log */
 #define ESP_LOGW(tag, format, ...) ESP_EARLY_LOGW(tag, format, ##__VA_ARGS__)
+#else
+/** @brief Log a warning message using ESP-IDF early log */
+#define ESP_LOGW(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 3
 /** @brief Log an info message using ESP-IDF early log */
 #define ESP_LOGI(tag, format, ...) ESP_EARLY_LOGI(tag, format, ##__VA_ARGS__)
+#else
+/** @brief Log an info message using ESP-IDF early log */
+#define ESP_LOGI(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 4
 /** @brief Log a debug message using ESP-IDF early log */
 #define ESP_LOGD(tag, format, ...) ESP_EARLY_LOGD(tag, format, ##__VA_ARGS__)
+#else
+/** @brief Log a debug message using ESP-IDF early log */
+#define ESP_LOGD(tag, format, ...)
+#endif
 
+#if CONFIG_ESP_BIST_LOG_LEVEL >= 5
 /** @brief Log a verbose message using ESP-IDF early log */
 #define ESP_LOGV(tag, format, ...) ESP_EARLY_LOGV(tag, format, ##__VA_ARGS__)
+#else
+/** @brief Log a verbose message using ESP-IDF early log */
+#define ESP_LOGV(tag, format, ...)
+#endif
 
 #endif
 

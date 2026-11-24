@@ -21,10 +21,10 @@
  * The LP WDT peripheral (at DR_REG_LP_WDT_BASE) is clocked by the LP slow
  * clock (~32 kHz).
  *
- * On timeout, the LP WDT triggers a full system reset
- * (WDT_STAGE_ACTION_RESET_SYSTEM). This ensures that any failure in the
- * BIST execution path forces the entire chip to a known-good state —
- * the appropriate behavior for safety-critical applications.
+ * On timeout, the LP WDT triggers a full SoC reset covering both the HP
+ * digital system and the LP/RTC domain (WDT_STAGE_ACTION_RESET_RTC). This
+ * ensures that any failure in the BIST or Host Diagnostics execution path
+ * forces the entire chip (HP + LP) back to a known-good reset state.
  */
 
 #pragma once

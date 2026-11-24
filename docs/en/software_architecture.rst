@@ -27,14 +27,15 @@ Key Build Properties
 Modules Architecture
 --------------------
 
-- **CPU tests** (``core/cpu/``): general-purpose and FPU register integrity, trap/PMP/PMA/FPU CSR integrity, PC integrity (functions placed in IRAM, Flash, RTC, and TCM on ESP32-P4), stack overflow sentinel protection
+- **CPU tests** (``core/cpu/``): general-purpose and FPU register integrity (static single-core walk and dual-core reciprocal comparison), trap/PMP/PMA/FPU CSR integrity (static and reciprocal), instruction decoding and execution equivalence-class self-tests (``bist_cpu_instructions`` across 10 ISA groups: integer ALU, shifts, upper immediate LUI/AUIPC, control flow, load/store, RV32M multiply/divide, Zicsr/Zifencei CSR and fence, RV32A atomics, RV32F floating point, RV32C compressed instructions), PC integrity (functions placed in IRAM, Flash, RTC, and TCM on ESP32-P4), stack overflow sentinel protection
 - **Memory tests** (``core/memory/``): RAM March A/X, Abraham (H.2.19.1 time-division); flash CRC32 validation
-- **Interrupt tests** (``core/interrupt/``): software IRQ source mapping and dual timer-group hardware interrupt delivery
+- **Interrupt tests** (``core/interrupt/``): software IRQ source mapping (static single-core walk and dual-core reciprocal comparison) and dual timer-group hardware interrupt delivery
 - **Clock tests** (``core/clock/``): XT WDT 32 kHz monitoring (on SoCs with ``SOC_XT_WDT_SUPPORTED``); main-crystal drift measurement at ``CONFIG_XTAL_FREQ``
 - **WDT tests** (``core/wdt/``): hardware watchdog timeout test and core reset verification
 - **IO tests** (``core/io/``): GPIO output/input and ADC low/high/reference plausibility checks
 - **Drivers** (``drivers/``): MWDT/windowed WDT, XT WDT, SYSTIMER, GPIO, and ADC oneshot drivers
 - **Performance Metrics** (``include/bist_metrics.h``): Macro-based Performance Counter CSR interface for measuring CPU cycles, instruction counts, and microarchitectural events during BIST test execution
+- **Multi-core dispatch** (``core/multicore/`` API; shared SoC backend ``soc/common/cpu_multicore.c``): portable ``bist_multicore_call()``; P4 and H4 standalone interrupt-woken workers
 - **SoC support** (``soc/{IDF_TARGET_PATH_NAME}/``): startup, vectors, linker script, newlib stubs
 
 Hierarchy & Call Structure
@@ -82,10 +83,11 @@ Data Storage Model
 
 - **Flash/ROM**: ``.flash.text`` / ``.flash.rodata`` mapped to IROM/DROM; CRC stored in dedicated flash sections (``.crc_section_text``, ``.crc_section_data``). No executable code is mapped to DROM.
 - **IRAM**: All ``libbist_esp.a`` code, startup routines, exception vectors, and ``pc_test_0`` placed in IRAM for deterministic timing.
-- **DRAM**: ``.data``/``.bss`` for app and BIST; all BIST library rodata (``*libbist_esp.a:*(.rodata*)``) placed in DRAM to ensure cache-independent access during self-tests; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer and the 256-byte RAM-test safe stack, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
+- **DRAM**: ``.data``/``.bss`` for app and BIST; all BIST library rodata (``*libbist_esp.a:*(.rodata*)``) placed in DRAM to ensure cache-independent access during self-tests; stack/heap bounded; stack sentinel region at bottom of stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``); ``.dram0.safe_ram`` section holds backup buffer, the 256-byte RAM-test safe stack, and (on Host Diagnostics ESP-IDF builds) the dedicated safe DMA heap pool, excluded from the RAM test region so the march algorithms can test the full DRAM including the normal stack.
 - **Flash (ICache)**: ``pc_test_1`` and ``pc_test_2`` placed in ``.flash.text`` with a 64KB gap to invert bits [3:15]; avoids consuming SRAM.
 - **RTC/LP RAM**: Small RAM region used by ``pc_test_3``.
 - **TCM (Tightly Coupled Memory)**: On ESP32-P4, ``.tcm.text`` at ``0x3010xxxx`` holds ``pc_test_4``.
+- **Shared SRAM**: On dual-core targets (e.g. ESP32-P4 reciprocal testing), HP SRAM is shared between both cores; statically allocated structures in ``.bss`` facilitate deterministic cross-core evidence exchange.
 - **Configuration**: Generated ``bist_conf.h`` carries Kconfig options (timeouts, drift thresholds, etc.).
 
 Time-Based Dependencies
@@ -95,7 +97,7 @@ Time-Based Dependencies
 - **Windowed watchdog**: ``CONFIG_ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US`` enforces minimum feed interval; early feeds flag underflow.
 - **Clock tests**: Measure frequency ratio vs 32.768 kHz; tolerance via ``CONFIG_ESP_BIST_CLOCK_PERCENT_FREQUENCY_DRIFT``.
 - **XT WDT**: Detects 32kHz failure after ~200 cycles.
-- **Runtime tests**: CPU/CSR/stack/PC executed within watchdog window; deterministic bounded execution.
+- **Runtime tests**: CPU (registers, CSRs, instruction equivalence classes), stack, and PC tests executed within watchdog window; deterministic bounded execution.
 - **Post-boot tests**: Clock, RAM, flash, stack, GPIO, ADC, and interrupt tests run once at startup; integrators ensure total time fits safety goals.
 
 Hardware/Software Interfaces

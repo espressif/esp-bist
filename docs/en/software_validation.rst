@@ -8,7 +8,7 @@ The ESP-BIST library is validated with three complementary approaches:
 
 1. **QEMU-based emulation**: full system simulation with fault injection via GDB for deterministic, repeatable testing in CI pipelines
 
-2. **Hardware testing**: On-device validation on actual {IDF_TARGET_NAME} hardware for real-world condition verification
+2. **Hardware testing**: On-device validation on actual {IDF_TARGET_NAME} hardware for real-world condition verification with fault injection via GDB
 
 3. **Host unit testing**: Off-target tests in ``tests/unit/`` that run on the build machine without hardware or an emulator, covering pure algorithmic helpers and protocol logic that can be exercised outside the firmware environment
 
@@ -100,14 +100,59 @@ Key characteristics:
 - GDB process terminates, leaving QEMU running the faulted test
 - Test output is captured by pytest and validated
 
+Device OpenOCD / GDB
+^^^^^^^^^^^^^^^^^^^^
+
+Device FAIL cases in ``pytest_device_*`` use the same test labels and assertions as QEMU, attaching through OpenOCD's GDB stub instead of QEMU's ``:1234`` debug server.
+
+**Environment:**
+
+- OpenOCD: ``openocd-esp32`` with board config ``board/{IDF_TARGET_PATH_NAME}-builtin.cfg`` (USB-JTAG)
+- GDB stub: TCP port ``:3333``
+- ``OPENOCD_SCRIPTS`` must be set (source ESP-IDF ``export.sh``)
+- pytest requires an explicit ``--target=<soc>`` (not ``auto``)
+
+**Execution flow:**
+
+.. blockdiag::
+    :scale: 100%
+    :caption: Device OpenOCD / GDB Flow
+    :align: center
+
+    blockdiag {
+        Flash -> "Start OpenOCD\n(:3333)" -> "GDB attach\nreset halt" -> "Inject fault" -> "Resume DUT" -> "pytest dut.expect\nFAIL/reset" -> Cleanup;
+    }
+
+**GDB script pattern:**
+
+.. code-block::
+
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb <test_label>
+    commands
+        set <reg_or_var>=<fault_value>
+        monitor step
+        monitor resume
+    end
+    continue
+
 
 CPU Register Integrity Test
 ---------------------------
 
-**Purpose:** Verify that all CPU general-purpose registers (X1-X31) maintain integrity and can retain both 0 and 1 patterns without corruption.
+**Purpose:** Verify that CPU general-purpose registers (X1-X31) maintain integrity and can retain both 0 and 1 patterns without corruption. Static mode runs a single-core checkerboard walk. Reciprocal mode (ESP32-P4) adds dual-core reciprocal comparison between HP Core 0 and HP Core 1.
+
+Static CPU Register Test
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify register integrity on the executing core using checkerboard write/read-back of ``0xAAAAAAAA`` and ``0x55555555``.
 
 QEMU/Emulation Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
 
@@ -182,7 +227,7 @@ Breakpoint is placed at ``testFRegA_<freg_name>``, and GDB corrupts the register
     test_BIST_Cpu_Regs:FAIL
 
 Hardware Validation
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
 
@@ -205,13 +250,244 @@ Hardware Validation
 - All 32 registers pass integrity checks on real hardware
 - No stuck-at faults or register corruption detected
 
+**Failure Test: ``test_reg_error_device`` (Parameterized, 32 registers)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb testRegA_<reg_name>
+    commands
+        set $<reg_name>=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Script Parameterization:**
+
+The script is executed 32 times, once for each register:
+
+- ``ra``, ``sp``, ``gp``, ``tp``
+- ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
+- ``s0``, ``s1``, ``s2``, ``s3``, ``s4``, ``s5``, ``s6``, ``s7``, ``s8``, ``s9``, ``s10``, ``s11``
+- ``a0``, ``a1``, ``a2``, ``a3``, ``a4``, ``a5``, ``a6``, ``a7``
+
+Each test replaces ``<reg_name>`` with the specific register name.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at label ``testRegA_<reg_name>`` (where register is tested against 0xAAAAAAAA)
+2. When breakpoint hits, register is forcibly set to 0x55555555 (wrong value)
+3. Test continues and reads register, expecting 0xAAAAAAAA
+4. Mismatch detected, test returns error code ``BIST_ESP_CPU_TEST_ERR``
+5. Test prints "test_BIST_Cpu_Regs:FAIL"
+
+FPU registers use ``test_freg_error_device`` on ESP32-H4/P4.
+
+**Test Coverage:** 32 test cases (one per register)
+
+**Expected Output per Register:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:FAIL
+
+Reciprocal CPU Register Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify CPU register integrity in dual-core configuration (ESP32-P4) using reciprocal comparison and cross-validation between HP Core 0 and HP Core 1.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py``
+
+**Execution:**
+
+1. QEMU starts in dual-core mode, executing ``bist_cpu_regs_test()`` in reciprocal configuration.
+2. Core 0 executes the register walk into shared SRAM slot 0.
+3. Core 0 validates its own recorded read-backs.
+4. Core 0 dispatches the register walk to Core 1 via ``bist_multicore_call()`` into shared SRAM slot 1.
+5. Core 0 dispatches validation of Core 1 results to Core 1 via ``bist_multicore_call()``.
+6. Core 0 dispatches validation of Core 0 results to Core 1 via ``bist_multicore_call()``.
+7. Core 0 validates Core 1 results directly.
+8. Test returns ``BIST_ESP_OK`` and prints "test_BIST_Cpu_Regs:PASS".
+9. pytest validates output presence within timeout.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:PASS
+
+**Failure Test: ``test_reg_error`` (Parameterized, 31 general-purpose registers)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to QEMU debug server
+    target remote :1234
+
+    # Set temporary breakpoint at register test label
+    tb bist_cc_test_gpr_a_<reg_name>
+    commands
+        set $<reg_name>=0x55555555
+        continue
+    end
+    continue
+
+**Script Parameterization:**
+
+The script is executed for each general-purpose integer register:
+
+- ``ra``, ``sp``, ``gp``, ``tp``
+- ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
+- ``s0``, ``s1``, ``s2``, ``s3``, ``s4``, ``s5``, ``s6``, ``s7``, ``s8``, ``s9``, ``s10``, ``s11``
+- ``a0``, ``a1``, ``a2``, ``a3``, ``a4``, ``a5``, ``a6``, ``a7``
+
+Each test replaces ``<reg_name>`` with the specific register name.
+
+**Failure Test: ``test_freg_error`` (Parameterized, 32 FPU registers)**
+
+Breakpoint is placed at ``bist_cc_test_fpr_a_<freg_name>``, and GDB corrupts the register value to ``0x55555555``, verifying that the reciprocal comparison detects the fault:
+
+- ``ft0``–``ft11``
+- ``fs0``–``fs11``
+- ``fa0``–``fa7``
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at label ``bist_cc_test_gpr_a_<reg_name>`` (or ``bist_cc_test_fpr_a_<freg_name>``)
+2. When breakpoint hits, register is forcibly set to wrong value (0x55555555)
+3. Test continues and verifies register against expected pattern (0xAAAAAAAA)
+4. Mismatch detected, test fails
+5. Test prints "test_BIST_Cpu_Regs:FAIL"
+
+**Test Coverage:** 63 test cases (31 GPRs + 32 FPRs)
+
+**Expected Output per Register:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:FAIL
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 device with both HP cores running in bare-metal standalone mode
+- Shared memory region configured in HP SRAM
+
+**Execution:**
+
+1. Flash firmware to ESP32-P4 device
+2. Run ``pytest pytest_device_cpu_reg_test_reciprocal.py`` to capture serial output
+3. Application initializes both cores and executes ``bist_cpu_regs_test()`` and ``bist_cpu_csr_regs_test()``
+4. Dual-core register walk and mutual cross-validation complete
+5. Serial monitor captures "test_BIST_Cpu_Regs:PASS" and "test_BIST_Cpu_Csr_Regs:PASS"
+6. pytest validates presence in output
+
+**Expected Behavior:**
+
+- Both HP cores pass register integrity and reciprocal cross-validation on real hardware
+- No stuck-at faults, register corruption, or inter-core communication faults detected
+
+**Failure Test: ``test_reg_error_device`` (Parameterized across Core 0 and Core 1, 31 registers)**
+
+**GDB Fault Injection Scripts:**
+
+*Core 0 Fault Injection:*
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_cc_test_gpr_a_<reg_name>
+    commands
+        set $<reg_name>=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+*Core 1 Fault Injection:*
+
+OpenOCD groups both HP cores into one SMP group and arms a hardware breakpoint across both cores. GDB attaches to Core 0, which hits the label first. For Core 1 injection, GDB single-steps Core 0 past the label, waits for Core 1's hit, and writes the corrupted value directly to Core 1 target (``esp32p4.hp.cpu1``):
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    hbreak bist_cc_test_gpr_a_<reg_name>
+    continue
+    monitor step
+    continue
+    monitor targets esp32p4.hp.cpu1
+    monitor reg <reg_name> 0x55555555
+    disable breakpoints
+    monitor targets esp32p4.hp.cpu0
+    monitor resume
+
+**Script Parameterization:**
+
+Executed for both cores (Core 0 and Core 1) across all 31 general-purpose registers:
+
+- ``ra``, ``sp``, ``gp``, ``tp``
+- ``t0``, ``t1``, ``t2``, ``t3``, ``t4``, ``t5``, ``t6``
+- ``s0`` (mapped to ``fp`` in OpenOCD), ``s1``–``s11``
+- ``a0``–``a7``
+
+**Failure Test: ``test_freg_error_device`` (Parameterized across Core 0 and Core 1, 32 FPU registers)**
+
+Breakpoint is placed at ``bist_cc_test_fpr_a_<freg_name>``, and register is corrupted to ``0x55555555`` on Core 0 or Core 1 across all 32 single-precision floating-point registers (``ft0``–``ft11``, ``fs0``–``fs11``, ``fa0``–``fa7``).
+
+**Fault Injection Method:**
+
+1. GDB/OpenOCD halts execution and sets breakpoint at ``bist_cc_test_gpr_a_<reg_name>`` (or ``bist_cc_test_fpr_a_<freg_name>``)
+2. On Core 0 injection, GDB sets register to 0x55555555 upon temporary breakpoint hit
+3. On Core 1 injection, Core 0 is stepped past the label and OpenOCD sets register on Core 1 target
+4. Cross-validation detects the mismatch between expected and actual register values
+5. Test returns error and prints "test_BIST_Cpu_Regs:FAIL"
+
+**Test Coverage:** 126 test cases (63 on Core 0 + 63 on Core 1: 31 GPRs + 32 FPRs per core)
+
+**Expected Output per Register:**
+
+.. code-block::
+
+    test_BIST_Cpu_Regs:FAIL
+
 CPU CSR Integrity Test
 ----------------------
 
-**Purpose:** Verify that CPU Control and Status Registers maintain integrity and can be read/written reliably. Tested CSRs include trap registers (MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers (pma_addr0–11) on PMA-capable SoCs (C6, H2, C5), and MEXSTATUS/MHINT on C5 only.
+**Purpose:** Verify that CPU Control and Status Registers maintain integrity and can be read/written reliably. Tested CSRs include trap registers (MTVEC, MSCRATCH, MEPC, MCAUSE, MTVAL), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers (pma_addr0–11) on PMA-capable SoCs (C6, H2, C5), and MEXSTATUS/MHINT on C5 only. Static mode runs a single-core test. Reciprocal mode (ESP32-P4) adds dual-core reciprocal comparison between HP Core 0 and HP Core 1.
+
+Static CPU CSR Test
+^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify CSR integrity on the executing core by writing alternating bit patterns (``0xAAAAAAAA`` and ``0x55555555``) masked to writable bits and verifying read-backs.
 
 QEMU/Emulation Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_qemu_cpu_reg_test.py``
 
@@ -279,7 +555,7 @@ Each test replaces ``<csr_name>`` with the specific CSR name or number.
     test_BIST_Cpu_Csr_Regs:FAIL
 
 Hardware Validation
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 **Test Script:** ``tests/cpu_reg_test/pytest_device_cpu_reg_test.py``
 
@@ -301,6 +577,222 @@ Hardware Validation
 - All CSRs pass integrity checks on real hardware (25 on C3, 37 on C6/H2/C61, 39 on C5, 40 on H4/P4)
 - No stuck-at faults or CSR corruption detected
 
+**Failure Test: ``test_reg_csr_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb testRegA_<csr_name>
+    commands
+        set $t0=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Script Parameterization:**
+
+The script is executed once for each CSR. The full list varies by SoC:
+
+- **Trap CSRs** (all SoCs): ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
+- **PMP Address CSRs** (all SoCs): ``pmpaddr0``–``pmpaddr15``
+- **PMP Configuration CSRs** (all SoCs): ``pmpcfg0``–``pmpcfg3``
+- **PMA Address CSRs** (C6, H2, C5 only): ``0xBD0``–``0xBDB`` (pma_addr0–11)
+- **Custom CSRs** (C5 only): ``0x7E1`` (mexstatus), ``0x7C5`` (mhint)
+
+Each test replaces ``<csr_name>`` with the specific CSR name or number.
+
+**Note:** GDB modifies the temporary register ``t0`` which is used by the test logic to verify CSR contents. FPU CSRs use ``test_freg_csr_error_device`` on ESP32-H4/P4.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at CSR test label
+2. When hit, modifies temporary register (t0) to incorrect value
+3. Test logic uses t0 to verify CSR contents
+4. Mismatch detected, test fails
+5. Returns ``BIST_ESP_CPU_CSR_TEST_ERR``
+
+**Test Coverage:** 25 test cases on ESP32-C3 (5 trap + 16 pmpaddr + 4 pmpcfg), 37 on ESP32-C6/H2/C61 (adds 12 pma_addr), 39 on ESP32-C5 (adds 12 pma_addr + mexstatus + mhint), 40 on ESP32-H4/P4 (adds 12 pma_addr + ``fflags``, ``frm``, ``fcsr``)
+
+**Expected Output per CSR:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:FAIL
+
+Reciprocal CPU CSR Test
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify CPU CSR integrity in dual-core configuration (ESP32-P4) using reciprocal comparison and cross-validation between HP Core 0 and HP Core 1.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_qemu_cpu_reg_test_reciprocal.py``
+
+**Execution:**
+
+1. QEMU starts in dual-core mode, executing ``bist_cpu_csr_regs_test()`` in reciprocal configuration.
+2. Core 0 executes the CSR walk into shared SRAM slot 0.
+3. Core 0 validates its own recorded read-backs.
+4. Core 0 dispatches the CSR walk to Core 1 via ``bist_multicore_call()`` into shared SRAM slot 1.
+5. Core 0 dispatches validation of Core 1 results to Core 1 via ``bist_multicore_call()``.
+6. Core 0 dispatches validation of Core 0 results to Core 1 via ``bist_multicore_call()``.
+7. Core 0 validates Core 1 results directly.
+8. Test returns ``BIST_ESP_OK`` and prints "test_BIST_Cpu_Csr_Regs:PASS".
+9. pytest validates output presence within timeout.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:PASS
+
+**Failure Test: ``test_reg_csr_error`` (Parameterized, 37 CSRs)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to QEMU debug server
+    target remote :1234
+
+    # Set temporary breakpoint at CSR test label
+    tb bist_cc_test_csr_a_<csr_name>
+    commands
+        set $t0=0x55555555
+        continue
+    end
+    continue
+
+**Script Parameterization:**
+
+Executed for all 37 trap, PMP, and PMA CSRs tested in reciprocal mode on ESP32-P4:
+
+- **Trap CSRs**: ``mtvec``, ``mscratch``, ``mepc``, ``mcause``, ``mtval``
+- **PMP Address CSRs**: ``pmpaddr0``–``pmpaddr15``
+- **PMP Configuration CSRs**: ``pmpcfg0``–``pmpcfg3``
+- **PMA Address CSRs**: ``pmaaddr0``–``pmaaddr11``
+
+Each test replaces ``<csr_name>`` with the specific CSR name.
+
+**Failure Test: ``test_freg_csr_error`` (Parameterized, 3 FPU CSRs)**
+
+Breakpoint is placed at ``bist_cc_test_csr_a_<fcsr_name>`` for FPU CSRs (``fflags``, ``frm``, ``fcsr``), and temporary register ``t0`` is set to ``0x55555555``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at CSR test label (``bist_cc_test_csr_a_<csr_name>``)
+2. When hit, modifies temporary register (t0) to incorrect value (0x55555555)
+3. Test logic uses t0 to verify CSR contents
+4. Mismatch detected, test fails
+5. Test prints "test_BIST_Cpu_Csr_Regs:FAIL"
+
+**Test Coverage:** 40 test cases (37 trap/PMP/PMA CSRs + 3 FPU CSRs)
+
+**Expected Output per CSR:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:FAIL
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/cpu_reg_test_reciprocal/pytest_device_cpu_reg_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 device with both HP cores running in bare-metal standalone mode
+- Shared memory region configured in HP SRAM
+
+**Execution:**
+
+1. Flash firmware to ESP32-P4 device
+2. Run ``pytest pytest_device_cpu_reg_test_reciprocal.py`` to capture serial output
+3. Application initializes both cores and executes ``bist_cpu_regs_test()`` and ``bist_cpu_csr_regs_test()``
+4. Dual-core CSR walk and mutual cross-validation complete
+5. Serial monitor captures "test_BIST_Cpu_Regs:PASS" and "test_BIST_Cpu_Csr_Regs:PASS"
+6. pytest validates presence in output
+
+**Expected Behavior:**
+
+- Both HP cores pass CSR integrity and reciprocal cross-validation on real hardware
+- No stuck-at faults, CSR corruption, or inter-core communication faults detected
+
+**Failure Test: ``test_reg_csr_error_device`` (Parameterized across Core 0 and Core 1, 37 CSRs)**
+
+**GDB Fault Injection Scripts:**
+
+*Core 0 Fault Injection:*
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_cc_test_csr_a_<csr_name>
+    commands
+        set $t0=0x55555555
+        monitor step
+        monitor resume
+    end
+    continue
+
+*Core 1 Fault Injection:*
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    hbreak bist_cc_test_csr_a_<csr_name>
+    continue
+    monitor step
+    continue
+    monitor targets esp32p4.hp.cpu1
+    monitor reg t0 0x55555555
+    disable breakpoints
+    monitor targets esp32p4.hp.cpu0
+    monitor resume
+
+**Script Parameterization:**
+
+Executed for both cores (Core 0 and Core 1) across all 37 CSRs (5 trap + 16 PMP address + 4 PMP config + 12 PMA address).
+
+**Failure Test: ``test_freg_csr_error_device`` (Parameterized across Core 0 and Core 1, 3 FPU CSRs)**
+
+Breakpoint is placed at ``bist_cc_test_csr_a_<fcsr_name>`` for FPU CSRs (``fflags``, ``frm``, ``fcsr``), and temporary register ``t0`` is corrupted on Core 0 or Core 1.
+
+**Fault Injection Method:**
+
+1. GDB/OpenOCD sets breakpoint at CSR test label (``bist_cc_test_csr_a_<csr_name>``)
+2. On Core 0, GDB modifies register ``t0`` upon breakpoint hit
+3. On Core 1, OpenOCD modifies register ``t0`` on target ``esp32p4.hp.cpu1``
+4. Test logic uses corrupted ``t0`` for CSR comparison, detecting mismatch
+5. Test fails and prints "test_BIST_Cpu_Csr_Regs:FAIL"
+
+**Test Coverage:** 80 test cases (40 on Core 0 + 40 on Core 1: 37 CSRs + 3 FPU CSRs per core)
+
+**Expected Output per CSR:**
+
+.. code-block::
+
+    test_BIST_Cpu_Csr_Regs:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -313,6 +805,72 @@ CI Test Results
 
 .. xml-junit-test-results:: tests/cpu_reg_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
    :title: CPU Register Device Test Results
+
+CPU Instruction Decoding and Execution Test
+-------------------------------------------
+
+**Purpose:** Verify the decoding, ALU calculations, branch evaluation, register data paths, immediate value unscrambling, and execution integrity of all supported RISC-V instruction equivalence classes (IEC 60730 Table H.1 component 1.2, measure H.2.18.5) across 10 distinct instruction groups (381 test vectors total).
+
+QEMU/Emulation Validation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Application:** ``tests/cpu_instruction_test/main.c``
+
+**Test Script:** ``tests/cpu_instruction_test/pytest_device_cpu_instruction_test.py``
+
+**Execution Flow:**
+
+1. QEMU or target hardware boots the Unity test runner in ``tests/cpu_instruction_test/main.c``.
+2. Executes ``bist_cpu_instruction_test()``, which invokes enabled instruction groups in sequence:
+
+   - Integer ALU (80 vectors, RV32I)
+   - Shifts (36 vectors, RV32I)
+   - Upper Immediate (11 vectors, LUI/AUIPC)
+   - Control Flow (28 vectors, conditional branches and unconditional jumps)
+   - Loads and Stores (15 vectors, SB/SH/SW and LB/LBU/LH/LHU/LW)
+   - Multiply and Divide (48 vectors, RV32M)
+   - CSR and Fence (15 vectors, Zicsr/Zifencei operating on ``mscratch``)
+   - Atomics (13 vectors, RV32A Zaamo/Zalrsc; excluded on ESP32-C3)
+   - Floating Point (60 vectors, RV32F single-precision binary32 on ESP32-H4/P4)
+   - Compressed Instructions (75 vectors, RV32C 16-bit formats)
+3. Each vector computes results from specified operand equivalence classes and compares against expected values.
+4. On complete pass, the function returns ``BIST_ESP_OK``, writes ``0`` to ``bist_cpu_instruction_failure_id``, and sets failure group to ``BIST_INSN_GROUP_NONE``.
+5. Unity asserts that ``bist_cpu_instruction_test() == BIST_ESP_OK``, ``bist_cpu_instruction_last_failure_id() == 0``, and ``bist_cpu_instruction_last_failure_group() == BIST_INSN_GROUP_NONE``.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Instructions:PASS
+
+Fault Injection and Negative Testing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Negative testing and fault injection validate the diagnostic capability, fail-fast behavior, error reporting, and stack restoration:
+
+1. **Fail-Fast Mechanics and Vector ID Reporting**:
+   - When an injected fault causes a vector check to fail (e.g., modifying expected ALU, shift, or compressed arithmetic results), the assembly routine immediately halts further vector execution, stores the failing 1-based vector ID into ``bist_cpu_instruction_failure_id``, and returns error code ``14`` (``BIST_ESP_CPU_INSTRUCTION_TEST_ERR``).
+   - The C dispatcher captures the failing group enum (``bist_insn_group_t``) in ``bist_cpu_instruction_failure_group``, logs the error via ``ESP_LOGE`` with the group name and vector ID, and exits immediately without invoking subsequent groups.
+2. **Stack Frame Restoration on Error Exits**:
+   - The RV32C compressed group uses a 544-byte stack frame with frame base register ``t4``. When testing stack pointer manipulation (``c.addi16sp`` vectors), corrupting expected values (e.g., vector 59) proved that ``sp`` is restored cleanly from ``t4`` and callee-saved registers (``ra``, ``s0``, ``s1``) are restored before returning, guaranteeing no stack corruption on error paths.
+3. **Size Witness Verification for Relaxable Compressed Instructions**:
+   - For relaxable branch and jump instructions (``c.j``, ``c.jal``, ``c.beqz``, ``c.bnez``), link-resolved ``.rodata`` size witnesses (relocation pairs ``R_RISCV_ADD8`` / ``R_RISCV_SUB8``) are validated at run time. Mutating the expected witness check from 2 to 4 successfully caught vector 67 as an error, proving that silent widening at link time is reliably detected.
+
+Hardware Validation
+^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/cpu_instruction_test/pytest_device_cpu_instruction_test.py``
+
+**Expected Inputs/Environment:**
+
+- Device running in machine mode at nominal system frequency.
+- BIST code executing from IRAM for deterministic timing.
+
+**Execution:**
+
+1. Flash test binary to the target SoC.
+2. Monitor UART output during test suite execution.
+3. Verify that all 381 instruction test vectors execute cleanly and report ``PASS`` across all enabled groups.
 
 Stack Overflow Detection Test
 -----------------------------
@@ -390,6 +948,40 @@ Hardware Validation
 
 - Stack overflow detected on real hardware
 - Sentinel pattern successfully corrupted and identified
+
+**Failure Test: ``test_cpu_stack_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_cpu_stack_overflow_data
+    commands
+        set count_max=10
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at stack test initialization
+2. When hit, reduces recursion depth (count_max) to 10 (insufficient for overflow)
+3. Test attempts recursion but cannot reach deep enough to corrupt sentinel
+4. Stack overflow detection fails to trigger
+5. Returns ``BIST_ESP_STACK_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Cpu_Stack_Overflow:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -517,6 +1109,48 @@ Hardware Validation
 - No stuck-at, coupling, or address decoder faults detected
 - RAM backup/restore prevents data loss during test
 
+**Failure Test: Memory Corruption via GDB**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_ram_test_march_a_step2
+    commands
+        set _bist_ram_test_start=0xFF
+        monitor step
+        monitor resume
+    end
+    continue
+
+March X uses ``bist_ram_test_march_x_step2``; Abraham uses ``bist_ram_test_abraham_seq1``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint during RAM pattern verification (step 2: Read 0, Write 1)
+2. When hit, writes ``0xFF`` to the first word of the test region via the linker
+   symbol ``_bist_ram_test_start`` (the local pointer ``start_addr`` is optimized
+   into a register by ``-Os`` and is not accessible to GDB)
+3. Test continues and reads memory, expecting the all-zeros pattern written in step 1
+4. Mismatch detected, returns ``BIST_ESP_RAM_TEST_ERR``
+5. Test prints ``test_BIST_ram_march_a:FAIL`` (or March X / Abraham)
+
+**Test Coverage:** 3 test cases (March A, March X, and Abraham algorithms)
+
+**Expected Output per Test:**
+
+.. code-block::
+
+    test_BIST_ram_march_a:FAIL
+    test_BIST_ram_march_x:FAIL
+    test_BIST_ram_abraham:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -619,6 +1253,42 @@ Hardware Validation
 - No flash corruption or tampering detected
 - Test detects any flash section modifications
 
+**Failure Test: CRC Length Corruption via GDB**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_flash_test_data
+    commands
+        set crc_section_len=0xFF
+        monitor step
+        monitor resume
+    end
+    continue
+
+``.flash.text`` uses the same script at ``bist_flash_test_text``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at CRC test initialization
+2. When hit, modifies section length to incorrect value (0xFF)
+3. Test computes CRC over wrong region
+4. Computed CRC does not match stored value
+5. Returns ``BIST_ESP_FLASH_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_flash:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -635,7 +1305,7 @@ CI Test Results
 Program Counter Integrity Test
 ------------------------------
 
-**Purpose:** Verify that the program counter maintains integrity and that code execution occurs in expected memory regions (IRAM, Flash, RTC).
+**Purpose:** Verify that the program counter maintains integrity and that code execution occurs in expected memory regions (IRAM, Flash, RTC, and TCM on ESP32-P4).
 
 QEMU/Emulation Validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -653,7 +1323,7 @@ QEMU/Emulation Validation
    - ``pcTestFunction4`` in TCM (ESP32-P4 only)
 3. Each function returns its own address
 4. Test verifies return addresses match expected function addresses
-5. Returns ``BIST_ESP_OK`` if all addresses verified (covers 24 of 30 addressable PC bits)
+5. Returns ``BIST_ESP_OK`` if all addresses are verified.
 
 **Expected Output:**
 
@@ -749,9 +1419,110 @@ Hardware Validation
 
 **Expected Behavior:**
 
-- All four function addresses verified correctly on real hardware
-- 24 PC bits (2-17, 19-21, 25, 28) exercised successfully
+- All four function addresses (five on ESP32-P4) verified correctly on real hardware
+- PC bits exercised across memory regions
 - No unexpected code execution or address corruption detected
+
+**Failure Test: Function Pointer Corruption (WDT Reset)**
+
+This test zeroes the first function pointer so that ``jalr`` jumps to address 0,
+triggering an instruction access fault. The firmware cannot recover, so the
+watchdog timer fires and resets the CPU.
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_verify_pc_test
+    commands
+        silent
+        set $arr = $sp
+        set {int}$arr = 0
+        set $sp = $arr - 256
+        call wdt_init(10000)
+        set $sp = $arr
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB sets a breakpoint at ``bist_verify_pc_test`` (the loop label)
+2. At the breakpoint ``$sp`` points to the ``pcTestFunctions`` array on the stack
+3. The first pointer is set to 0 — the CPU jumps to address 0, faults, and the WDT
+   resets the system
+4. pytest expects serial ``Reset reason: 1`` or ``Reset reason: 7``
+
+**Expected Output:**
+
+.. code-block::
+
+    Reset reason: 7
+
+Program Counter Reciprocal Comparison Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify on ESP32-P4 that both HP cores execute the five PC test
+regions (HP SRAM, two Flash locations, LP SRAM, and TCM) at their linked
+addresses, and that each core's fixed-layout evidence is validated against the
+canonical linked addresses on both cores.
+
+QEMU/Emulation Validation
+"""""""""""""""""""""""""
+
+**Test Script:** ``tests/pc_test_reciprocal/pytest_qemu_pc_test_reciprocal.py`` (ESP32-P4 only; skipped on other targets)
+
+**Execution:**
+
+1. Core 0 runs the five-region walk into shared slot 0 (``bist_pc_shared_results[0]``) and validates it.
+2. Core 0 dispatches the walk to Core 1 via ``bist_cpu_call()``, which writes shared slot 1.
+3. Core 1 validates slot 1 and then validates slot 0.
+4. Core 0 validates slot 1.
+5. The test returns ``BIST_ESP_OK`` only if both walks and all four validations pass, and prints ``test_BIST_PC:PASS``.
+
+**Fault Injection:**
+
+``test_pc_expected_address_error`` is parameterized for both result slots and
+all five region functions. At ``bist_pc_verify_core0_on_core1`` or
+``bist_pc_verify_core1_on_core0``, GDB sets the selected
+``bist_pc_shared_results[core].returned_address[function]`` to zero. The other
+core then compares the corrupted address with the canonical linked address and
+reports ``test_BIST_PC:FAIL``.
+
+There are 10 QEMU injection cases: five function addresses for each of the two
+core result slots. The injection occurs after both local validations have
+passed, so each case is detectable only by the corresponding cross-core
+validation.
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/pc_test_reciprocal/pytest_device_pc_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 in standalone bare-metal mode with both HP cores initialized
+- Shared HP SRAM and HP SPM (TCM) accessible by both cores
+
+**Expected Behavior:**
+
+- ``test_BIST_PC:PASS`` is reported after both walks and reciprocal validations complete.
+
+**Fault Injection:**
+
+``test_pc_expected_address_error_device`` runs with ``pytest --injection`` and
+is parameterized for both result slots and all five region functions (10 test
+cases total). At ``bist_pc_verify_core0_on_core1`` or
+``bist_pc_verify_core1_on_core0``, GDB sets the selected
+``bist_pc_shared_results[core].returned_address[function]`` to zero. The other
+core compares the corrupted address with the canonical linked address and
+reports ``test_BIST_PC:FAIL``.
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -761,15 +1532,25 @@ CI Test Results
 .. xml-junit-test-results:: tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
     :title: Program Counter QEMU Test Results
 
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/pc_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+        :title: Program Counter Reciprocal QEMU Test Results
+
 **Device Test:**
 
 .. xml-junit-test-results:: tests/pc_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Program Counter Device Test Results
 
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/pc_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+        :title: Program Counter Reciprocal Device Test Results
+
 Interrupt Handling and Execution Test
 -------------------------------------
 
-**Purpose:** Verify interrupt-matrix routing and ISR delivery for software interrupt sources, and concurrent hardware interrupt delivery via dual timer-group alarms (IEC 60730 Table H.1 ID 2).
+**Purpose:** Verify interrupt-matrix routing and ISR delivery for software interrupt sources, and concurrent hardware interrupt delivery via dual timer-group alarms (IEC 60730 Table H.1 ID 2). Static and reciprocal (ESP32-P4) implementations share the same public APIs.
 
 QEMU/Emulation Validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -856,6 +1637,154 @@ Hardware Validation
     test_BIST_Interrupt_Source_Map:PASS
     test_BIST_Hardware_Interrupt:PASS
 
+**Failure Test: ``test_interrupt_source_map_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_interrupt_source_map_count
+    commands
+        set interrupt_count=0
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint after the software-source ISR loop
+2. When hit, ``interrupt_count`` is set to 0 (less than the expected 8)
+3. Test compares the count and returns ``BIST_ESP_INTERRUPT_TEST_ERR``
+4. Test prints ``test_BIST_Interrupt_Source_Map:FAIL``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:FAIL
+
+Reciprocal QEMU/Emulation Validation (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/interrupt_test_reciprocal/pytest_qemu_interrupt_test_reciprocal.py`` (ESP32-P4 only; skipped on other targets)
+
+**Note:** QEMU validates the software source-map path (``CPU_INTR_FROM_CPU_0..2``); hardware timer testing requires real hardware.
+
+**Execution:**
+
+1. Core 0 executes the software source-map walk for sources 0..2 into shared slot 0 (``bist_interrupt_sw_shared_results[0]``) and validates it.
+2. Core 0 dispatches the walk to Core 1 via ``bist_multicore_call()``, which writes shared slot 1.
+3. Core 0 dispatches validation of slot 1 to Core 1 via ``bist_multicore_call()``.
+4. Core 0 dispatches validation of slot 0 to Core 1 via ``bist_multicore_call()``.
+5. Core 0 validates slot 1 directly.
+6. The test returns ``BIST_ESP_OK`` only if both walks and all four validations pass, and prints ``test_BIST_Interrupt_Source_Map:PASS``.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:PASS
+
+**Fault Injection:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Test
+     - GDB injection
+     - Expected output
+   * - ``test_interrupt_source_map_count_error``
+     - At ``bist_interrupt_source_map_count`` (first hit, Core 0), set ``s_interrupt_count=0``
+     - ``Failed to validate core 0 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_walk_core1_count_error``
+     - At ``bist_interrupt_source_map_count`` (Core 1 hit, after ignoring Core 0 hits), set ``s_interrupt_count=0``
+     - ``Failed to validate core 1 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot0_cross_check_error[field]``
+     - At ``bist_interrupt_sw_verify_core0_on_core1``, flip bit 2 (XOR 4) of ``bist_interrupt_sw_shared_results[0].<field>`` for each of ``status``, ``completion_mask``, and ``interrupt_count[0..2]``
+     - ``Failed to validate core 0 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot1_cross_check_error[field]``
+     - At ``bist_interrupt_sw_verify_core1_on_core0``, flip bit 2 (XOR 4) of ``bist_interrupt_sw_shared_results[1].<field>`` for each of ``status``, ``completion_mask``, and ``interrupt_count[0..2]``
+     - ``Failed to validate core 1 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot0_enable_mask_cross_check_error``
+     - At ``bist_interrupt_sw_verify_core0_on_core1``, clear CPU interrupt bit 9 in ``bist_interrupt_sw_shared_results[0].enabled_mask_active[0]``
+     - ``Failed to validate core 0 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_sw_slot1_cleared_mask_cross_check_error``
+     - At ``bist_interrupt_sw_verify_core1_on_core0``, set CPU interrupt bit 9 in ``bist_interrupt_sw_shared_results[1].enabled_mask_cleared[0]``
+     - ``Failed to validate core 1 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+
+The slot corruptions are injected after local validations have completed, verifying that cross-core checks independently detect evidence tampering.
+
+Reciprocal Hardware Validation (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Test Script:** ``tests/interrupt_test_reciprocal/pytest_device_interrupt_test_reciprocal.py``
+
+**Expected Inputs/Environment:**
+
+- ESP32-P4 device in standalone bare-metal mode with both HP cores initialized
+- Shared HP SRAM accessible by both cores for evidence exchange
+- Two Timer Groups (TIMG0 and TIMG1) available for sequential hardware testing
+
+**Execution:**
+
+1. Flash firmware to ESP32-P4 device
+2. Run ``pytest pytest_device_interrupt_test_reciprocal.py``
+3. Application initializes multicore environment and executes ``bist_interrupt_source_map_test()`` and ``bist_hardware_interrupt_test()``
+4. Reciprocal software source map test executes on Core 0, dispatches to Core 1, and performs mutual cross-validation
+5. Reciprocal hardware interrupt test executes sequential TIMG0/TIMG1 walks on Core 0 then Core 1, deinitializing timers between cores, and cross-validates ISR count ratios
+6. Serial monitor captures test outputs
+
+**Expected Behavior:**
+
+- Both HP cores pass software interrupt matrix routing and hardware dual-timer ratio checks and reciprocal cross-validation on real hardware
+- Serial output reports ``test_BIST_Interrupt_Source_Map:PASS`` and ``test_BIST_Hardware_Interrupt:PASS``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Interrupt_Source_Map:PASS
+    test_BIST_Hardware_Interrupt:PASS
+
+**Fault Injection:**
+
+``pytest --injection`` runs the following cases against the same firmware:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Test
+     - GDB injection
+     - Expected output
+   * - ``test_interrupt_source_map_count_error_device``
+     - At ``bist_interrupt_source_map_count`` (first hit, Core 0), set ``s_interrupt_count=0``
+     - ``Failed to validate core 0 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core0-sw]``
+     - At ``bist_interrupt_sw_verify_core0_on_core1``, set ``bist_interrupt_sw_shared_results[0].interrupt_count[0]=0``
+     - ``Failed to validate core 0 SW interrupt results on core 1`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core1-sw]``
+     - At ``bist_interrupt_sw_verify_core1_on_core0``, set ``bist_interrupt_sw_shared_results[1].interrupt_count[0]=0``
+     - ``Failed to validate core 1 SW interrupt results on core 0`` and ``test_BIST_Interrupt_Source_Map:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core0-hw]``
+     - At ``bist_interrupt_hw_verify_core0_on_core1``, set ``bist_interrupt_hw_shared_results[0].count_1=0``
+     - ``Failed to validate core 0 HW interrupt results on core 1`` and ``test_BIST_Hardware_Interrupt:FAIL``
+   * - ``test_interrupt_cross_check_error_device[core1-hw]``
+     - At ``bist_interrupt_hw_verify_core1_on_core0``, set ``bist_interrupt_hw_shared_results[1].count_1=0``
+     - ``Failed to validate core 1 HW interrupt results on core 0`` and ``test_BIST_Hardware_Interrupt:FAIL``
+
+Local fault injection verifies detection on the executing core, while
+shared-slot corruption verifies that peer cross-validation independently
+detects evidence tampering across both software and hardware paths.
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -864,10 +1793,20 @@ CI Test Results
 .. xml-junit-test-results:: tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
     :title: Interrupt QEMU Test Results
 
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/interrupt_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml
+        :title: Interrupt Reciprocal QEMU Test Results
+
 **Device Test:**
 
 .. xml-junit-test-results:: tests/interrupt_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: Interrupt Device Test Results
+
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/interrupt_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+        :title: Interrupt Reciprocal Device Test Results
 
 Clock Integrity Test
 --------------------
@@ -1032,6 +1971,42 @@ Hardware Validation
 - Both tests return PASS on real hardware
 - Two-boot sequence completes within test timeout window
 
+**Failure Test: ``test_wdt_error_device`` (No WDT Reset)**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_test_wdt_timeout
+    commands
+        set wdt_timeout_us=1000000
+        monitor step
+        monitor resume
+    end
+    continue
+
+``test_wdt_success_device`` uses the same label with ``wdt_timeout_us=10000`` so the timeout still fires.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at WDT timeout initialization
+2. When hit, sets timeout to a large value (1 second)
+3. Test delay completes before timeout expires
+4. No WDT reset occurs
+5. Returns ``BIST_ESP_WDT_TEST_ERR`` (watchdog failed)
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_WDT:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1084,6 +2059,44 @@ Hardware Validation
 **Expected Behavior:**
 
 - Normal feeds within the window pass; early feeds set underflow flag; consecutive valid feeds complete without error.
+
+**Failure Test: ``test_windowed_wdt_*_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    break bist_windowed_wdt_underflow_check
+    ignore $bpnum <calls_before>
+    commands
+        set underflow=<injected_value>
+        monitor step
+        set $a0=<injected_value>
+        monitor resume
+    end
+    continue
+
+``<calls_before>`` skips hits from earlier Unity cases (NORMAL: 0, UNDERFLOW: 2, CONSECUTIVE: 3). NORMAL/CONSECUTIVE inject ``1``; UNDERFLOW injects ``0``.
+
+**Fault Injection Method:**
+
+1. GDB breaks after underflow is assigned, before return
+2. The underflow flag (and ``$a0``) is forced to the wrong value
+3. The Unity test sees an incorrect underflow result and fails
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_WINDOWED_WDT_NORMAL:FAIL
+    test_BIST_WINDOWED_WDT_UNDERFLOW:FAIL
+    test_BIST_WINDOWED_WDT_CONSECUTIVE:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -1195,6 +2208,41 @@ Hardware Validation
 - All GPIO configurations properly reset after test
 - No GPIO configuration errors or stuck pins detected
 
+**Failure Test: ``test_io_output_gpio_error_device`` / ``test_io_input_gpio_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_gpio_output_check
+    commands
+        set level=1
+        monitor step
+        monitor resume
+    end
+    continue
+
+Input uses ``bist_gpio_input_check`` with ``level=0``.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at the GPIO level check
+2. When hit, ``level`` is forced to the wrong value
+3. The comparison fails and the test returns ``BIST_ESP_IO_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_IO_OUTPUT_GPIO:FAIL
+    test_BIST_IO_INPUT_GPIO:FAIL
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -1215,8 +2263,6 @@ QEMU/Emulation Validation
 
 Hardware Validation
 ^^^^^^^^^^^^^^^^^^^
-
-**Note:** The ESP32-H4 does not feature an ADC peripheral; the ADC test suite is skipped for ESP32-H4 targets.
 
 **Test Script:** ``tests/analog_io_test/pytest_device_analog_io_test.py``
 
@@ -1244,7 +2290,7 @@ Hardware Validation
    - Configure ADC1 channel 2 with 12 dB attenuation
    - Enable internal pull-down on the mapped GPIO
    - Read raw ADC value after 10 ms settling time
-   - Verify raw value is within ``CONFIG_ESP_BIST_ADC_PERCENT_DEVIATION`` of zero
+   - Verify raw value is within tolerance of the SoC-specific low reference (``BIST_ADC_LOW_VAL``)
    - Reset GPIO and delete ADC unit
    - Returns ``BIST_ESP_OK`` if reading is within tolerance
 
@@ -1308,11 +2354,47 @@ Hardware Validation
 **Expected Behavior:**
 
 - Invalid ADC unit/channel numbers properly rejected
-- ADC channel reads near zero with internal pull-down
+- ADC channel reads near the SoC-specific low reference with internal pull-down
 - ADC channel reads near high reference with internal pull-up
 - On ESP32-C3, VREF-biased reading is within mid-scale reference range
 - All ADC and GPIO configurations properly reset after test
 - No stuck-at faults or configuration errors detected
+
+**Failure Test: ``test_analog_io_*_error_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    tb bist_adc_low_check
+    commands
+        set raw=0xFFFF
+        monitor step
+        monitor resume
+    end
+    continue
+
+High and reference checks use ``bist_adc_high_check`` / ``bist_adc_reference_check`` with ``raw=0``. Reference runs on ESP32-C3 only.
+
+**Fault Injection Method:**
+
+1. GDB sets breakpoint at the ADC plausibility check
+2. When hit, ``raw`` is forced outside the allowed band
+3. The test returns ``BIST_ESP_ADC_TEST_ERR``
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_ANALOG_IO_LOW_LEVEL:FAIL
+    test_BIST_ANALOG_IO_HIGH_LEVEL:FAIL
+    test_BIST_ANALOG_IO_REFERENCE:FAIL
 
 CI Test Results
 ^^^^^^^^^^^^^^^
@@ -1360,6 +2442,6 @@ Validation Summary
 ------------------
 
 - QEMU covers CPU regs, CSRs, stack, RAM, flash, PC, watchdog, windowed WDT, and esp_timer with deterministic fault injection where applicable.
-- Hardware covers all modules; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
+- Hardware covers all modules including OpenOCD/GDB FAIL cases; clock, GPIO, and ADC are hardware-only; watchdog requires two-boot sequence; windowed WDT and esp_timer have dedicated test applications.
 - Host unit tests cover the clock deviation math helper (``xtal_deviation_percent``).
 - Fault injections uniformly use temporary breakpoints and value corruption to assert FAIL paths.

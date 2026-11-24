@@ -13,19 +13,152 @@ menu "ESP-BIST Tests"
 
 config ESP_BIST_CPU_REG_TEST
     bool "CPU Register Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for CPU registers.
 
+choice ESP_BIST_CPU_REG_TEST_TYPE
+    prompt "CPU Register Test Selection"
+    depends on ESP_BIST_CPU_REG_TEST
+    default ESP_BIST_CPU_REG_TEST_STATIC
+    help
+      Select which CPU Register test to use.
+
+    config ESP_BIST_CPU_REG_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static memory test for CPU registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class B.
+
+    config ESP_BIST_CPU_REG_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal tests for CPU registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
 config ESP_BIST_CPU_CSR_REG_TEST
     bool "CPU CSR Register Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for CPU Control and Status Registers (CSRs).
 
+choice ESP_BIST_CPU_CSR_REG_TEST_TYPE
+    prompt "CPU CSR Register Test Selection"
+    depends on ESP_BIST_CPU_CSR_REG_TEST
+    default ESP_BIST_CPU_CSR_REG_TEST_STATIC
+    help
+      Select which CPU CSR Register test to use.
+
+    config ESP_BIST_CPU_CSR_REG_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static memory test for CPU CSR registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class B.
+
+    config ESP_BIST_CPU_CSR_REG_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal tests for CPU CSR registers.
+          Matches IEC60730 Table H.1 component 1.1 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
+menuconfig ESP_BIST_CPU_INSTRUCTION_TEST
+    bool "CPU Instruction Equivalence Test"
+    depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+    default n
+    help
+      IEC 60730 Annex H component 1.2 periodic self-test using an
+      equivalence-class instruction test (H.2.18.5). Enable individual
+      instruction groups in the submenu.
+
+if ESP_BIST_CPU_INSTRUCTION_TEST
+
+config ESP_BIST_CPU_INSTRUCTION_INTEGER
+    bool "Integer ALU instruction group"
+    default y
+    help
+      Test RV32I integer ALU instructions: ADD/ADDI, SUB, AND/ANDI,
+      OR/ORI, XOR/XORI, SLT/SLTI, SLTU/SLTIU.
+
+config ESP_BIST_CPU_INSTRUCTION_SHIFT
+    bool "Shift instruction group"
+    default y
+    help
+      Test RV32I shifts: SLL/SLLI, SRL/SRLI, SRA/SRAI. Covers counts
+      0, 1, and 31, plus register-shift masking of amounts above 31.
+
+config ESP_BIST_CPU_INSTRUCTION_UPPERIMM
+    bool "LUI and AUIPC instruction group"
+    default y
+    help
+      Test LUI and AUIPC, including upper-immediate bounds.
+
+config ESP_BIST_CPU_INSTRUCTION_CTRL
+    bool "Control-flow instruction group"
+    default y
+    help
+      Test BEQ/BNE/BLT/BGE/BLTU/BGEU taken and not-taken, forward and
+      backward, plus JAL/JALR targets and link values.
+
+config ESP_BIST_CPU_INSTRUCTION_LDST
+    bool "Load and store instruction group"
+    default y
+    help
+      Test SB/SH/SW and LB/LBU/LH/LHU/LW with positive and negative
+      offsets. Misaligned accesses are not exercised.
+
+config ESP_BIST_CPU_INSTRUCTION_MUL
+    bool "Multiply and divide instruction group (RV32M)"
+    default y
+    help
+      Test RV32M MUL/MULH/MULHSU/MULHU and DIV/DIVU/REM/REMU, including
+      divide-by-zero and signed overflow (INT_MIN / -1).
+
+config ESP_BIST_CPU_INSTRUCTION_CSR
+    bool "CSR and fence instruction group (Zicsr / Zifencei)"
+    default y
+    help
+      Test Zicsr CSRRW/CSRRS/CSRRC and immediate forms on mscratch,
+      plus RV32I FENCE and Zifencei FENCE.I. Distinct from the CSR
+      register integrity test.
+
+config ESP_BIST_CPU_INSTRUCTION_AMO
+    bool "Atomic instruction group (RV32A)"
+    default y
+    help
+      Test RV32A AMOs + LR/SC (Zaamo and Zalrsc word ops). Not used
+      on ESP32-C3.
+
+config ESP_BIST_CPU_INSTRUCTION_FP
+    bool "Floating-point instruction group (RV32F)"
+    default y
+    help
+      Test RV32F single-precision arithmetic, fused multiply-add, sign
+      injection, min/max, compares, conversions, moves and classify,
+      plus static rounding modes and fflags. Built only on FPU targets
+      (ESP32-H4, ESP32-P4).
+
+config ESP_BIST_CPU_INSTRUCTION_COMP
+    bool "Compressed instruction group (RV32C)"
+    default y
+    help
+      Test the RV32C 16-bit encodings: scrambled immediate fields, the
+      x8-x15 register field, sp-relative loads and stores, and compressed
+      control flow. Every target supports C, so this group is always
+      built. c.ebreak is excluded because it traps.
+
+endif # ESP_BIST_CPU_INSTRUCTION_TEST
+
 config ESP_BIST_MEMORY_RAM_TEST
     bool "Memory RAM Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
         Enable tests for the RAM memory integrity (March A, March X, and
         Abraham).
@@ -53,57 +186,104 @@ config ESP_BIST_RAM_PARTITION_SIZE
 
 config ESP_BIST_STACK_TEST
     bool "Stack Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for the stack integrity.
 
 config ESP_BIST_PROGRAM_COUNTER_TEST
     bool "Program Counter Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the program counter.
 
+choice ESP_BIST_PROGRAM_COUNTER_TEST_TYPE
+    prompt "Program Counter Test Selection"
+    depends on ESP_BIST_PROGRAM_COUNTER_TEST
+    default ESP_BIST_PROGRAM_COUNTER_TEST_STATIC
+    help
+      Select which Program Counter test to use.
+
+    config ESP_BIST_PROGRAM_COUNTER_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static memory test for Program Counter.
+          Matches IEC60730 Table H.1 component 1.3 for Class B.
+
+    config ESP_BIST_PROGRAM_COUNTER_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal tests for Program Counter.
+          Matches IEC60730 Table H.1 component 1.3 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
 config ESP_BIST_MEMORY_FLASH_TEST
     bool "Memory Flash Test"
-    default y if !ZEPHYR_ESP_BIST_MODULE
+    default n
     help
       Enable tests for the Flash memory integrity.
 
 config ESP_BIST_CLOCK_TEST
     bool "Clock Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the main crystal clock.
 
 config ESP_BIST_GPIO_TEST
     bool "GPIO Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the GPIO pins.
 
 config ESP_BIST_ADC_TEST
     bool "ADC Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the ADC pins.
 
 config ESP_BIST_WATCHDOG_TEST
     bool "Watchdog Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for the HP main watchdog timer (MWDT).
 
 config ESP_BIST_INTERRUPT_TEST
     bool "Interrupt Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable tests for software and hardware interrupts.
+
+choice ESP_BIST_INTERRUPT_TEST_TYPE
+    prompt "Interrupt Test Selection"
+    depends on ESP_BIST_INTERRUPT_TEST
+    default ESP_BIST_INTERRUPT_TEST_STATIC
+    help
+      Select which Interrupt test to use.
+
+    config ESP_BIST_INTERRUPT_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static interrupt test for software source mapping and
+          hardware timer delivery.
+          Matches IEC60730 Table H.1 component 2 for Class B.
+
+    config ESP_BIST_INTERRUPT_TEST_RECIPROCAL
+        bool "Reciprocal Tests"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal interrupt tests.
+          Matches IEC60730 Table H.1 component 2 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
 
 endmenu
 
@@ -118,12 +298,40 @@ config ESP_BIST_WDT_TIMEOUT_US
       timeout via lp_wdt_init(). On HP core / standalone builds, this configures
       the main watchdog timer (MWDT).
 
-config ESP_BIST_LP_DEBUG_LOG
-    bool "Enable LP-core debug logging (ESP_LOGD)"
-    depends on ESP_BIST && (IDF_ESP_BIST_COMPONENT || ZEPHYR_ESP_BIST_MODULE)
+choice ESP_BIST_LOG_LEVEL
+    prompt "Log level"
+    default ESP_BIST_LOG_LEVEL_INFO
+    depends on ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS
     help
-      Compile in ESP_LOGD output on the LP core. Disabled by default to keep
-      LP firmware small (~16 KiB SRAM).
+      Compile-time ceiling for BIST ESP_LOGx calls. Messages above this
+      level are removed from the binary on the HP core, the LP core under
+      Zephyr, and the LP core under ESP-IDF.
+
+      0 = no output, 1 = error, 2 = warning, 3 = info, 4 = debug, 5 = verbose.
+
+    config ESP_BIST_LOG_LEVEL_NONE
+        bool "No output"
+    config ESP_BIST_LOG_LEVEL_ERROR
+        bool "Error"
+    config ESP_BIST_LOG_LEVEL_WARN
+        bool "Warning"
+    config ESP_BIST_LOG_LEVEL_INFO
+        bool "Info"
+    config ESP_BIST_LOG_LEVEL_DEBUG
+        bool "Debug"
+    config ESP_BIST_LOG_LEVEL_VERBOSE
+        bool "Verbose"
+endchoice
+
+config ESP_BIST_LOG_LEVEL
+    int
+    depends on ESP_BIST || ESP_BIST_HOST_DIAGNOSTICS
+    default 0 if ESP_BIST_LOG_LEVEL_NONE
+    default 1 if ESP_BIST_LOG_LEVEL_ERROR
+    default 2 if ESP_BIST_LOG_LEVEL_WARN
+    default 3 if ESP_BIST_LOG_LEVEL_INFO
+    default 4 if ESP_BIST_LOG_LEVEL_DEBUG
+    default 5 if ESP_BIST_LOG_LEVEL_VERBOSE
 
 config BIST_FLASH_TEST_CHUNK_SIZE
     hex "Flash Test Chunk Size"
@@ -180,7 +388,7 @@ config ESP_BIST_MULTICORE
     help
       Bring up HP core 1 during startup and enable bist_multicore_call() so
       tests can be dispatched to it. Only available on dual-core standalone
-      bare-metal targets (ESP32-P4).
+      bare-metal targets (ESP32-P4, ESP32-H4).
 
 config ESP_BIST_CPU1_STACK_SIZE
     hex "HP Core 1 Stack Size"
@@ -188,7 +396,7 @@ config ESP_BIST_CPU1_STACK_SIZE
     default 0x2000
     help
       Size in bytes of the dedicated HP core 1 stack on dual-core standalone
-      targets (ESP32-P4). Reserved at the top of HP SRAM so RAM march tests
+      targets (ESP32-P4, ESP32-H4). Reserved at the top of HP SRAM so RAM march tests
       on core 0 cannot overwrite core 1's live stack. Unused on single-core SoCs.
 
 config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
@@ -203,7 +411,7 @@ config ESP_BIST_WDT_WINDOWED_UNDERFLOW_TIMEOUT_US
 config ESP_BIST_METRICS
     bool "BIST Metrics Collection"
     depends on ESP_BIST && !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
-    default y
+    default n
     help
       Enable the collection of performance metrics during BIST operations, such as
       execution time, CPU cycles, and instruction counts.
@@ -290,6 +498,19 @@ config ESP_BIST_HD_RAM_PARTITION_SIZE
       backed up and restored more often. The safe-RAM backup buffer is
       2 x partition_size x 4 bytes.
 
+config ESP_BIST_HD_SAFE_DMA_POOL_SIZE
+    int "Dedicated safe-RAM DMA heap pool size (bytes)"
+    depends on ESP_BIST_HD_AUDIT_RAM && IDF_ESP_BIST_COMPONENT
+    default 16384
+    range 0 131072
+    help
+      Size in bytes of the dedicated MALLOC_CAP_DMA internal SRAM heap
+      placed in .dram0.safe_ram (below _data_start). At startup,
+      MALLOC_CAP_DMA is removed from the general internal heap and
+      assigned exclusively to this pool so Wi-Fi MAC, BLE baseband, and
+      GDMA descriptors/buffers stay outside the live March-A span
+      [_bist_hp_ram_start, _bist_hp_ram_end). Set to 0 to disable.
+
 endmenu # Host Diagnostics Audits
 
 config ESP_BIST_HD_CHALLENGE_WINDOW_US
@@ -339,6 +560,17 @@ config ESP_BIST_HD_AGENT_READY_TIMEOUT_US
     help
       Maximum time the companion waits for AGENT_READY after its own BIST before
       entering safe state.
+
+config ESP_BIST_HD_MAILBOX_TX_TIMEOUT_US
+    int "Companion mailbox TX timeout (us)"
+    depends on ESP_BIST_HOST_DIAGNOSTICS
+    default 10000
+    range 100 10000000
+    help
+      Maximum time in microseconds the LP companion waits for the HP host to
+      acknowledge or drain an outgoing mailbox transmission before failing
+      closed. Keep below ESP_BIST_WDT_TIMEOUT_US so an unacknowledged TX
+      reaches bist_hd_safe_state() before the LP watchdog expires.
 
 config ESP_BIST_HD_AGENT_TASK_STACK
     int "Host Diagnostic Agent stack size (bytes)"

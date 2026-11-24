@@ -120,16 +120,16 @@ Post-Boot Self-Tests
 9. **ADC Low Level Test** (``bist_adc_low_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
 
    - **IEC 60730 Component**: 7.2 (Analog I/O)
-   - **Purpose**: Verifies ADC reads near zero with internal pull-down
+   - **Purpose**: Verifies ADC reads the SoC-specific low reference with internal pull-down
    - **Rationale**: Analog input functionality must be validated before use in safety-critical applications
-   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of zero (skipped on ESP32-H4)
+   - **Implementation**: Configures channel, enables pull-down, reads raw value within tolerance of SoC-specific low reference
 
 10. **ADC High Level Test** (``bist_adc_high_level_test(ADC_UNIT_1, ADC_CHANNEL_2)``)
 
     - **IEC 60730 Component**: 7.2 (Analog I/O)
     - **Purpose**: Verifies ADC reads near full scale with internal pull-up
     - **Rationale**: Detects stuck-at-low faults and verifies ADC conversion path
-    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference (skipped on ESP32-H4)
+    - **Implementation**: Configures channel, enables pull-up, reads raw value within tolerance of SoC-specific high reference
 
 11. **ADC Reference Test** (``bist_adc_reference_test(ADC_UNIT_1, ADC_CHANNEL_2)``) — ESP32-C3 only
 
@@ -141,14 +141,14 @@ Post-Boot Self-Tests
 12. **Software Interrupt Source Map Test** (``bist_interrupt_source_map_test()``)
 
     - **IEC 60730 Component**: 2 (Interrupt handling and execution)
-    - **Purpose**: Verifies interrupt-matrix routing and ISR delivery for software IRQ sources ``CPU_INTR_FROM_CPU_0..3``
+    - **Purpose**: Verifies interrupt-matrix routing and ISR delivery for software IRQ sources. In reciprocal mode (ESP32-P4), both HP cores execute the software walk and cross-validate results.
     - **Rationale**: Stuck or mis-routed interrupts can prevent fault handlers and safety responses from running
     - **Implementation**: Maps each software source to CPU interrupt 9, triggers eight times, checks enable mask and ISR count, then unmaps. Enabled when ``CONFIG_ESP_BIST_INTERRUPT_TEST`` is set (standalone builds).
 
 13. **Hardware Interrupt Test** (``bist_hardware_interrupt_test()``)
 
     - **IEC 60730 Component**: 2 (Interrupt handling and execution)
-    - **Purpose**: Verifies concurrent hardware interrupt delivery via dual timer-group alarms
+    - **Purpose**: Verifies concurrent hardware interrupt delivery via dual timer-group alarms. In reciprocal mode (ESP32-P4), both HP cores execute the timer walk sequentially and cross-validate results.
     - **Rationale**: Incorrect interrupt frequency or missed peripheral IRQs can break timing-critical safety functions
     - **Implementation**: TIMG0 (500 µs) and TIMG1 (1000 µs) on CPU interrupts 9 and 10; checks 2:1 ISR count ratio with ±1 tolerance. Post-boot only; requires two Timer Groups.
 
@@ -182,7 +182,7 @@ Watchdog Callback Registration
 
 **Implementation**:
 
-- XT WDT callback directly calls ``fail_safe_exit()`` for crystal failures (guarded by ``SOC_XT_WDT_SUPPORTED`` at compile time)
+- XT WDT callback directly calls ``fail_safe_exit()`` for crystal failures (guarded by ``SOC_XT_WDT_SUPPORTED`` at compile time). The crystal test disarms the watchdog, so the sample enables it again before registering this callback.
 - MWDT callback logs the event (callback executes in IRAM before reset)
 
 Runtime Tests
@@ -197,14 +197,14 @@ Runtime Tests
 1. **CPU Register Test** (``bist_cpu_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU Registers)
-   - **Purpose**: Verifies all 32 general-purpose registers maintain integrity; on FPU supported devices, also verifies all 32 single-precision FPU registers (f0–f31)
+   - **Purpose**: Verifies all 32 general-purpose registers maintain integrity; on FPU supported devices, also verifies all 32 single-precision FPU registers (f0–f31). In static mode, runs a single-core checkerboard walk. In reciprocal mode (available on ESP32-P4 with ``CONFIG_ESP_BIST_CPU_REG_TEST_RECIPROCAL=y``), executes a dual-core reciprocal comparison across both HP cores using shared SRAM and cross-core function dispatch.
    - **Rationale**: Register corruption can cause incorrect computation or control flow errors
    - **Execution Frequency**: Called in main loop (every iteration)
 
 2. **CPU CSR Test** (``bist_cpu_csr_regs_test()``)
 
    - **IEC 60730 Component**: 1.1 (CPU CSRs)
-   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6, H2, C5, C61, P4, and H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4).
+   - **Purpose**: Verifies critical Control and Status Registers — trap CSRs (MTVEC, MEPC, MCAUSE, MTVAL, MSCRATCH), PMP registers (PMPADDR0–15, PMPCFG0–3), PMA address registers on C6, H2, C5, C61, P4, and H4, MEXSTATUS/MHINT on C5 only, and FPU CSRs (``fflags``, ``frm``, ``fcsr``) on FPU supported devices (H4, P4). In static mode, runs a single-core pattern test. In reciprocal mode (available on ESP32-P4 with ``CONFIG_ESP_BIST_CPU_CSR_REG_TEST_RECIPROCAL=y``), executes a dual-core reciprocal comparison across both HP cores using shared SRAM and cross-core function dispatch.
    - **Rationale**: CSR corruption can cause exception handling failures or memory protection violations
    - **Execution Frequency**: Called in main loop (every iteration)
 
@@ -226,9 +226,16 @@ Runtime Tests
 5. **Program Counter Test** (``bist_pc_test()``)
 
    - **IEC 60730 Component**: 1.3 (Program Counter)
-   - **Purpose**: Exercises PC register bits by calling functions across 4 different memory regions (5 on ESP32-P4 with TCM)
+   - **Purpose**: Exercises PC register bits by calling functions across 4 different memory regions (5 on ESP32-P4 with TCM). In reciprocal mode (ESP32-P4), both HP cores execute the region walk and reciprocally validate results against the linked function addresses.
    - **Rationale**: PC corruption can cause execution outside intended code regions
    - **Execution Frequency**: Called in main loop (every iteration)
+
+5. **CPU Instruction Equivalence Test** (``bist_cpu_instruction_test()``)
+
+   - **IEC 60730 Component**: 1.2 (Instruction Decoding & Execution)
+   - **Purpose**: Verifies instruction decoding and ALU/FPU execution across 10 equivalence groups (381 vectors covering RV32I ALU/shifts/upper imm/branches/loads/stores, RV32M, Zicsr/Zifencei, RV32A, RV32F, and RV32C)
+   - **Rationale**: Detects decoding logic errors, arithmetic calculation faults, branch decision errors, register field corruption, and immediate value scrambling faults
+   - **Execution Frequency**: Called in startup self-tests and periodically in main loop
 
 **Error Handling**: All runtime test failures trigger ``fail_safe_exit()``, preventing continued operation with detected faults.
 
@@ -516,6 +523,10 @@ For maximum safety coverage (as in standalone application):
         // Initialize all safety mechanisms
         bist_cpu_stack_overflow_init();
     #if SOC_XT_WDT_SUPPORTED
+        esp_xt_wdt_init(&(esp_xt_wdt_config_t) {
+            .timeout = 200,
+            .auto_backup_clk_enable = false,
+        });
         esp_xt_wdt_register_callback(fail_safe_exit, NULL);
     #endif
         wdt_register_callback(wdt_callback, NULL);

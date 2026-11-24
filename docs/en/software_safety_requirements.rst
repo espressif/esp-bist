@@ -18,19 +18,25 @@ The ESP-BIST library implements on-startup and runtime self-tests and monitoring
 
    * - 1.1
      - CPU - Registers
-     - Verifies integrity of CPU general-purpose registers; on FPU supported devices, also single-precision FPU registers (f0–f31)
-     - Register corruption, stuck-at faults, data path errors
+     - Verifies integrity of CPU general-purpose registers and Control and Status Registers (static single-core walk or dual-core reciprocal comparison); on FPU supported devices, also single-precision FPU registers (f0–f31) and FPU CSRs
+     - Register corruption, stuck-at faults, data path errors, CSR configuration faults
      - :ref:`cpu-register-test`
+
+   * - 1.2
+     - CPU - Instruction decoding and execution
+     - Periodic self-test using an equivalence class test (H.2.18.5) across 10 instruction groups (RV32I, RV32M, Zicsr/Zifencei, RV32A, RV32F, RV32C)
+     - Instruction decode errors, ALU calculation errors, branch decision faults, register field corruption, immediate value transposition/scrambling faults, FPU arithmetic and rounding errors
+     - :ref:`cpu-instruction-test`
 
    * - 1.3
      - CPU - Program Counter
-     - Exercises PC bits, detects unexpected jumps or stuck PC
+     - Exercises PC bits across memory regions, detects unexpected jumps or stuck PC
      - Control-flow faults, stuck PC, unexpected jumps, code execution outside intended regions
      - :ref:`program-counter-test`
 
    * - 2
      - Interrupt handling and execution
-     - Validates interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery via dual timer-group alarms
+     - Validates interrupt-matrix routing for software IRQ sources and concurrent hardware interrupt delivery via dual timer-group alarms (static single-core walk or dual-core reciprocal comparison)
      - Stuck or missed interrupts, incorrect interrupt-matrix routing, enable/disable faults, incorrect interrupt frequency or period
      - :ref:`interrupt-test`
 
@@ -130,8 +136,9 @@ The BIST library interfaces with hardware through a HAL layer; low-level access 
 - **Memory interfaces**:
 
   - RAM direct access: Direct memory read/write for March A/X RAM tests (``src/bist/core/memory/bist_ram.c``)
-  - RTC memory: RTC memory region for PC test function placement (``src/bist/core/cpu/bist_pc.c``)
-  - Linker-defined memory regions: IRAM, Flash, and RTC memory sections via linker scripts (``src/soc/{IDF_TARGET_PATH_NAME}/ld/linker.ld``)
+  - RTC memory: RTC memory region for PC test function placement (``src/bist/core/cpu/bist_pc.c``, ``src/bist/core/cpu/bist_pc_reciprocal.c``)
+  - Linker-defined memory regions: IRAM, Flash, RTC memory, and (ESP32-P4) TCM sections via linker scripts (``src/soc/{IDF_TARGET_PATH_NAME}/ld/linker.ld``)
+  - Shared HP SRAM (ESP32-P4 reciprocal tests): statically allocated result slots exchanged between HP cores by the CPU register, CSR, PC, and interrupt reciprocal tests
 
 Build System
 ------------
@@ -183,7 +190,7 @@ The following non-default compiler options are applied to specific third-party E
      - ESP-IDF's low-level XT WDT header (``hal/xt_wdt_ll.h``) declares helper functions as ``inline`` without ``static``. Under the project ``-std=gnu17``, that is an inline definition and does not emit an external symbol. The linker then fails with undefined references. ``src/bist/CMakeLists.txt`` adds ``-fgnu89-inline`` to this one translation unit on ESP32-C3, on top of the library ``-Os``, so the function bodies are emitted in place. The override does not change BIST-owned code.
    * - ``esp_hw_support/port/esp32c61/ocode_init.c`` (ESP-IDF)
      - ``-include esp_attr.h``
-     - ESP-IDF v6.0's ``esp32c61/ocode_init.c`` uses attributes ``NOINLINE_ATTR`` and ``IRAM_ATTR`` without explicitly including ``esp_attr.h``. Under strict compiler options, macros default to empty or trigger undeclared identifier errors. ``cmake/project.cmake`` force-includes ``esp_attr.h`` for this single translation unit when building for ESP32-C61.
+     - ESP-IDF's ``esp32c61/ocode_init.c`` uses attributes ``NOINLINE_ATTR`` and ``IRAM_ATTR`` without explicitly including ``esp_attr.h``. Under strict compiler options, macros default to empty or trigger undeclared identifier errors. ``cmake/project.cmake`` force-includes ``esp_attr.h`` for this single translation unit when building for ESP32-C61.
 
 For detailed information on tool versions, compiler/linker flags, toolchain configuration, and tool qualification methodology, see :doc:`tool_qualification`.
 
@@ -267,7 +274,7 @@ Code, data, and safety structures are mapped to explicit linker sections:
 - **Flash / IROM (``.flash.text``)**: General application code, as well as ``pc_test_1`` and ``pc_test_2`` (separated by a 64 KB gap to test upper address bits without consuming RAM).
 - **DRAM (``.dram0.data``, ``.dram0.bss``)**: Application and BIST variables. All BIST library read-only data (``*libbist_esp.a:*(.rodata*)``) is placed in DRAM to ensure cache-independent access during self-tests.
 - **Flash / DROM (``.flash.rodata``)**: Read-only application constants, descriptors, and tables. No executable code is mapped to DROM; the memory protection unit enforces read-only access.
-- **Safe RAM (``.dram0.safe_ram``)**: Dedicated 256-byte RAM-test safe stack and backup buffers, excluded from the RAM test region so that the march algorithms can test the entire DRAM without self-corruption.
+- **Safe RAM (``.dram0.safe_ram``)**: Dedicated 256-byte RAM-test safe stack, backup buffers, and (on Host Diagnostics ESP-IDF builds) the safe DMA heap pool, excluded from the RAM test region so that the march algorithms can test the entire DRAM without self-corruption; destructively self-tested on each call before live data is backed up.
 - **Stack Sentinel (``.dram0.overflow``)**: Guard block at the bottom of the stack (sized by ``CONFIG_ESP_BIST_STACK_PROTECTION_BLOCK_SIZE``) initialized with pattern ``0xA55A5AA5`` for stack overflow detection.
 - **Dedicated Test Regions (``.rtc.text``, ``.tcm.text``)**: Holds ``pc_test_3`` in RTC/LP RAM, and ``pc_test_4`` in TCM on ESP32-P4 to verify execution across disparate memory spaces.
 - **Flash CRC Sections (``.crc_section_text``, ``.crc_section_data``)**: Dedicated 4-byte fields placed at the end of DROM holding post-build CRC32 checksums of ``.flash.text`` and ``.flash.rodata`` for runtime integrity verification.

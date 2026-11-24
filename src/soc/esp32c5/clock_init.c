@@ -18,7 +18,7 @@
 #include "esp_rom_sys.h"
 #include "esp_private/esp_clk.h"
 #include "hal/clk_gate_ll.h"
-#include "esp_private/esp_modem_clock.h"
+#include "hal/timg_ll.h"
 #include "esp_private/esp_pmu.h"
 #include "soc/clk_tree_defs.h"
 #include "soc/rtc.h"
@@ -137,5 +137,5 @@ void esp_perip_clk_init(void)
     periph_ll_clk_gate_config_t clk_gate_config = {0};
     periph_ll_clk_gate_set_default(rst_reason, &clk_gate_config);
 
-    periph_ll_enable_clk_clear_rst(PERIPH_TIMG0_MODULE);
+    _timg_ll_enable_bus_clock(0, true);
 }
