@@ -653,6 +653,7 @@ test_idf_device:
 
 .test_qemu_template_remote:
   stage: Test Qemu
+  timeout: 2h
   variables:
     REPORT_PATH: 'build/tests/${SOC_TARGET}_qemu_report.xml'
   before_script:
