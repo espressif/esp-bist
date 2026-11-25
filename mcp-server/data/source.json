@@ -630,6 +630,33 @@
     "content_type": "source"
   },
   {
+    "function_name": "verify_gpio_input",
+    "body": "static bist_esp_err_t verify_gpio_input(volatile bist_gpio_input_result_t *slot_a,\n                                        volatile bist_gpio_input_result_t *slot_b)\n{\n    if (slot_a == NULL || slot_b == NULL) {\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (slot_a->status != (uint32_t)BIST_ESP_OK || slot_b->status != (uint32_t)BIST_ESP_OK) {\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (slot_a->level > 1U || slot_b->level > 1U) {\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    if (slot_a->level != slot_b->level) {\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/io/bist_gpio_reciprocal.c",
+    "line_start": 75,
+    "line_end": 95,
+    "module": "io",
+    "content_type": "source"
+  },
+  {
+    "function_name": "verify_gpio_input_job",
+    "body": "static void verify_gpio_input_job(void *arg)\n{\n    volatile bist_gpio_input_result_t *result = (volatile bist_gpio_input_result_t *)arg;\n\n    if (result == NULL) {\n        return;\n    }\n\n    result->status = (uint32_t)verify_gpio_input(&bist_gpio_input_shared_results[0],\n                                                 &bist_gpio_input_shared_results[1]);\n}",
+    "file": "src/bist/core/io/bist_gpio_reciprocal.c",
+    "line_start": 97,
+    "line_end": 107,
+    "module": "io",
+    "content_type": "source"
+  },
+  {
+    "function_name": "bist_gpio_input_reciprocal_test",
+    "body": "bist_esp_err_t bist_gpio_input_reciprocal_test(gpio_num_t gpio_num)\n{\n    volatile bist_gpio_input_result_t *test_result_core_0 = &bist_gpio_input_shared_results[0];\n    volatile bist_gpio_input_result_t *test_result_core_1 = &bist_gpio_input_shared_results[1];\n    bist_esp_err_t status;\n    bist_esp_err_t ret;\n\n    if (!GPIO_IS_VALID_GPIO(gpio_num)) {\n        ESP_LOGE(TAG, \"GPIO number error: %d\", (int)gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    s_gpio_input_pin = gpio_num;\n\n    /* Sample on core 0 */\n    bist_gpio_input_sample_job((void *)test_result_core_0);\n    if (test_result_core_0->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Core 0 could not sample GPIO %d\", (int)gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    /* Sample on core 1 */\n    ret = bist_multicore_call(1, bist_gpio_input_sample_job, (void *)test_result_core_1);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Sampling dispatch to core 1 failed (%d)\", ret);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Core 1 could not sample GPIO %d\", (int)gpio_num);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    /* Cross-validate both samples on core 1 */\n    BIST_ADD_LABEL(\"bist_gpio_input_verify\");\n    ret = bist_multicore_call(1, verify_gpio_input_job, (void *)test_result_core_1);\n    if (ret != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"Cross-check dispatch to core 1 failed (%d)\", ret);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n    if (test_result_core_1->status != (uint32_t)BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"GPIO %d rejected on core 1: level %u on core 0, %u on core 1\", (int)gpio_num,\n                 (unsigned)test_result_core_0->level, (unsigned)test_result_core_1->level);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    /* Cross-validate both samples on core 0 */\n    status = verify_gpio_input(test_result_core_0, test_result_core_1);\n    if (status != BIST_ESP_OK) {\n        ESP_LOGE(TAG, \"GPIO %d rejected on core 0: level %u on core 0, %u on core 1\", (int)gpio_num,\n                 (unsigned)test_result_core_0->level, (unsigned)test_result_core_1->level);\n        return BIST_ESP_IO_TEST_ERR;\n    }\n\n    return BIST_ESP_OK;\n}",
+    "file": "src/bist/core/io/bist_gpio_reciprocal.c",
+    "line_start": 109,
+    "line_end": 163,
+    "module": "io",
+    "content_type": "source"
+  },
+  {
     "function_name": "adc_oneshot_io_to_channel",
     "body": "esp_err_t adc_oneshot_io_to_channel(int io_num, adc_unit_t * const unit_id, adc_channel_t * const channel)\n{\n    return adc_io_to_channel(io_num, unit_id, channel);\n}",
     "file": "src/bist/drivers/adc_oneshot.c",

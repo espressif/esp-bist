@@ -2185,18 +2185,21 @@ The standalone BIST library uses `esp_timer` (``src/bist/drivers/esp_timer.c``) 
 
 Both QEMU and device test pipelines execute ``tests/windowed_wdt_test/``, validating ``esp_timer`` operation under both emulation and real hardware.
 
-GPIO Plausibility Test
-----------------------
+Digital I/O Test
+----------------
 
-**Purpose:** Verify that GPIO pins can be configured and that IO levels are readable and controllable.
+**Purpose:** Verify that GPIO pins can be configured, IO levels are readable and controllable, and digital inputs pass dual-core reciprocal cross-validation on supported SoCs.
+
+Static Plausibility Test
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 QEMU/Emulation Validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""
 
-**Note:** GPIO tests are hardware-only.
+**Note:** Static GPIO plausibility tests require hardware.
 
 Hardware Validation
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 **Test Script:** ``tests/digital_io_test/pytest_device_digital_io_test.py``
 
@@ -2302,6 +2305,65 @@ Input uses ``bist_gpio_input_check`` with ``level=0``.
     test_BIST_IO_OUTPUT_GPIO:FAIL
     test_BIST_IO_INPUT_GPIO:FAIL
 
+Reciprocal GPIO Input Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Purpose:** Verify digital input pin integrity in dual-core configuration using reciprocal cross-validation between HP Core 0 and HP Core 1.
+
+Hardware Validation
+"""""""""""""""""""
+
+**Test Script:** ``tests/digital_io_test_reciprocal/pytest_device_digital_io_test_reciprocal.py``
+
+**Execution:**
+
+1. Firmware executes on ESP32-P4 hardware:
+
+   - Configures GPIO2 in ``GPIO_MODE_INPUT_OUTPUT``, sets level to 0 and runs ``bist_gpio_input_reciprocal_test(GPIO2)``, sets level to 1 and runs ``bist_gpio_input_reciprocal_test(GPIO2)``, then resets GPIO2.
+   - Configures GPIO8 in ``GPIO_MODE_INPUT`` (with internal pull-up enabled by ``gpio_reset_pin()``), runs ``bist_gpio_input_reciprocal_test(GPIO8)``, then resets GPIO8.
+
+2. On each ``bist_gpio_input_reciprocal_test()`` call, Core 0 samples the pin into shared SRAM slot 0 via ``gpio_get_level()``.
+3. Core 0 dispatches sampling of the same pin to Core 1 via ``bist_multicore_call()`` into shared SRAM slot 1.
+4. Core 0 dispatches cross-validation of both slots to Core 1 via ``bist_multicore_call()``.
+5. Core 0 cross-validates both slots locally.
+6. Test returns ``BIST_ESP_OK`` for all runs and prints ``test_BIST_Gpio_Input_Reciprocal:PASS``.
+7. Invalid pin test calls the API with ``SOC_GPIO_PIN_COUNT`` and ``-1``, verifying ``BIST_ESP_IO_TEST_ERR``.
+
+**Expected Output:**
+
+.. code-block::
+
+    test_BIST_Gpio_Input_Reciprocal:PASS
+    test_BIST_Gpio_Input_Reciprocal_Invalid_Pin:PASS
+
+**Failure Test: ``test_gpio_input_reciprocal_level_mismatch_device``**
+
+**GDB Fault Injection Script:**
+
+.. code-block::
+
+    # Connect to OpenOCD GDB stub
+    target remote 127.0.0.1:3333
+    mon reset halt
+    maintenance flush register-cache
+    monitor gdb breakpoint_override hard
+
+    # Breakpoint at verification step after both samples are collected
+    tb bist_gpio_input_verify
+    commands
+        set bist_gpio_input_shared_results[1].level = bist_gpio_input_shared_results[0].level ^ 1
+        monitor step
+        monitor resume
+    end
+    continue
+
+**Fault Injection Method:**
+
+1. GDB attaches to OpenOCD and sets a hardware breakpoint at ``bist_gpio_input_verify`` after both cores collect their samples into shared SRAM.
+2. When the breakpoint hits, slot 1 level is inverted relative to slot 0.
+3. The cross-check detects the mismatched levels and returns ``BIST_ESP_IO_TEST_ERR``.
+4. Test prints ``test_BIST_Gpio_Input_Reciprocal:FAIL``.
+
 CI Test Results
 ^^^^^^^^^^^^^^^
 
@@ -2309,6 +2371,11 @@ CI Test Results
 
 .. xml-junit-test-results:: tests/digital_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
     :title: GPIO Device Test Results
+
+.. only:: esp32p4
+
+    .. xml-junit-test-results:: tests/digital_io_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml
+        :title: Reciprocal GPIO Input Device Test Results
 
 ADC Plausibility Test
 ---------------------

@@ -230,12 +230,19 @@ Runtime Tests
    - **Rationale**: PC corruption can cause execution outside intended code regions
    - **Execution Frequency**: Called in main loop (every iteration)
 
-5. **CPU Instruction Equivalence Test** (``bist_cpu_instruction_test()``)
+6. **CPU Instruction Equivalence Test** (``bist_cpu_instruction_test()``)
 
    - **IEC 60730 Component**: 1.2 (Instruction Decoding & Execution)
    - **Purpose**: Verifies instruction decoding and ALU/FPU execution across 10 equivalence groups (381 vectors covering RV32I ALU/shifts/upper imm/branches/loads/stores, RV32M, Zicsr/Zifencei, RV32A, RV32F, and RV32C)
    - **Rationale**: Detects decoding logic errors, arithmetic calculation faults, branch decision errors, register field corruption, and immediate value scrambling faults
    - **Execution Frequency**: Called in startup self-tests and periodically in main loop
+
+7. **Reciprocal Digital I/O Test** (``bist_gpio_input_reciprocal_test(gpio_num)``)
+
+   - **IEC 60730 Component**: 7.1 (Digital I/O, Class C)
+   - **Purpose**: Cross-validates digital input pin level between Core 0 and Core 1 (available on ESP32-P4 with ``CONFIG_ESP_BIST_GPIO_TEST_RECIPROCAL=y``)
+   - **Rationale**: Detects single-core peripheral read errors or signal mismatch on critical inputs
+   - **Execution Frequency**: Called periodically in the main loop for each safety-critical input pin
 
 **Error Handling**: All runtime test failures trigger ``fail_safe_exit()``, preventing continued operation with detected faults.
 

@@ -306,19 +306,24 @@ Windowed Watchdog Test & esp_timer Validation (IEC 60730 ID: 6.3)
 GPIO Test (IEC 60730 ID: 7.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: GPIO configuration and plausibility checks (output drive and input read).
+**Requirement**: GPIO configuration and plausibility checks (output drive and input read), plus dual-core reciprocal cross-validation on supported SoCs (H.2.18.15).
 
-**Design**: ``src/bist/core/io/bist_gpio.c``, ``src/bist/drivers/gpio.c`` (``bist_gpio_output_test()``, ``bist_gpio_input_test()``; :ref:`gpio-plausibility-test`)
+**Design**:
+
+- Static: ``src/bist/core/io/bist_gpio.c``, ``src/bist/drivers/gpio.c`` (``bist_gpio_output_test()``, ``bist_gpio_input_test()``; :ref:`digital-io-test`)
+- Reciprocal (ESP32-P4): ``src/bist/core/io/bist_gpio_reciprocal.c``, ``src/bist/drivers/gpio.c`` (``bist_gpio_input_reciprocal_test()``; :ref:`digital-io-test`)
 
 **Test Implementation**:
 
-- Hardware-only: ``tests/digital_io_test/pytest_device_digital_io_test.py`` (invalid pin rejection, GPIO2 output drive, configured input level and GDB read value injection)
+- Static (Hardware-only): ``tests/digital_io_test/pytest_device_digital_io_test.py`` (invalid pin rejection, GPIO2 output drive, configured input level, and GDB read value injection)
+- Reciprocal (ESP32-P4): ``tests/digital_io_test_reciprocal/pytest_device_digital_io_test_reciprocal.py`` (dual-core reciprocal GPIO input sampling and cross-validation pass on device; GDB level mismatch fault injection via OpenOCD)
 
 **Test Results**:
 
-- Hardware: ``tests/digital_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Static Hardware: ``tests/digital_io_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Reciprocal Hardware: ``tests/digital_io_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 3 pass test and 2 fail cases on target hardware.
+**Coverage**: 3 static pass tests and 2 static fail cases on target hardware; 2 reciprocal pass tests and 1 reciprocal fail case on target hardware.
 
 ADC Test (IEC 60730 ID: 7.2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

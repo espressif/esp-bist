@@ -51,6 +51,7 @@ GPIO Tests
 ----------
 
 .. include-build-file:: inc/bist_gpio.inc
+.. include-build-file:: inc/bist_gpio_reciprocal.inc
 
 ADC Tests
 ---------

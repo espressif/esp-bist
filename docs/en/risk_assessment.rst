@@ -90,7 +90,7 @@ The following table maps identified hazards to safety functions, risk levels, an
      - GPIO misconfiguration or stuck I/O lines causing incorrect system behavior
      - Medium
      - 7.1 (Digital I/O)
-     - ``bist_gpio_output_test()`` and ``bist_gpio_input_test()`` verify GPIO configuration, output drive capability, and input level readback
+     - ``bist_gpio_output_test()`` and ``bist_gpio_input_test()`` verify GPIO configuration, output drive capability, and input level readback; ``bist_gpio_input_reciprocal_test()`` provides dual-core cross-validation on supported SoCs (ESP32-P4)
 
    * - H11
      - ADC misconfiguration or stuck analog input lines causing incorrect sensor readings

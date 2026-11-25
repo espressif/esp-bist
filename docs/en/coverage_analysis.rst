@@ -111,12 +111,12 @@ The following table provides code coverage information for each BIST module:
      - 1 (premature feed underflow)
      - :doc:`software_validation` (Windowed Watchdog Test)
 
-   * - GPIO Plausibility
-     - 2
-     - 2 (100%)
-     - 3 (invalid pin, output drive, input level)
-     - Hardware-only
-     - :doc:`software_validation` (GPIO Test)
+   * - Digital I/O
+     - 3
+     - 3 (100%)
+     - 5 (invalid pin, output drive, input level, reciprocal cross-validation, reciprocal invalid pin)
+     - 3 (output fail, input fail, reciprocal mismatch)
+     - :doc:`software_validation` (Digital I/O Test)
 
    * - ADC Plausibility
      - 3
@@ -231,10 +231,10 @@ Requirements Coverage Matrix
      - ``tests/windowed_wdt_test/build/tests/*_report.xml``
 
    * - 7.1
-     - Digital I/O Plausibility
-     - ``bist_gpio_output_test()``, ``bist_gpio_input_test()``
-     - Hardware-only (invalid pin rejection, GPIO2 output drive, configured input read)
-     - ``tests/digital_io_test/build/tests/*_report.xml``
+     - Digital I/O (Static & Reciprocal)
+     - ``bist_gpio_output_test()``, ``bist_gpio_input_test()``, ``bist_gpio_input_reciprocal_test()``
+     - Hardware-only (static output/input plausibility on target hardware, reciprocal dual-core validation on ESP32-P4)
+     - ``tests/digital_io_test/build/tests/*_report.xml``, ``tests/digital_io_test_reciprocal/build/tests/*_report.xml``
 
    * - 7.2
      - Analog I/O Plausibility
@@ -250,7 +250,7 @@ Known Coverage Limitations
 
 1. **Clock Tests (Hardware-Only & Board Variations)**: QEMU cannot accurately model crystal oscillators or XT WDT hardware; physical target hardware validation is used. On boards without an external 32 kHz crystal, clock deviation arithmetic is regression-tested on host via ``tests/unit/clock_math/``. On SoCs lacking ``SOC_XT_WDT_SUPPORTED``, the 32 kHz crystal watchdog test is skipped.
 
-2. **GPIO Tests (Hardware-Only)**: GPIO pad drivers and input buffers require physical silicon routing; validated on device via ``tests/digital_io_test/``.
+2. **GPIO Tests (Hardware-Only)**: GPIO pad drivers and input buffers require physical silicon routing; validated on device via ``tests/digital_io_test/`` and ``tests/digital_io_test_reciprocal/``.
 
 3. **ADC Tests (Hardware-Only)**: ADC conversion and internal biasing (pull-down, pull-up, VREF) require physical analog silicon; validated on device via ``tests/analog_io_test/``.
 

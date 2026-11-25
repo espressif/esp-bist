@@ -2132,15 +2132,21 @@ Coding and Interfaces
 - No division operations are present in this test.
 
 .. _gpio-plausibility-test:
+.. _digital-io-test:
 
-GPIO Plausibility Test
-----------------------
+Digital I/O Test
+----------------
 
-GPIO Output
-^^^^^^^^^^^
+The Digital I/O test validates GPIO hardware operation and signal integrity:
+
+- **Static (Single-Core Plausibility)**: Tests output drive capability (0 and 1 levels with read-back) and input level plausibility on the executing core.
+- **Reciprocal (Dual-Core Comparison)**: Available on dual-core targets (ESP32-P4) using cross-core sampling and mutual verification of digital inputs.
+
+Static GPIO Output Test
+^^^^^^^^^^^^^^^^^^^^^^^
 .. blockdiag::
     :scale: 100%
-    :caption: GPIO Output Test
+    :caption: GPIO Output Test (Static)
     :align: center
 
     blockdiag {
@@ -2173,21 +2179,19 @@ GPIO Output
         Success [label = "Return BIST_ESP_OK"];
     }
 
-**GPIO Output Test:**
+- Validates GPIO pin number with ``GPIO_IS_VALID_GPIO``.
+- Resets pin to default state with ``gpio_reset_pin``.
+- Configures as input/output with ``gpio_set_direction(gpio_num, GPIO_MODE_INPUT_OUTPUT)``.
+- Sets level to 0 and reads back with ``gpio_get_level``.
+- Sets level to 1 and reads back.
+- Resets pin to default state on exit.
+- Returns ``BIST_ESP_IO_TEST_ERR`` on configuration failure or level mismatch.
 
-- Validates GPIO pin number using ``GPIO_IS_VALID_GPIO`` macro
-- Resets pin to default state with ``gpio_reset_pin``
-- Configures as input/output with ``gpio_set_direction(gpio_num, GPIO_MODE_INPUT_OUTPUT)``
-- Sets level to 0 (``gpio_set_level(gpio_num, 0)``) and reads back with ``gpio_get_level``
-- Sets level to 1 (``gpio_set_level(gpio_num, 1)``) and reads back
-- Returns ``BIST_ESP_IO_TEST_ERR`` on any mismatch or error
-- Resets pin to default state after test
-
-GPIO Input
-^^^^^^^^^^
+Static GPIO Input Test
+^^^^^^^^^^^^^^^^^^^^^^
 .. blockdiag::
     :scale: 50%
-    :caption: GPIO Input Test
+    :caption: GPIO Input Test (Static)
     :align: center
 
     blockdiag {
@@ -2212,24 +2216,60 @@ GPIO Input
         Success [label = "Return BIST_ESP_OK"];
     }
 
-**GPIO Input Test:**
+- Validates GPIO pin number.
+- Resets pin to default state.
+- Configures as input with ``gpio_set_direction(gpio_num, GPIO_MODE_INPUT)``.
+- Reads level with ``gpio_get_level`` and compares against ``expected_level``.
+- Resets pin on exit.
+- Returns ``BIST_ESP_IO_TEST_ERR`` if sampled level differs from expected.
 
-- Validates GPIO pin number
-- Resets pin to default state
-- Configures as input only with ``gpio_set_direction(gpio_num, GPIO_MODE_INPUT)``
-- Reads level with ``gpio_get_level`` and compares against ``expected_level`` parameter
-- Returns ``BIST_ESP_IO_TEST_ERR`` if level does not match expected
-- Resets pin after test
+Reciprocal Dual-Core GPIO Input Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. blockdiag::
+    :scale: 50%
+    :caption: GPIO Input Test (Reciprocal)
+    :align: center
 
-Both tests ensure GPIO pins are restored to default state after testing to avoid side effects.
+    blockdiag {
+        orientation = portrait;
+        Start -> "Core 0: Sample Input" -> "Core 1: Sample Input" -> "Core 1: Validate Both" -> "Core 0: Validate Both" -> Success;
+        "Core 0: Sample Input" -> Error [label = "Fail"];
+        "Core 1: Sample Input" -> Error [label = "Fail"];
+        "Core 1: Validate Both" -> Error [label = "Fail"];
+        "Core 0: Validate Both" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: Sample Input" [label = "Core 0: Sample pin\nWrite to slot 0"];
+        "Core 1: Sample Input" [label = "Core 1: Sample pin\nWrite to slot 1 (IPC)"];
+        "Core 1: Validate Both" [label = "Core 1:\nValidate slots 0 & 1 (IPC)", shape = diamond];
+        "Core 0: Validate Both" [label = "Core 0:\nValidate slots 0 & 1", shape = diamond];
+        Error [label = "Return\nBIST_ESP_IO_TEST_ERR"];
+        Success [label = "Return\nBIST_ESP_OK"];
+    }
+
+For dual-core reciprocal verification, samples one input pin on both HP cores and compares the evidence:
+
+1. **Local Sample (Core 0)**: Core 0 reads the pin level via ``gpio_get_level()`` into shared SRAM slot 0.
+2. **Remote Sample (Core 1)**: Core 0 dispatches sampling of the same pin to HP Core 1 into shared SRAM slot 1.
+3. **Remote Cross-Validation (Core 1)**: Core 0 dispatches verification to Core 1, which verifies that both slots completed, levels are valid (0 or 1), and levels are equal.
+4. **Local Cross-Validation (Core 0)**: Core 0 runs the same verification locally.
+
+The runtime reciprocal test is non-invasive: it only reads the pin and does not reset it, change its direction, or drive a level.
+
+Fixed-Layout Result Buffer
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reciprocal test exchanges evidence using a fixed-layout structure (``bist_gpio_input_result_t``) in statically allocated HP SRAM (``bist_gpio_input_shared_results``):
+
+- Exactly 8 bytes per slot (2 slots: Core 0 and Core 1).
+- Contains no pointers, verified at compile time with ``_Static_assert`` on total structure size and field offsets.
+- Contains execution ``status`` (preset to ``BIST_ESP_IO_TEST_ERR`` before reading) and sampled ``level``.
 
 Module API
 ^^^^^^^^^^
 
 .. metrics-table:: tests/metrics/build/tests/{IDF_TARGET_PATH_NAME}_metrics.json
-   :functions: bist_gpio_output_test, bist_gpio_input_test
-
-
+   :functions: bist_gpio_output_test, bist_gpio_input_test, bist_gpio_input_reciprocal_test
 
 Source Files
 ^^^^^^^^^^^^
@@ -2244,23 +2284,24 @@ Source Files
    * - ``src/bist/core/io/bist_gpio.c``
      - v1.1.0
      - d525e03929c18f45d4a13bffd1c304d0
+   * - ``src/bist/core/io/bist_gpio_reciprocal.c``
+     - N/A
+     - 08c0ecbdb07622d2882ab9e7adb0925d
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
-- The GPIO test checks all input parameters for validity (e.g., valid GPIO number) and returns explicit error codes on failure.
-- This test uses the GPIO driver (``gpio_set_direction``, ``gpio_set_level``, ``gpio_get_level``, ``gpio_reset_pin``) and error code definitions.
-- Uses local variables for configuration and state.
-- No dynamic memory is used.
-- All functions have a single entry and exit. Early returns are used for error handling.
-- Branching is limited to error detection and hardware access checks. No deep nesting or complex logic.
-- Loops are bounded by the number of logic levels to test and the number of pins (if tested in a loop externally). All loops are finite and predictable.
-- Only integer comparisons and assignments are used. No floating-point or complex arithmetic.
-- No interrupts are used or manipulated by this test.
-- Pointers are used for driver calls and local variables. All pointer usage is explicit and safe.
-- No recursion is used in this test.
-- No goto or label-based jumps are used.
-- Type conversions are only used for driver calls, which are explicit and safe.
-- No division operations are present in this test.
+
+- All GPIO test functions check input parameters with ``GPIO_IS_VALID_GPIO`` and return explicit error codes on failure.
+- Static tests configure and restore GPIO pins using the GPIO driver (``gpio_set_direction``, ``gpio_set_level``, ``gpio_get_level``, ``gpio_reset_pin``).
+- The reciprocal test only reads pin levels via ``gpio_get_level`` without modifying pin configuration.
+- Reciprocal evidence is stored in statically allocated shared HP SRAM with compile-time layout assertions.
+- Cross-core dispatch uses ``bist_multicore_call()``; only Core 0 initiates dispatch.
+- No dynamic memory allocation is used.
+- All functions have a single entry and exit. Early returns handle error conditions.
+- Branching is limited to parameter and level checks without deep nesting.
+- No loops exist in the reciprocal sample or verification functions.
+- Only integer comparisons and assignments are used.
+- No interrupts are manipulated by these tests.
 
 .. _adc-plausibility-test:
 
