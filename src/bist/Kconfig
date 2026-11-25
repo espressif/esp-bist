@@ -226,6 +226,29 @@ config ESP_BIST_MEMORY_FLASH_TEST
     help
       Enable tests for the Flash memory integrity.
 
+choice ESP_BIST_MEMORY_FLASH_TEST_TYPE
+    prompt "Memory Flash Test Selection"
+    depends on ESP_BIST_MEMORY_FLASH_TEST
+    default ESP_BIST_MEMORY_FLASH_TEST_STATIC
+    help
+      Select which Flash memory test to use.
+
+    config ESP_BIST_MEMORY_FLASH_TEST_STATIC
+        bool "Static Test"
+        help
+          Use the static Flash CRC test.
+          Matches IEC 60730 Table H.1 component 4.1 for Class B.
+
+    config ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL
+        bool "Reciprocal Test"
+        depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE
+        depends on ESP_BIST_MULTICORE
+        help
+          Use the reciprocal Flash CRC test.
+          Matches IEC 60730 H.2.18.15 for Class C,
+          but requires dual-core support (currently only ESP32-P4) and standalone build.
+endchoice
+
 config ESP_BIST_CLOCK_TEST
     bool "Clock Test"
     depends on !IDF_ESP_BIST_COMPONENT && !ZEPHYR_ESP_BIST_MODULE

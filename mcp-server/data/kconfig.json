@@ -232,12 +232,32 @@
   {
     "name": "ESP_BIST_MEMORY_FLASH_TEST",
     "type": "bool",
-    "default": "n",
-    "depends_on": "",
-    "help": "Enable tests for the Flash memory integrity.",
+    "default": "ESP_BIST_MEMORY_FLASH_TEST_STATIC",
+    "depends_on": "ESP_BIST_MEMORY_FLASH_TEST",
+    "help": "Select which Flash memory test to use.",
     "menu": "ESP-BIST Tests",
     "range": "",
     "prompt": "Memory Flash Test"
+  },
+  {
+    "name": "ESP_BIST_MEMORY_FLASH_TEST_STATIC",
+    "type": "bool",
+    "default": "",
+    "depends_on": "",
+    "help": "Use the static Flash CRC test.\nMatches IEC 60730 Table H.1 component 4.1 for Class B.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Static Test"
+  },
+  {
+    "name": "ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL",
+    "type": "bool",
+    "default": "",
+    "depends_on": "ESP_BIST_MULTICORE",
+    "help": "Use the reciprocal Flash CRC test.\nMatches IEC 60730 H.2.18.15 for Class C,\nbut requires dual-core support (currently only ESP32-P4) and standalone build.",
+    "menu": "ESP-BIST Tests",
+    "range": "",
+    "prompt": "Reciprocal Test"
   },
   {
     "name": "ESP_BIST_CLOCK_TEST",

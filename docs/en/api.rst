@@ -35,6 +35,7 @@ Memory Tests
 
 .. include-build-file:: inc/bist_ram.inc
 .. include-build-file:: inc/bist_flash.inc
+.. include-build-file:: inc/bist_flash_reciprocal.inc
 
 Clock Tests
 -----------

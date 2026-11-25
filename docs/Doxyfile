@@ -39,6 +39,7 @@ INPUT = \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_gpio.h \
     $(PROJECT_PATH)/src/bist/core/io/include/bist_adc.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash.h \
+    $(PROJECT_PATH)/src/bist/core/memory/include/bist_flash_reciprocal.h \
     $(PROJECT_PATH)/src/bist/core/memory/include/bist_ram.h \
     $(PROJECT_PATH)/src/bist/core/multicore/include/bist_multicore.h \
     $(PROJECT_PATH)/src/bist/core/wdt/include/bist_wdt.h \

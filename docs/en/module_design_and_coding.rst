@@ -975,9 +975,17 @@ Coding and Interfaces
 Flash CRC Test
 --------------
 
+The Flash CRC Test validates ``.flash.rodata`` and ``.flash.text`` by computing CRC32 checksums and comparing them against post-build reference values:
+
+- **Static (Single-Core)**: ``bist_flash_test()`` in ``bist_flash.c`` runs on the calling core.
+- **Reciprocal (Dual-Core Comparison)**: the same ``bist_flash_test()`` in ``bist_flash_reciprocal.c`` reuses ``calculate_crc32()`` from ``bist_flash.c`` on both HP cores, records the section CRCs in shared result slots, and cross-validates each core's output. ``CONFIG_ESP_BIST_MEMORY_FLASH_TEST_TYPE`` selects one implementation.
+
+Static Single-Core Flash CRC Test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. blockdiag::
     :scale: 50%
-    :caption: Flash CRC Test
+    :caption: Flash CRC Test (Static)
     :align: center
 
     blockdiag {
@@ -1009,7 +1017,49 @@ Flash CRC Test
         End [label = "End"];
     }
 
-This diagram shows the concrete implementation of flash CRC validation. The test reads ``.flash.rodata`` and ``.flash.text`` sections from linker-defined symbols, computes CRC32 in configurable chunk sizes, and compares against stored checksums injected post-build by ``scripts/calculate_crc32.py``.
+This diagram shows the concrete implementation of the static flash CRC validation. The test reads ``.flash.rodata`` and ``.flash.text`` sections from linker-defined symbols, computes CRC32 in configurable chunk sizes, and compares against stored checksums injected post-build by ``scripts/calculate_crc32.py``.
+
+Reciprocal Dual-Core Flash CRC Test (ESP32-P4)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. blockdiag::
+    :scale: 50%
+    :caption: Flash CRC Test (Reciprocal)
+    :align: center
+
+    blockdiag {
+        orientation = portrait;
+        span_height = 40;
+        node_width = 260;
+        node_height = 55;
+        default_fontsize = 11;
+
+        Start -> "Core 0: Flash Walk" -> "Core 0: Validate Core 0" -> "Core 1: Flash Walk" -> "Core 1: Validate Core 1" -> "Core 1: Validate Core 0" -> "Core 0: Validate Core 1" -> Success;
+        "Core 0: Flash Walk" -> Error [label = "Fail"];
+        "Core 0: Validate Core 0" -> Error [label = "Fail"];
+        "Core 1: Flash Walk" -> Error [label = "Fail"];
+        "Core 1: Validate Core 1" -> Error [label = "Fail"];
+        "Core 1: Validate Core 0" -> Error [label = "Fail"];
+        "Core 0: Validate Core 1" -> Error [label = "Fail"];
+
+        Start [label = "Start\n(Core 0 caller)", shape = roundedbox];
+        "Core 0: Flash Walk" [label = "Core 0: Compute CRCs -> slot 0"];
+        "Core 0: Validate Core 0" [label = "Core 0: Validate slot 0", shape = diamond];
+        "Core 1: Flash Walk" [label = "Core 1: Compute CRCs -> slot 1 (IPC)"];
+        "Core 1: Validate Core 1" [label = "Core 1: Validate slot 1 (IPC)", shape = diamond];
+        "Core 1: Validate Core 0" [label = "Core 1: Validate slot 0 (IPC)", shape = diamond];
+        "Core 0: Validate Core 1" [label = "Core 0: Validate slot 1", shape = diamond];
+        Error [label = "Return\nBIST_ESP_FLASH_TEST_ERR"];
+        Success [label = "Return BIST_ESP_OK", shape = roundedbox];
+    }
+
+On ESP32-P4, both HP cores independently compute and cross-validate the flash CRCs via ``bist_multicore_call()``:
+
+1. **Core 0 Walk & Local Check**: Core 0 computes ``.flash.rodata`` and ``.flash.text`` CRCs into ``bist_flash_shared_results[0]`` and validates slot 0 locally.
+2. **Core 1 Walk & Remote Check**: Core 0 dispatches the walk and local validation of ``bist_flash_shared_results[1]`` to Core 1.
+3. **Cross-Validation**: Core 1 validates slot 0 (via IPC), and Core 0 validates slot 1 locally.
+
+Validation requires ``status == BIST_ESP_OK``, non-zero post-build reference CRCs (``_crc_section_data_start``, ``_crc_section_text_start``), and matching ``crc_rodata`` and ``crc_text`` values. Each 12-byte slot (``bist_flash_result_t`` in static HP SRAM) holds only ``status``, ``crc_rodata``, and ``crc_text`` with no pointers; each core reads linker symbols locally.
 
 Module API
 ^^^^^^^^^^
@@ -1033,26 +1083,29 @@ Source Files
      - MD5
    * - ``src/bist/core/memory/bist_flash.c``
      - v1.1.0
-     - dc51fd6f762667c16f01f816515b8408
+     - 9049f90b40044923a5c08ce965a302bd
+   * - ``src/bist/core/memory/bist_flash_reciprocal.c``
+     - N/A
+     - 28e1534f9a791470380471fd3b8e4d3d
 
 Coding and Interfaces
 ^^^^^^^^^^^^^^^^^^^^^
 
-- The Flash CRC test uses explicit error handling: if CRC calculation or flash region access fails, the function returns an explicit error code.
-- Stored CRCs injected post-build by ``scripts/calculate_crc32.py``
-- This test uses linker-defined symbols for flash region boundaries and reference CRC values.
-- Uses statically defined CRC32 table and linker symbols for flash regions.
+- Returns ``BIST_ESP_FLASH_TEST_ERR`` on CRC mismatch, invalid reference, or multicore dispatch failure.
+- Post-build reference CRCs are injected by ``scripts/calculate_crc32.py`` and accessed via linker symbols.
+- ``bist_flash.c`` provides ``calculate_crc32()`` and, for the static selection, ``bist_flash_test()``. When ``CONFIG_ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL`` is selected, ``bist_flash_reciprocal.c`` provides ``bist_flash_test()`` and reuses ``calculate_crc32()``. The static ``bist_flash_test()`` is compiled out.
+- Uses a static CRC32 lookup table (``bist_hd_crc32_update()``); reciprocal mode dispatches Core 1 jobs via ``bist_multicore_call()`` using two fixed-layout static result slots in HP SRAM.
 - No dynamic memory is used.
 - All buffers are stack-allocated or provided by the linker.
 - The main function has a single entry and, under normal conditions, a single exit. Early returns are used for error handling.
 - Branching is limited to error detection and chunk processing. No deep nesting or complex logic.
 - Loops are bounded by the size of the flash region and the chunk size. All loops are finite and predictable.
 - Only integer comparisons, CRC32 table lookups, and assignments are used. No floating-point or complex arithmetic.
-- No interrupts are used or manipulated by this test.
-- Pointers are used to access flash regions and buffers. All pointer arithmetic is explicit and bounds-checked.
+- In static mode, no interrupts are used or manipulated by this test.
+- Pointers are used to access flash regions and shared result slots. All pointer arithmetic is explicit and bounds-checked.
 - No recursion is used in this test.
 - No goto or label-based jumps are used.
-- Type conversions are only used for linker symbol addresses, which is standard and explicit.
+- Type conversions are only used for linker symbol addresses and job arguments, which is standard and explicit.
 - Division is only used to calculate chunk sizes and is always bounded by the region size.
 
 Flash CRC Calculation Script

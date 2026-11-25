@@ -19,15 +19,6 @@
 #include "bist_hd_crc.h"
 #include "bist_log.h"
 
-// Pointer to CRC32 value
-extern uint32_t _crc_section_text_start, _crc_section_data_start;
-
-// Flash sections
-extern uint32_t _flash_rodata_start, _flash_rodata_end;
-extern uint32_t _flash_text_start, _flash_text_end;
-
-static const char *TAG = "bist.flash";
-
 uint32_t calculate_crc32(uint8_t *data, size_t length)
 {
     uint32_t calc_crc = 0;
@@ -46,9 +37,16 @@ uint32_t calculate_crc32(uint8_t *data, size_t length)
     return calc_crc & 0xFFFFFFFF;
 }
 
-/**
- * @brief Run flash test
- */
+#ifndef CONFIG_ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL
+
+// Pointer to CRC32 value
+extern uint32_t _crc_section_text_start, _crc_section_data_start;
+
+// Flash sections
+extern uint32_t _flash_rodata_start, _flash_rodata_end;
+extern uint32_t _flash_text_start, _flash_text_end;
+
+static const char *TAG = "bist.flash";
 
 bist_esp_err_t bist_flash_test(void)
 {
@@ -87,3 +85,5 @@ bist_esp_err_t bist_flash_test(void)
 
     return BIST_ESP_OK;
 }
+
+#endif /* CONFIG_ESP_BIST_MEMORY_FLASH_TEST_RECIPROCAL */

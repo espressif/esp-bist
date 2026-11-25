@@ -200,21 +200,32 @@ Clock Test (IEC 60730 ID: 3)
 Flash CRC Test (IEC 60730 ID: 4.1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-**Requirement**: Validate invariable memory integrity via CRC32.
+**Requirement**: Validate invariable memory integrity via CRC32. For reciprocal testing on ESP32-P4, compute the flash section CRCs on both HP cores and reciprocally cross-validate results (H.2.18.15).
 
-**Design**: ``src/bist/core/memory/bist_flash.c`` (``bist_flash_test()``; :ref:`flash-test`)
+**Design**:
+
+- Static: ``src/bist/core/memory/bist_flash.c`` (``bist_flash_test()``, ``calculate_crc32()``; :ref:`flash-test`)
+- Reciprocal (ESP32-P4): ``src/bist/core/memory/bist_flash_reciprocal.c`` (``bist_flash_test()``; :ref:`flash-test`)
 
 **Test Implementation**:
 
-- QEMU: ``tests/flash_test/pytest_qemu_flash_test.py`` (text and rodata CRC pass + GDB length corruption)
-- Hardware: ``tests/flash_test/pytest_device_flash_test.py`` (CRC validation on target DUT + GDB length corruption)
+- Static:
+
+  - QEMU: ``tests/flash_test/pytest_qemu_flash_test.py`` (text and rodata CRC pass + GDB length corruption)
+  - Hardware: ``tests/flash_test/pytest_device_flash_test.py`` (CRC validation on target DUT + GDB length corruption)
+
+- Reciprocal (ESP32-P4):
+
+  - QEMU: ``tests/flash_test_reciprocal/pytest_qemu_flash_test_reciprocal.py`` (dual-core pass, ``.flash.rodata`` length faults on Core 0 and Core 1, a ``.flash.text`` length fault on Core 0, and 6 cross-check evidence corruptions across both slots)
+  - Hardware: ``tests/flash_test_reciprocal/pytest_device_flash_test_reciprocal.py`` (dual-core reciprocal CRC validation pass and 4 cross-check CRC fault injections across both core slots on target DUT)
 
 **Test Results**:
 
-- QEMU: ``tests/flash_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
-- Hardware: ``tests/flash_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Static QEMU: ``tests/flash_test/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml``
+- Static Hardware: ``tests/flash_test/build/tests/{IDF_TARGET_PATH_NAME}_device_report.xml``
+- Reciprocal QEMU/Hardware: ``tests/flash_test_reciprocal/build/tests/{IDF_TARGET_PATH_NAME}_qemu_report.xml`` and ``{IDF_TARGET_PATH_NAME}_device_report.xml``
 
-**Coverage**: 2 flash sections tested for integrity; 2 GDB fault-injection tests in QEMU; verified on hardware.
+**Coverage**: Static: 2 flash sections tested for integrity with 1 pass and 2 GDB fault-injection tests in QEMU and hardware. Reciprocal: 2 flash sections verified across both HP cores with 1 pass, 9 QEMU fault-injection test cases, and 4 hardware fault-injection test cases.
 
 RAM Test (IEC 60730 ID: 4.2)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -330,7 +341,7 @@ Traceability Summary
 --------------------
 
 - **Total IEC 60730 Components**: 10 (1.1, 1.2, 1.3, 2, 3, 4.1, 4.2, 6.3, 7.1, 7.2)
-- **Total Test Applications**: 11 standalone target test suites + 1 host unit test suite
+- **Total Test Applications**: 12 standalone target test suites + 1 host unit test suite
 - **Test Environments**: QEMU (deterministic emulation & GDB fault injection), Hardware (real-world DUT), Host (algorithmic verification)
 - **Coverage & Evidence**: Complete requirement-to-test mapping and JUnit XML report locations are tabulated in :doc:`coverage_analysis`.
 
